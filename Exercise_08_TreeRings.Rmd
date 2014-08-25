@@ -1,0 +1,530 @@
+Fusing Times-Series Data: Tree Rings and Forest Inventory
+========================================================
+
+In this exercise we will extend the state-space framework in order to combine multiple data streams with different observation errors and to separate observation error from process error. We will also demonstrate how to add hierarchical random effects in order to partition the process error into multiple sources.
+
+Specifically, we will be building upto the model presented by Clark et al. 2007 Ecological Applications in order to combine tree ring data with forest inventory data. Unlike the original model, which was written all in R, we will rewrite this model into JAGS, which makes it easier to see what is going on and to modify the model. In this exercise we will utilize data from a collection of small plots at the Harvard Forest, Petersham, MA.
+
+We will divide this analysis into a number of steps, which we will encapsulate into functions to make them easier to understand and run. Thus we will begin by defining these functions. Specifically, the steps will be:
+* load forest inventory data
+* load tree ring data
+* match the tree core and inventory data for individual trees and merge these data sets into one data frame
+* format this data into a list for input into JAGS
+* run the JAGS model
+* visualize the output
+
+Since the first task, reading the forest data, is just a simple read.csv, lets start by defining the function that loads the tree ring data. This data is in a somewhat obscure text-based format called TUSCON, and is spread out across multiple files. Fortunately, there is an R library, dplR, that includes utilities for reading individual TUSCON files, so we'll just extend this to loop over all the files in a directory
+
+```{r}
+## code that loops over a whole set of Tuscon files
+Read_Tuscon <- function(folder){
+
+  library(dplR)
+  
+  filenames <- dir(folder,pattern =  "TXT",full.names=TRUE)
+  filenames <- c(filenames,dir(folder,pattern =  "rwl",full.names=TRUE))
+  filedata <- list()
+  for (file in filenames){
+    filedata[[file]] <- read.tucson(file, header = FALSE)
+  }
+
+  return(filedata)
+  
+}
+```
+
+Next we'll define some small helper functions that we'll use for parsing and plotting. In particular, each tree is indexed by site, plot, subplot, and individual (designated by a tree tag number). Within the tree ring files we concatenate these codes into one string, so we need the ability to both build these strings and extract info from them. For example, the code H6A1506 means that this tree came from site H (Harvard Forest), plot 6, subplot A, and had tag number 1506.
+
+```{r}
+extract.stringCode <- function(x,extractor=from.TreeCode){
+  return(extractor(x))
+}
+
+from.TreeCode <- function(x){
+  SITE = substr(x,1,1)
+  PLOT = substr(x,2,2)
+  SUBPLOT = substr(x,3,3)
+  TAG = substr(x,4,1000000L)
+  return(data.frame(SITE,PLOT,SUBPLOT,TAG))
+}
+
+to.TreeCode <- function(SITE,PLOT,SUBPLOT,TAG=NULL){
+  SITE = as.character(SITE)
+  PLOT = as.character(PLOT)
+  SUBPLOT = as.character(SUBPLOT)
+  TAG = as.character(TAG)
+  x = paste(SITE,PLOT,SUBPLOT,sep="")
+  if(!is.null(x)){
+    x = paste(x,TAG,sep="")
+  }
+  return(x)
+}
+
+parse.MatrixNames <- function(w,pre="x",numeric=FALSE){ 
+  w = sub(pre,"",w)
+  w = sub("[","",w,fixed=TRUE)
+  w = sub("]","",w,fixed=TRUE)
+  w = matrix(unlist(strsplit(w,",")),nrow=length(w),byrow=TRUE)
+  if(numeric){
+    class(w) <- "numeric"
+  }
+  colnames(w)<-c("row","col")
+  return(as.data.frame(w))
+}
+
+#plots a confidence interval around an x-y plot (e.g. a timeseries)
+ciEnvelope <- function(x,ylo,yhi,...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+                                      ylo[1])), border = NA,...) 
+}
+```
+
+Next, we'll need to match the tree ring data and the forest inventory data.
+
+```{r}
+matchInventoryRings <- function(trees,rings,extractor=from.TreeCode,nyears=30,coredOnly=TRUE){
+
+  ## build tree codes
+  names(trees) = toupper(names(trees))
+  tree.ID = to.TreeCode(trees$SITE,trees$PLOT,trees$SUB,trees$TAG)
+
+  ## build tree ring codes
+  if(is.list(rings)){
+    rings <- combine.rwl(rings)
+  }
+  ring.ID <- names(rings)
+
+  ## matching up data sets by tree
+  mch = match(tree.ID,ring.ID)
+  mch[duplicated(mch)] <- NA  ## if there's multiple stems, match the first
+
+  ## combine data into one table
+  combined = cbind(trees,t(as.matrix(rings))[mch,-(nyears-1):0 + nrow(rings)])
+  if(coredOnly==TRUE){
+    combined = combined[!is.na(combined$"2000"),]  ## remove trees that were uncored, usind 2000 as the reference year
+    }
+  return(combined)
+}
+```
+
+Now that we have the data merged, we need to extract just those parts that we need for the statistical analysis, and then format those as a list object. We also need to define some defaults for our prior parameters. Finally, we also need to address the units of the data sets. In this case diameter is measured in cm, but growth is measured in mm of ring width (i.e. single radius), so we need to convert both data sets to one set of units, which in this case will be cm. Note that the code below assumes that in the inventory file that the DBH measurements from the different years are recorded in columns like DBH91 and DBH09 for the DBH measurements in 1991 and 2009 respectively. Given this pattern we parse those columns and match them to the years in the tree ring data.
+
+
+```{r}
+## builds the JAGS data object for the tree ring / inventory fusion code
+## also sets all the priors
+buildJAGSdata_InventoryRings <- function(combined,inc.unit.conv = 0.1){
+  
+  ## pull out growth to a matrix, y, convert to cm of diameter
+  y = as.matrix(combined[,!is.na(as.numeric(colnames(combined)))])*inc.unit.conv*2
+  
+  ## pull out years
+  time = as.numeric(colnames(y))
+  
+  ## pull out diameter to a matrix, z
+  DBH = as.matrix(combined[,grep("DBH",colnames(combined))])
+  class(DBH) <- "numeric"
+  z = matrix(NA,nrow(y),ncol(y))
+  DBH.years = as.numeric(sub("DBH","",colnames(DBH)))
+  DBH.years = ifelse(DBH.years < 20,DBH.years+2000,DBH.years+1900)
+  z[,which(time %in% DBH.years)] = DBH
+  
+  ## build data object for JAGS
+  n = nrow(y)
+  data <- list(y=y[1:n,],z = z[1:n,],ni=n,nt=ncol(y),x_ic=1,tau_ic=0.000001,
+               a_dbh=8,r_dbh=4,a_inc=1,r_inc=0.01,a_add=1,r_add=1,time=time)
+  
+  return(data)
+  
+}
+```
+
+Now that we have the data prepped we need to fit the model itself. The second half of this code is just the same JAGS syntax we used in the previous state-space exercise, so lets focus on the JAGS code itself. To begin with, lets look back at the JAGS code for the random walk
+
+```
+model{
+  
+  #### Data Model
+  for(i in 1:n){
+    y[i] ~ dnorm(x[i],tau_obs)
+  }
+  
+  #### Process Model
+  for(i in 2:n){
+    x[i]~dnorm(x[i-1],tau_add)
+  }
+  
+  #### Priors
+  x[1] ~ dnorm(x_ic,tau_ic)
+  tau_obs ~ dgamma(a_obs,r_obs)
+  tau_add ~ dgamma(a_add,r_add)
+}
+```
+
+Since we're fusing two data sources, we'll need to add a second data model. We'll also modify our process model to include a mean growth rate term. Finally, we'll need to specify priors on both observation errors, the process error, and the mean.
+
+```
+model{
+
+#### Data Model: DBH
+for(i in 1:n){
+z[i] ~ dnorm(x[i],tau_dbh)
+}
+
+#### Data Model: growth
+for(i in 2:n){
+inc[i] <- x[i]-x[i-1]
+y[i] ~ dnorm(inc[i],tau_inc)
+}
+
+#### Process Model
+#### Dnew is the expected new diameter given the previous diameter and the mean growth rate
+for(i in 2:n){
+Dnew[i] <- x[i-1] + mu  
+x[i]~dnorm(Dnew[i],tau_add)
+}
+
+#### Priors
+x[1] ~ dnorm(x_ic,tau_ic)
+tau_dbh ~ dgamma(a_dbh,r_dbh)
+tau_inc ~ dgamma(a_inc,r_inc)
+tau_add ~ dgamma(a_add,r_add)
+mu ~ dnorm(0.5,0.5)
+}
+```
+
+This code would work perfectly if we only had only measured a single tree, but we measured a number of trees so next need to modify the code to work with tree-by-year matrices of DBH and growth.
+
+```
+model{
+
+  ### Loop over all individuals
+  for(i in 1:ni){
+  
+  #### Data Model: DBH
+  for(t in 1:nt){
+  z[i,t] ~ dnorm(x[i,t],tau_dbh)
+  }
+  
+  #### Data Model: growth
+  for(t in 2:nt){
+  inc[i,t] <- x[i,t]-x[i,t-1]
+  y[i,t] ~ dnorm(inc[i,t],tau_inc)
+  }
+  
+  #### Process Model
+  for(t in 2:nt){
+  Dnew[i,t] <- x[i,t-1] + mu
+  x[i,t]~dnorm(Dnew[i,t],tau_add)
+  }
+  
+  x[i,1] ~ dnorm(x_ic,tau_ic)
+  }  ## end loop over individuals
+  
+  #### Priors
+  tau_dbh ~ dgamma(a_dbh,r_dbh)
+  tau_inc ~ dgamma(a_inc,r_inc)
+  tau_add ~ dgamma(a_add,r_add)
+  mu ~ dnorm(0.5,0.5)
+}
+```
+
+Finally, since growth is indexed by both tree and year, lets add random effect for both individuals and years. In this case our process model now becomes   Dnew[i,t] <- x[i,t-1] + mu + ind[i] + year[t], where ind and year are the random effects for individual and year respectively. Next, we'll need to specify the distributions that these random effects are drawn from, as well as the priors on the random effect variances
+
+```
+  model{
+  
+  ### Loop over all individuals
+  for(i in 1:ni){
+  
+  #### Data Model: DBH
+  for(t in 1:nt){
+  z[i,t] ~ dnorm(x[i,t],tau_dbh)
+  }
+  
+  #### Data Model: growth
+  for(t in 2:nt){
+  inc[i,t] <- x[i,t]-x[i,t-1]
+  y[i,t] ~ dnorm(inc[i,t],tau_inc)
+  }
+  
+  #### Process Model
+  for(t in 2:nt){
+  Dnew[i,t] <- x[i,t-1] + mu + ind[i] + year[t]
+  x[i,t]~dnorm(Dnew[i,t],tau_add)
+  }
+  
+  ## individual effects
+  ind[i] ~ dnorm(0,tau_ind)
+  
+  ## initial condition
+  x[i,1] ~ dnorm(x_ic,tau_ic)
+  }  ## end loop over individuals
+  
+  ## year effects
+  for(t in 1:nt){
+  year[t] ~ dnorm(0,tau_yr)
+  }
+  
+  
+  #### Priors
+  tau_dbh ~ dgamma(a_dbh,r_dbh)
+  tau_inc ~ dgamma(a_inc,r_inc)
+  tau_add ~ dgamma(a_add,r_add)
+  tau_ind ~ dgamma(1,0.1)
+  tau_yr  ~ dgamma(1,0.1)
+  mu ~ dnorm(0.5,0.5)
+  
+  }
+```
+
+Putting this all together we have the following function, which includes a switch to toggle between the version of the code that includes random effects and the version that doesn't. 
+
+```{r}
+## this code fuses forest inventory data with tree growth data (tree ring or dendrometer band)
+## for the same plots. Code is a rewrite of Clark et al 2007 Ecol Appl into JAGS
+## inputs: 
+##  data = list of data inputs
+##  random = whether or not to include random effects
+## Requires JAGS
+## Returns an mcmc.list object
+
+InventoryGrowthFusion <- function(data,n.iter,random=TRUE){
+  require(rjags)
+  
+  TreeDataFusionMV = "
+model{
+
+  ### Loop over all individuals
+  for(i in 1:ni){
+  
+  #### Data Model: DBH
+  for(t in 1:nt){
+  z[i,t] ~ dnorm(x[i,t],tau_dbh)
+  }
+  
+  #### Data Model: growth
+  for(t in 2:nt){
+  inc[i,t] <- x[i,t]-x[i,t-1]
+  y[i,t] ~ dnorm(inc[i,t],tau_inc)
+  }
+  
+  #### Process Model
+  for(t in 2:nt){
+  Dnew[i,t] <- x[i,t-1] + mu
+  x[i,t]~dnorm(Dnew[i,t],tau_add)
+  }
+  
+  x[i,1] ~ dnorm(x_ic,tau_ic)
+  }  ## end loop over individuals
+  
+  #### Priors
+  tau_dbh ~ dgamma(a_dbh,r_dbh)
+  tau_inc ~ dgamma(a_inc,r_inc)
+  tau_add ~ dgamma(a_add,r_add)
+  mu ~ dnorm(0.5,0.5)
+}"
+
+  if(random==TRUE){
+  ## version with tree and year random effects
+  TreeDataFusionMV = "
+  model{
+  
+  ### Loop over all individuals
+  for(i in 1:ni){
+  
+  #### Data Model: DBH
+  for(t in 1:nt){
+  z[i,t] ~ dnorm(x[i,t],tau_dbh)
+  }
+  
+  #### Data Model: growth
+  for(t in 2:nt){
+  inc[i,t] <- x[i,t]-x[i,t-1]
+  y[i,t] ~ dnorm(inc[i,t],tau_inc)
+  }
+  
+  #### Process Model
+  for(t in 2:nt){
+  Dnew[i,t] <- x[i,t-1] + mu + ind[i] + year[t]
+  x[i,t]~dnorm(Dnew[i,t],tau_add)
+  }
+  
+  ## individual effects
+  ind[i] ~ dnorm(0,tau_ind)
+  
+  ## initial condition
+  x[i,1] ~ dnorm(x_ic,tau_ic)
+  }  ## end loop over individuals
+  
+  ## year effects
+  for(t in 1:nt){
+  year[t] ~ dnorm(0,tau_yr)
+  }
+  
+  
+  #### Priors
+  tau_dbh ~ dgamma(a_dbh,r_dbh)
+  tau_inc ~ dgamma(a_inc,r_inc)
+  tau_add ~ dgamma(a_add,r_add)
+  tau_ind ~ dgamma(1,0.1)
+  tau_yr  ~ dgamma(1,0.1)
+  mu ~ dnorm(0.5,0.5)
+  
+  }"
+}
+    
+  ## state variable initial condition
+  z0 = t(apply(data$y,1,function(y){-rev(cumsum(rev(y)))})) + data$z[,ncol(data$z)] 
+  
+  ## JAGS initial conditions
+  nchain = 3
+  init <- list()
+  for(i in 1:nchain){
+    y.samp = sample(data$y,length(data$y),replace=TRUE)
+    init[[i]] <- list(x = z0,tau_add=runif(1,1,5)/var(diff(y.samp),na.rm=TRUE),
+                      tau_dbh=1,tau_inc=500,tau_ind=50,tau_yr=100,ind=rep(0,data$ni),year=rep(0,data$nt))
+  }
+  
+  ## compile JAGS model
+  j.model   <- jags.model (file = textConnection(TreeDataFusionMV),
+                           data = data,
+                           inits = init,
+                           n.chains = 3)
+  ## burn-in
+  jags.out   <- coda.samples (model = j.model,
+                              variable.names = c("tau_add","tau_dbh","tau_inc","mu","tau_ind","tau_yr"),
+                              n.iter = min(n.iter,2000))
+  plot(jags.out)
+  
+  ## run MCMC
+  jags.out   <- coda.samples (model = j.model,
+                              variable.names = c("x","tau_add","tau_dbh","tau_inc","mu",
+                                                 "tau_ind","tau_yr","ind","year"),
+                              n.iter = n.iter)
+  
+  return(jags.out)
+}
+```
+
+Next, lets generate some diagnostic plots to look at the model. First, lets plot the posterior CI for growth and DBH and compare these to observations. Since we have scores of cores and trees, we'll pick a random subset of trees to check. One thing that's critical to note is that for the confidence intervals on growth that these are calculated pathwise -- we're looking at the growth from a whole MCMC iteration -- rather than pairwise (i.e. subtracting the posterior distribution for DBH at one point from the posterior distribution of DBH at the next). Because there's high correlations between successive time points, the pathwise uncertainty estimates are considerably lower in uncertainty -- essentially saying that we know can know the growth rate of the tree better than we can know the actual size of the tree
+
+Second, let's look at the histogram of our fixed effect, mu, and the precisions. Let's also convert the precisions to standard deviations to make them easier to interpret
+
+Third, let's look at the random effects. It is easy enough to plot the year effects by year. For the individual effects we'll plot these twice, first ordering the effects by plot and the second ordering them by species.
+
+```{r}
+InventoryGrowthFusionDiagnostics <- function(jags.out,combined){
+  
+  #### Diagnostic plots
+  
+  ### DBH
+  layout(matrix(1:8,4,2))
+  out <- as.matrix(jags.out)
+  x.cols = which(substr(colnames(out),1,1)=="x")   ## which columns are the state variable, x
+  ci <- apply(out[,x.cols],2,quantile,c(0.025,0.5,0.975))
+  ci.names = parse.MatrixNames(colnames(ci),numeric=TRUE)
+  
+  smp = c(sample.int(data$ni,3),49)  ## I've rigged the sampling to make sure you see tree 49!
+  for(i in smp){
+    sel = which(ci.names$row == i)
+    plot(data$time,ci[2,sel],type='n',ylim=range(ci[,sel],na.rm=TRUE),ylab="DBH (cm)",main=i)
+    ciEnvelope(data$time,ci[1,sel],ci[3,sel],col="lightBlue")
+    points(data$time,data$z[i,],pch="+",cex=1.5)
+  }
+  
+  ## growth
+  for(i in smp){
+    sel = which(ci.names$row == i)
+    inc.mcmc = apply(out[,x.cols[sel]],1,diff)
+    inc.ci = apply(inc.mcmc,1,quantile,c(0.025,0.5,0.975))*5
+    
+    plot(data$time[-1],inc.ci[2,],type='n',ylim=range(inc.ci,na.rm=TRUE),ylab="Ring Increment (mm)")
+    ciEnvelope(data$time[-1],inc.ci[1,],inc.ci[3,],col="lightBlue")
+    points(data$time,data$y[i,]*5,pch="+",cex=1.5,type='b',lty=2)
+  }
+  
+  ## process model
+  vars = (1:ncol(out))[-c(which(substr(colnames(out),1,1)=="x"),grep("tau",colnames(out)),
+                          grep("year",colnames(out)),grep("ind",colnames(out)))]
+  par(mfrow=c(1,1))
+  for(i in vars){
+    hist(out[,i],main=colnames(out)[i])
+  }
+  if(length(vars)>1) pairs(out[,vars])
+  
+  ## Standard Deviations
+  #layout(matrix(c(1,2,3,3),2,2,byrow=TRUE))
+  par(mfrow=c(2,3))
+  prec = out[,grep("tau",colnames(out))]
+  for(i in 1:ncol(prec)){
+    hist(1/sqrt(prec[,i]),main=colnames(prec)[i])
+  }
+  cor(prec)
+  pairs(prec)
+  
+    
+  par(mfrow=c(1,1))
+  ### YEAR
+  year.cols = grep("year",colnames(out))
+  if(length(year.cols>0)){
+    ci.yr <- apply(out[,year.cols],2,quantile,c(0.025,0.5,0.975))
+    plot(data$time,ci.yr[2,],type='n',ylim=range(ci.yr,na.rm=TRUE),main="Year Effect",ylab="cm")
+    ciEnvelope(data$time,ci.yr[1,],ci.yr[3,],col="lightBlue")
+    lines(data$time,ci.yr[2,],lty=1,lwd=2)
+    abline(h=0,lty=2)
+  }
+  
+  ### INDIV
+  ind.cols= which(substr(colnames(out),1,3)=="ind")
+  if(length(ind.cols)>0){
+    boxplot(out[,ind.cols],horizontal=TRUE,outline=FALSE,col=combined$PLOT,main="Individual Effects By Plot",,xlab="cm")
+    abline(v=0,lty=2)
+    ## calculate plot-level means for random effects
+    tapply(apply(out[,ind.cols],2,mean),combined$PLOT,mean)
+    table(combined$PLOT)
+    
+    spp = combined$SPP
+    boxplot(out[order(spp),ind.cols],horizontal=TRUE,outline=FALSE,col=spp[order(spp)],main="Individual Effects By Species",xlab="cm")
+    abline(v=0,lty=2)
+    spp.code = levels(spp)[table(spp)>0]
+    legend("bottomright",legend=rev(spp.code),col=rev(which(table(spp)>0)),lwd=4)
+    ## calculate species-level means for random effects
+    tapply(apply(out[,ind.cols],2,mean),combined$SPP,mean)
+  }
+}
+```
+
+
+Finally, putting everything together we only need to write a short and simple script that calls each function. By default this code is set to run with a small number of years (10), and a much too low number of MCMC iterations (200), just so that the code with "knit" quickly initially. For your analyses you should obviously increase these -- I found that convergence was adequate with around 20,000 samples, though I probably would run 10x longer than that for a publishable analysis. However, such an analysis would take hours to run.
+
+```{r}
+setwd("~/Dropbox/Ecological Forecasting/Labs/Lab 8 - Tree Rings/")
+
+## Read tree data
+trees <- read.csv("H 2012 Adult Field Data.csv")
+
+## Read tree ring data
+rings <- Read_Tuscon("Revised 2/")
+
+combined <- matchInventoryRings(trees,rings)
+
+data <- buildJAGSdata_InventoryRings(combined)
+
+jags.out = InventoryGrowthFusion(data,n.iter=500,random=FALSE)
+
+InventoryGrowthFusionDiagnostics(jags.out,combined)
+
+```
+
+Assignment:
+
+1. Run the model initially with random effects off
+
+2. Rerun the model with random effects on. Compare this to the previous run.
+
+3. Based on the diagnostics, propose an additional effect (fixed or random) to add to the model. Such an effect should plausibly chip away at a sizable fraction of the unexplained variability -- you wouldn't want to propose an effect that isn't associated with systematic variability. 
+
+4. Explain any additional exploratory analyses you would perform (e.g. plotting your proposed covariate against one of the random effects). 
+
+5. Write the JAGS code that would fit the proposed model

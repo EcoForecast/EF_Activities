@@ -1,0 +1,252 @@
+Exercise 2: From Models to Forecasts
+========================================================
+
+Simulating the discrete-time logistic
+-------------------------------------
+
+Define parameters
+```{r}
+r = 1         ## intrinsic growth rate
+K = 10        ## carrying capacity      
+n0 = .1       ## initial population size
+NT = 30       ## number of time steps to simulate
+time = 1:NT
+```
+
+Iterative simulation
+```{r}
+n = rep(n0,NT)    ## vector to store results
+for(t in 2:NT){
+  n[t] = n[t-1] + r*n[t-1]*(1-n[t-1]/K)
+}
+```
+
+Plot results
+```{r}
+plot(time,n,ylim=c(0,12),lwd=3,type='l',
+     ,bty='l',cex.lab=1.5,
+      xlab="Time",ylab="Population Size")
+```
+
+### Problems
+
+1. Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+
+
+Probability distributions in R
+------------------------------
+
+Because it is a statistical language, there are a large number of probability distributions in R by default and an even larger number that can be loaded from packages.  The table below gives a listing of the most common distributions in R, the name of the function within R, and the parameters of the distribution.
+
+
+Distribution   | R name | Parameters
+------------   | ------ | ----------
+beta           | beta   | shape1, shape2, ncp
+Binomial       | binom  | size, prob
+Cauchy         | cauchy | location, scale
+chi-squared    | chisq  | df, ncp
+exponential    | exp    | rate
+F              | f      | df1, df2, ncp
+gamma          | gamma  | shape, scale
+geometric      | geom   | prob
+hypergeometric | hyper  | m, n, k
+log-normal     | lnorm  | meanlog, sdlog
+logistic       | logis  | location, scale
+Negative binomial | nbinom | size, prob
+Normal        | norm    | mean, sd
+Poisson       | pois    | lambda
+Student's t   | t       | df, ncp
+uniform       | unif    | min, max
+Weibull       | weibull | shape, scale
+Wilcoxon      | wilcox  | m, n
+
+There is a good chart at http://www.johndcook.com/distribution_chart.html that describes the relationships among the common distributions, and the Wikipedia articles for most of them are good for quick reference. 
+
+R actually provides four related functions for each probability distribution.  These functions are called by adding a letter at the beginning of the function name.  The variants of each probability distribution are:
+
+* “d” = density:  probability density function (PDF)
+* “p” = cumulative distribution function (CDF)
+* “q” = quantile: calculates the value associated with a specified tail probability, inverse of “p”
+* “r” = random: simulates random numbers
+
+The first argument to these functions is the same regardless of the distribution and is x for “d”, q for “p”, p for “q”and n for “r”
+
+All of this will make more sense once we consider a concrete example.  Let's take a look at the normal probability density function first, since it's the one you're most familiar with.  If you use ?dnorm you'll see that for many of the function arguments there are default values, specifically mean=0 and sd=1.  Therefore if these values are not specified explicitly in the function call R assumes you want a standard Normal distribution.
+
+```{r}
+x = seq(-5,5,by=0.1)
+plot(x,dnorm(x),type='l')  		## that’s a lowercase “L” for “line”
+abline(v=0)					## add a line to indicate the mean (“v” is for “vertical”)
+lines(x,dnorm(x,2),col=2)			## try changing the mean (“col” sets the color)
+abline(v=2,col=2)
+lines(x,dnorm(x,-1,2),col=3)			## try changing the mean and standard dev
+abline(v=-1,col=3)
+```
+
+This plot of the normal distribution and the effects of varying the parameters in the normal are both probably familiar to you already – changing the mean changes where the distribution is centered while changing the standard deviation changes the spread of the distribution.  Next try looking at the CDF of the normal:
+
+```{r}
+plot(x,pnorm(x,0,1),type='l')
+abline(v=0)
+lines(x,pnorm(x,2,1),col=2)
+abline(v=2,col=2)
+lines(x,pnorm(x,-1,2),col=3)
+abline(v=-1,col=3)
+```
+
+Next let's look at the function qnorm.  Since the input to this function is a quantile, the x-values for the plot are restricted to the range [0,1].
+
+```{r}
+p = seq(0,1,by=0.01)
+plot(p,qnorm(p,0,1),type='l',ylim=range(x))    # ylim sets the y-axis range
+# range returns the min/max as a 2-element vector
+abline(h=0)						# “h” for “horizontal”
+lines(p,qnorm(p,2,1),col=2)
+abline(h=2,col=2)
+lines(p,qnorm(p,-1,2),col=3)
+abline(h=-1,col=3)
+```
+
+It should be readily apparent that the quantile function is the inverse of the CDF.  This function can be used to find the median of the distribution (p = 0.5) or to estimate confidence intervals at any level desired.
+
+```{r}
+par(mfrow=c(2,1))  		# set the plot to have two rows and 1 column
+qnorm(c(0.025,0.975),0,1)		# what width CI is specified by these values?
+plot(p,qnorm(p,0,1),type='l',ylim=range(x))
+abline(v=c(0.025,0.975),lty=2)	# add vertical lines at the CI
+abline(h=qnorm(c(0.025,0.975)),lty=2)	#add horizontal lines at the threshold vals
+plot(x,dnorm(x,0,1),type='l')		# plot the corresponding pdf
+abline(v=qnorm(c(0.025,0.975)),lty=2)
+```
+
+Finally, let's investigate the rnorm function for generating random numbers that have a normal distribution.  Here we generate histograms that have a progressively larger sample size and compare that to the actual density of the standard normal.  
+
+```{r}
+par(mfrow=c(2,2))  	# set up a plot with 2 rows and 2 columns
+n = c(10,100,1000,10000)	# sequence of sample sizes
+for(i in 1:4){			# loop over these sample sizes
+  hist(rnorm(n[i]),main=n[i],probability=TRUE,breaks=40)  
+				#here breaks defines number of bins in the histogram
+  lines(x,dnorm(x),col=2)
+}
+```
+
+One other technical note: like any function in R that generates random output, this example will give different results every time you run it. 
+
+This example demonstrates that as the number of random draws from a probability distribution increases, the histogram of those draws provides a better and better approximation of the density itself.  We will make use of this fact extensively this semester because – as odd as this may sound now – there are many distributions that are easier to randomly sample from than solve for analytically. 
+
+### Problems
+
+2. Choose another probability distribution and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+
+Monte Carlo Simulation
+----------------------
+
+Most of the figures from the logistic growth example in Chapter 2 included plots of the median trajectory and 95% interval estimates. These summary statistics are a reflection of the fact that the underlying model prediction was a timeseries of probability distributions, rather than a single trajectory. So how do we project a probability distribution through time?
+
+While there are analytical techniques that can be used to estimate these, in practice most are tedious and on a day-to-day basis are rarely employed unless a problem is very simple (e.g. linear regression). Instead, the effects of uncertainty on forecasts are frequently estmated numerically using **Monte Carlo** approachs. A Monte Carlo method is any algorithm that relys on randomization to approximate a computation. These approaches and other will be discussed in more detail later (Chapters 7, 9, 12, & 13).
+
+The previous example of approximating the Normal distribution with a histogram of samples from the Normal distribution is a simple illustration of this approach. What makes this approach powerful is that we can transform the samples from a distribution through whatever function we would like and the resulting set of samples is the correct histogram for that transformation. This is important because, by contrast, we **cannot** transform the summary statistics, such as the mean of the probability distribution, through an arbitrary function because of **Jensen's Inequality**.
+
+To illustrate this point, consider the function x^2 and a standard Normal distribution (mean = 0, sd = 1). Now if we ignore Jensen's Inequality and tranforme the mean and 95% CI we'd end up with a probability distribution that has a mean of 0^2 = 0, a lower confidence interval of -1.96^2 = 3.84 and an upper confidence interval of 1.96^2 = 3.84. Clearly this can't be correct, since the upper and lower CI are identical and the lower CI is higher than the mean. By contrast, if we do this transformation numerically
+
+```{r}
+par(mfrow=c(2,1))
+x = rnorm(10000,0,1)
+y = x^2
+
+hist(x,main="Original distribution",breaks=40)
+abline(v=quantile(x,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(x),col="red",lwd=3,lty=3)
+
+hist(y,main="Transformed distribution",breaks=40)
+abline(v=quantile(y,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(y),col="red",lwd=3,lty=3)
+```
+
+The Monte Carlo estimate is that the mean is `r mean(y)`, the median is `r median(y)`, and the 95% CI is `r quantile(y,c(0.025,0.975))`.
+
+It turns out that this specific transformation (x^2 of a standard Normal), has a well known analytical solution -- a Chi-squared distribution with one degee of freedom, so in this case we can compare the numerical approximation with the exact solution. This Chi-squared has a mean of 1, a median of `r qchisq(0.5,1)` and a 95% CI of `r qchisq(c(0.025,0.975),1)`. 
+
+### Problems
+
+3. Numerically transform a lognormal(meanlog=0,sdlog=0.05) through exp(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+
+4. The previous problem can be interpreted as simulating exponential growth one time step ahead with uncertainty in the initial condition. Explain how you would continue the simulation two more time-steps into the future.
+
+Parameter error
+---------------
+
+We next want to use the Monte Carlo approach to account for parameter uncertainty in the logistic regression
+
+To begin, we need to add parameters that describe our uncertainty in parameters and specify the size of the simulation
+```{r}
+r.sd = 0.2     ## standard deviation on r
+K.sd = 1.0     ## standard deviation on K
+NE = 1000      ## Ensemble size
+```
+
+Next, we need to run the Monte Carlo simulation for the logistic. In this case we'll be running the logistic growth model 1000 times, each time with slightly different parameters. We'll then store all 1000 trajectories in a matrix. In effect, we'll be estimating our probability distributions and all of our summary statistics from a sample of lines, rather than a sample of points as we did in the previous example.
+
+
+```{r}
+n = matrix(n0,NE,NT)   # storage for all simulations
+rE = rnorm(NE,r,r.sd)  # sample of r
+KE = rnorm(NE,K,K.sd)  # sample of K
+for(i in 1:NE){        # loop over samples
+  for(t in 2:NT){      # for each sample, simulate throught time
+    n[i,t] = n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i])
+  }
+}
+```
+
+Next we'll use *apply* to calculate the median and CI for each time point.
+```{r}
+n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+```
+
+Unfortunately, R doesn't have a built in function for plotting shaded CI on time-series plots, so we'll define one. Unlike plot, which just takes x and y as arguements, this function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+```{r}
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+  ylo[1])), border = NA,...) 
+}
+```
+
+### Problems
+
+5. Plot histograms of the samples of r and K used for the simulation.
+
+6. Plot a sample of 10 different trajectories from your ensemble (on one graph).
+
+7. Plot a histogram of your population forecast at time = 15.
+
+8. Plot the median trajectory and 95% CI.
+
+9. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
+
+Extra Credit: Initial conditions
+--------------------------------
+
+The approach for simulating uncertainty in the initial conditions is very similar to the approach used for the parameter uncertainty.  As in Chapter 2, we'll assume that the initial condition is distributed as a lognormal to ensure that we never draw negative values. For this example we'll assume a standard deviation of 0.6 and an intrinsic growth rate of 0.3
+
+```{r}
+r = 0.3
+n0.sd = 0.6
+n0s = rlnorm(NE,log(n0),n0.sd)
+n = matrix(n0s,NE,NT)
+for(i in 1:NE){
+  for(t in 2:NT){
+    n[i,t] = n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K)
+  }
+}
+```
+
+### Problems
+
+10. Plot the median & 95% interval.
+
+11. Repeat with r equal to 1.95, 2.05, and 2.8
+
+
+

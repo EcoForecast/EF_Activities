@@ -1,0 +1,275 @@
+Exercise 3: Tools for big data
+========================================================
+
+The objective of today's exercise is to provide a quick introduction to some common tools for dealing with big data. For each tool we are just using the most basic syntax and you are encouraged to go back and read the help for each at a later date. This exercise also focuses on "general purpose" tools. There are a multitude of R libraries available for accessing specific data sources and web services. A quick summary of some of these is available at http://ropensci.org/blog/2013/09/11/taskview. In addition, a Google search on many of the tools and topics covered in lecture will provide a lot of additional info on big data tools outside of R.
+
+Note: The code in this exercise will download data off the web dynamically, which can take some time, so try to "knit" infrequently.
+
+
+```{r,echo=FALSE}
+## since libraries will be pulled, make sure repository is set
+if(is.null(getOption("repos"))) option(repos = "http://cran.us.r-project.org")
+```
+
+Pulling data directly off the web
+---------------------------------
+
+In the previous exercises we loaded data into R using functions like read.csv. However, it is also possible to read data into R directly off the web by passing a web address to the file name. For smaller files that are quick to load this approach can ensure that the script is always operating with the most up-to-date version of a data file. 
+
+```{r}
+gflu = read.csv("http://www.google.org/flutrends/us/data.txt",skip=11)
+time = as.Date(gflu$Date)
+plot(time,gflu$Boston..MA,type='l')
+```
+
+That said, for publication purposes it is usually important to save the data that you used for an analysis, and that the date of access is recorded (and version number if available), as some datasets are subject to frequent revision.
+
+In this example, the file in question has an extensive header, which we skip during the load of the data, but as with any dataset, this metadata is important to read before using the data.
+
+```
+Google Flu Trends - United States
+Copyright 2013 Google Inc.
+
+Exported data may be used for any purpose, subject to the Google Terms of Service (http://www.google.com/accounts/TOS?hl=en_US).
+If you choose to use the data, please attribute it to Google as follows: "Data Source: Google Flu Trends (http://www.google.org/flutrends)".
+
+Each week begins on the Sunday (Pacific Time) indicated for the row.
+Data for the current week will be updated each day until Saturday (Pacific Time).
+Note: To open these files in a spreadsheet application, we recommend you save each text file as a CSV spreadsheet.
+For more information, please visit http://www.google.org/flutrends
+```
+
+**Question 1:**
+
+Using the US Forest Service's Forest Inventory and Analysis (FIA) data set, plot the rank vs log(abundance) curve for tree seedling counts from Rhode Island. Data is available at http://apps.fs.fed.us/fiadb-downloads/RI_SEEDLING.CSV and the relevant columns are TREECOUNT (raw seedling counts) and SPCD (species codes). 
+Hints: tapply, sum, na.rm=TRUE, sort, decreasing=TRUE, log='y'
+
+
+Web Scraping
+------------
+
+Often the data that we want to use from the web has been formatted in HTML for human-readability rather than in tab- or comma-delimited files for inport and export. The process of extracting data from webpages has been dubbed **scraping**. For these sorts of more complex problems we can use the RCurl library to grab HTML or XML structured content directly off the web, and then use the XML library to parse the markup into more standard R data objects. In the example below we grab yield data for Switchgrass from a site in central Illinois off the Biofuel Ecophysiological Traits and Yield database (http://betydb.org), a biofuel data clearinghouse that my lab started in 2008. In this particular case, if you visit the URL given below the data is also available as a CSV, which you can use to check that we 'scraped' the data correctly
+
+```{r}
+# Install RCurl if necessary
+pkg = rownames(installed.packages())
+if(!("RCurl" %in% pkg)){
+  install.packages("RCurl", dependencies = TRUE)
+}
+library("RCurl")
+
+# Install the XML package if necessary
+if(!("XML" %in% pkg)){
+  install.packages("XML", dependencies = TRUE)
+}
+library("XML")
+
+nu <- function(x){as.numeric(as.character(x))}  ## simple function to convert data to numeric
+
+yield_html <- getURL("https://www.betydb.org/maps/yields?site=783")  ## grab raw html
+yield_table = readHTMLTable(yield_html)[[1]]    ##grab first table on the webpage
+yield_table = within(yield_table,{              ## convert numeric rows
+  Mean = nu(Mean)
+  N = nu(N)
+  Stat = nu(Stat)
+})
+
+hist(yield_table$Mean)                          ## plot a histogram of yields
+```
+
+
+**Question 2:**
+What fraction of the state-level files in the FIA database at http://apps.fs.fed.us/fiadb-downloads/datamart.html were created before 2011/1/1 ?  hint: this is the 6th table on the page
+
+grep, system, RegExp
+--------------------
+
+`grep` is a handy little _command prompt_ function that returns lines from a file that match a search string. I continue to use this 'old school' utility on a daily basis to help manage code and data because this simple little search continues to be able to perform actions that elude newer search software:
+
+- `grep` looks within files, but is able to search across file and recursively within a directory structure. I use this constantly to follow variables or functions through complex code. For example, if I wanted to find uses of the term _fia_ in my current directory and all subdirectories I could type
+
+```
+grep -ir "fia" .
+```
+
+here the -i means ignore case when searching, the -r means to search recursively through subdirectories, and the `.` means to start from the current directory. Used in this way grep can help you quickly find your way through new and complex code, iteratively hopping through the code from one search to another. It is also extremely helpful in debugging, when a program returns a cryptic error message and you want to find _where_ in the code that message was generated.
+
+- `grep` returns the full lines/rows that match a search, allowing one to quickly and easily subset large datasets into smaller files and/or merge subsets across different files.
+
+- `grep` supports **Regular Expressions**, both within the search itself and in the set of filenames searched. For example, if we wanted to find all lines that contain 'fia', in all the `.Rmd` files in the current directory we could type
+
+```
+grep -ir 'fia' *.Rmd
+```
+
+where the * means 'match zero or more occurances of any character', in this case preceeding .Rmd (the zero part means this would match a file just named .Rmd). If I just wanted to find instances where `fia` is at the start of the line I could use the `^` to indicate the beginning of the line
+```
+grep -ir '^fia' *.Rmd
+```
+
+If I instead wanted just instances where `fia` is followed immediately by another letter I could use [a-z] to match just letters in the English alphabet.
+```
+grep -ir 'fia[a-z]' *.Rmd
+```
+or I could be more specific an just look for specific letters, e.g. fia[fds] would match fiaf, fiad, and fias. A full description of regular expressions is beyond the scope of this tutorial, and RegExp statements for matching complex patterns can quickly become cryptic, so following up on this further is left to the reader.
+
+
+There are often times when working in R that one needs to run another command, script, or piece of software that is external to R. If I'm working in an R script want the operating system to run a command I can do this with the `system` command
+
+```{r}
+system('grep -ir "fia" *.Rmd')
+```
+
+Furthermore, often we want to capture the output of that command directly into R, which we can do using the `intern` flag:
+
+```{r}
+fia.lines = system('grep -ir "fia" *.Rmd',intern=TRUE)
+fia.lines[1:3]
+```
+
+Finally, it is also worth mentioning that R has its own, internal, version of grep that can be useful for searching and subsetting data and which also supports RegExp. Unlike the command-line version of grep, this function returns the row numbers matching the search string. In the example below we use the function readLines to read unstructured text in as vector of strings, one corresponding to each row in a file. It also demonstrates the function `sub`, which is related to grep but which substitutes the matching string rather than just finding it.
+
+```{r}
+myCode = readLines("Exercise03_BigData.Rmd")  ## read unstructured text
+x = grep("RI",myCode)    ## returns the line numbers that include the string 'RI'
+myCode[x]
+sub("RI","VT",myCode[x])  ## substitute VT for RI
+```
+
+
+**Question 3:** Within the object myCode, find all the lines that begin with the comment character, #.
+
+
+netCDF, wget
+------------
+
+In this section I want to introduce another command-line utility, wget, which can be used to pull files and content off the web, and to demonstrate how netCDF can be used in R. For this example we will be using data from the WLEF eddy-covariance tower located in northern Wisconsin. Unlike most flux towers, WLEF is a "tall-tower" -- it's actually a 440m TV antenna -- which means that it integrates over a much larger footprint than most towers. Indeed, the tower is instrumented at multiple heights. First, let's make sure the netCDF library is installed
+
+```{r}
+## make sure that netCDF is installed
+if(!("ncdf" %in% rownames(installed.packages()))){
+  install.packages("ncdf", dependencies = TRUE)
+}
+library(ncdf)
+```
+
+Next, let's use wget to grab the data off the web. A few notes: 1) wget could be used from command line rather than as a system command;  2) if you don't have wget installed, use your web browser
+
+```{r}
+system("wget http://flux.aos.wisc.edu/data/cheas/wlef/netcdf/US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
+```
+
+Next, lets open the file and look at what it contains
+```{r}
+## open the netCDF file
+wlef = open.ncdf("US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
+print.ncdf(wlef)    ## metadata
+```
+
+To start, lets look at the CO2 flux data, NEE_co2, which we see is stored in a matrix that has dimensions of [level2,time], where here level2 refers to the different measurements heights. If we want to grab this data and the vectors describing the dimensions we can do this as:
+
+```{r}
+NEE = get.var.ncdf(wlef,"NEE_co2")    ## NEE data
+
+## matrix dimensions
+height = get.var.ncdf(wlef,"M_lvl")  
+doy = get.var.ncdf(wlef,"time")  # day of year
+```
+
+Finally, we can plot the data at the different heights. Since this flux data is recorded hourly the raw data is a bit of a cloud, therefore we use the function `filter` to impose a 24 hour moving window, which is indicated in the function as a vector of 24 weights, each given an equal weight of 1/24. 
+
+```{r}
+## print fluxes at 3 different heights
+par(mfrow=c(3,1))
+for(i in 1:3){
+plot(doy,filter(NEE[i,],rep(1/24,24)),type='l',main=paste("Height =",height[i],"m"))
+}
+```
+
+**Question 4:** Plot the methane flux timeseries with a 12 hour filter.
+
+
+SOAP
+----
+
+In addition to data that is directly downloadable, and that which is scraped, there are a number of places on the web where data is available though interactive webservices. One standard protocol for such data sharing is the Simple Object Acces Protocol (SOAP). In this example we will be using SOAP to access the NASA MODIS server, and rather than using the generic SOAP library we'll use a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
+
+While it is possible to grab MODISTools off of CRAN directly, in this example I wanted to show that it is also simple to pull R packages out of code development repositories, such as github, which we'll talk more about next week.
+
+```{r}
+pkg = rownames(installed.packages())
+if(!("devtools" %in% pkg)){
+  install.packages("devtools",dependencies=TRUE)
+}
+library("devtools")
+
+if(!("MODISTools" %in% pkg)){
+  install_github("MODISTools","seantuck12")  ## arguements are the library name and the username of the developer
+}
+library("MODISTools")
+```
+
+Next, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product (its definition, calculation, units, and missing data string) is available at https://lpdaac.usgs.gov/products/modis_products_table
+
+```{r}
+GetProducts()
+GetBands(Product="MOD13Q1")
+```
+
+Next, lets grab the data for a specific band (EVI) within a specific product (MOD13Q1). We'll focus on the location of the WLEF flux tower and look at the same year as we did with the flux data (2012). The argument Size defines the dimensions of the box grabbed in terms of distance (in kilometers) outward from the center. Note that in practice we would also want to query the QAQC data for this variable, `250m_16_days_VI_Quality`, as well and use it to screen the data.
+
+```{r}
+MODISSubsets(data.frame(lat=46.0827,long=-89.9792,start.date=2012,end.date=2012),
+  Product="MOD13Q1",Bands="250m_16_days_EVI",Size=c(1,1),StartDate=TRUE)
+```
+
+This function doesn't load the data directly into R, but instead saves it to your computer, so next we need to load the data.
+
+```{r}
+MODIS = read.csv(list.files(pattern=".asc")[1],header=FALSE,as.is=TRUE,na.string="-3000")
+```
+
+The data is arranged with the rows being the dates, the first 5 columns being the metadata, and the remaining columns being the observations. Here we extracted a 250m data products and looked +/ 1km in both directions, which gives us a 9x9 area and thus 81 data rows (and 86 rows total). For this example lets average over the spatial data and just generate a time-series of EVI. Also, lets extract the year (%Y) and day of year (%j) from column 3 and convert these to observation dates.
+
+```{r}
+EVI = apply(MODIS[,6:ncol(MODIS)],1,mean,na.rm=TRUE)*0.0001
+time = as.Date(substr(MODIS[,3],2,8),format="%Y%j")
+```
+
+**Question 5:** Plot EVI versus time and compare to the CO2 and CH4 flux observations.
+
+cron
+----
+
+The last topic I wanted to touch on isn't for data processing per se, but is handy for scheduling the automatic execution of tasks, and thus is frequently used in dynamic big data problems where new data is arriving on a regular basis and analyses need to be updated. An obvious example in the context of this course would be a forecast that would be updated on a daily or weekly basis. [note: like grep, cron is a *nix utility, so will run on linux, unix, and Mac OS, but not Windows].
+
+cron jobs are specified in the cron table using the function `crontab` with takes the arguements -l to list the current contents or -e to edit the contents. The file contains a header component that allows us to specify information such as the shell used (SHELL=), path variables (PATH=), who to email job status updates (MAILTO=), and the directory to start from (HOME=), each on a separate line. Below the header is the table of the cron jobs themselves. A cron job consists of two components, the scheduling information and the command/script/program to be run. Lets take a look at a simple cron table
+
+```
+MAILTO=dietze@bu.edu
+55 */2 * * * /home/scratch/dietze_lab/NOMADS/get_sref.sh
+```
+The last part of this is the easiest to explain -- we're starting a script called get_sref from the NOMADS folder. NOMADS is the NOAA met server and SREF is one of their weather forecast products, so it should come as no surprise that this script is grabbing the numerical weather forecast.  The first part of the script is more cryptic, but the five values given correspond to:
+
+```
+minute  This controls what minute of the hour the command will run on,
+	 and is between '0' and '59'
+hour	This controls what hour the command will run on, and is specified in
+         the 24 hour clock, values must be between 0 and 23 (0 is midnight)
+dom	This is the Day of Month, that you want the command run on, e.g. to
+	 run a command on the 19th of each month, the dom would be 19.
+month	This is the month a specified command will run on, it may be specified
+	 numerically (0-12), or as the name of the month (e.g. May)
+dow	This is the Day of Week that you want a command to be run on, it can
+	 also be numeric (0-7) or as the name of the day (e.g. sun).
+```
+Values that are not specified explicitly are filled in with a *. Also, it is possible to specify lists (e.g. 0,6,12,18) or to specify a repeat frequency using a /. Thus the above example is set to run every other hour (/2) at 55 min past the hour.
+
+**Question #6:**
+
+Imagine you are working with the full FIA database and want to ensure that the data you are using is always up to date. However, the total size of the database is large, the USFS server is slow, and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
+
+* Write out the pseudocode/outline for how to keep the files up to date
+* Write out what the cron table would look like to schedule this job (assume the update only needs to be done weekly)
+
+
