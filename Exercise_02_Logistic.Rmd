@@ -1,6 +1,8 @@
 Exercise 2: From Models to Forecasts
 ========================================================
 
+Note: This activity supplements material in Ecological Forecasting Chapter 2 "From Models to Forecasts" As a class activity, please turn in answers in Rmd format.
+
 Simulating the discrete-time logistic
 -------------------------------------
 
@@ -172,8 +174,6 @@ It turns out that this specific transformation (x^2 of a standard Normal), has a
 
 3. Numerically transform a lognormal(meanlog=0,sdlog=0.05) through exp(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
 
-4. The previous problem can be interpreted as simulating exponential growth one time step ahead with uncertainty in the initial condition. Explain how you would continue the simulation two more time-steps into the future.
-
 Parameter error
 ---------------
 
@@ -215,15 +215,15 @@ ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
 
 ### Problems
 
-5. Plot histograms of the samples of r and K used for the simulation.
+4. Plot histograms of the samples of r and K used for the simulation.
 
-6. Plot a sample of 10 different trajectories from your ensemble (on one graph).
+5. Plot a sample of 10 different trajectories from your ensemble (on one graph).
 
-7. Plot a histogram of your population forecast at time = 15.
+6. Plot a histogram of your population forecast at time = 15.
 
-8. Plot the median trajectory and 95% CI.
+7. Plot the median trajectory and 95% CI.
 
-9. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
+8. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
 
 Extra Credit: Initial conditions
 --------------------------------
@@ -244,9 +244,9 @@ for(i in 1:NE){
 
 ### Problems
 
-10. Plot the median & 95% interval.
+9. Plot the median & 95% interval.
 
-11. Repeat with r equal to 1.95, 2.05, and 2.8
+10. Repeat with r equal to 1.95, 2.05, and 2.8
 
 
 
