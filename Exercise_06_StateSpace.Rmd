@@ -109,7 +109,7 @@ cor(out[,1:2])
 Assignment:
 -----------
 
-Convert 6 out of every 7 observations to NA (i.e. pretend the observations are weekly) and refit the model. 
+In order to look at how observation frequency affects data assimilation, convert 3 out of every 4 observations to NA (i.e. treat the data as approximately monthly) and refit the model. 
 
 * Generate a time-series plot for the CI of x that includes the observations (as above). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
 * Compare the CI between the two runs.
