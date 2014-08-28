@@ -112,7 +112,6 @@ abline(h=-1,col=3)
 It should be readily apparent that the quantile function is the inverse of the CDF.  This function can be used to find the median of the distribution (p = 0.5) or to estimate confidence intervals at any level desired.
 
 ```{r}
-par(mfrow=c(2,1))  		# set the plot to have two rows and 1 column
 qnorm(c(0.025,0.975),0,1)		# what width CI is specified by these values?
 plot(p,qnorm(p,0,1),type='l',ylim=range(x))
 abline(v=c(0.025,0.975),lty=2)	# add vertical lines at the CI
@@ -124,7 +123,6 @@ abline(v=qnorm(c(0.025,0.975)),lty=2)
 Finally, let's investigate the rnorm function for generating random numbers that have a normal distribution.  Here we generate histograms that have a progressively larger sample size and compare that to the actual density of the standard normal.  
 
 ```{r}
-par(mfrow=c(2,2))  	# set up a plot with 2 rows and 2 columns
 n = c(10,100,1000,10000)	# sequence of sample sizes
 for(i in 1:4){			# loop over these sample sizes
   hist(rnorm(n[i]),main=n[i],probability=TRUE,breaks=40)  
@@ -153,7 +151,6 @@ The previous example of approximating the Normal distribution with a histogram o
 To illustrate this point, consider the function x^2 and a standard Normal distribution (mean = 0, sd = 1). Now if we ignore Jensen's Inequality and tranforme the mean and 95% CI we'd end up with a probability distribution that has a mean of 0^2 = 0, a lower confidence interval of -1.96^2 = 3.84 and an upper confidence interval of 1.96^2 = 3.84. Clearly this can't be correct, since the upper and lower CI are identical and the lower CI is higher than the mean. By contrast, if we do this transformation numerically
 
 ```{r}
-par(mfrow=c(2,1))
 x = rnorm(10000,0,1)
 y = x^2
 
