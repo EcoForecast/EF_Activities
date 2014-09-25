@@ -1,14 +1,32 @@
 Exercise 3: Tools for big data
 ========================================================
 
-The objective of today's exercise is to provide a quick introduction to some common tools for dealing with big data. For each tool we are just using the most basic syntax and you are encouraged to go back and read the help for each at a later date. This exercise also focuses on "general purpose" tools. There are a multitude of R libraries available for accessing specific data sources and web services. A quick summary of some of these is available at http://ropensci.org/blog/2013/09/11/taskview. In addition, a Google search on many of the tools and topics covered in lecture will provide a lot of additional info on big data tools outside of R.
+The objective of today's exercise is to provide a quick introduction to some common tools for dealing with big data. For each tool we are just using the most basic syntax and you are encouraged to go back and read the help for each at a later date. This exercise also focuses on "general purpose" tools. There are a multitude of R libraries available for accessing specific data sources and web services. A quick summary of some of these is available at http://cran.r-project.org/web/views/WebTechnologies.html. In addition, a Google search on many of the tools and topics covered in Chapters 3 and 4 will provide a lot of additional info on big data tools outside of R.
 
 Note: The code in this exercise will download data off the web dynamically, which can take some time, so try to "knit" infrequently.
-
 
 ```{r,echo=FALSE}
 ## since libraries will be pulled, make sure repository is set
 if(is.null(getOption("repos"))) option(repos = "http://cran.us.r-project.org")
+get.pkg <- function(pkg){
+  loaded <- do.call("require",list(package=pkg))
+  if(!loaded){
+    print(paste("trying to install",pkg))
+    install.packages(pkg,dependencies=TRUE)
+    loaded <- do.call("require",list(package=pkg))
+    if(loaded){
+      print(paste(pkg,"installed and loaded"))
+    } 
+    else {
+      stop(paste("could not install",pkg))
+    }    
+  }
+}
+get.pkg("RCurl")
+get.pkg("XML")
+get.pkg("ncdf")
+get.pkg("devtools")
+get.pkg("MODISTools")
 ```
 
 Pulling data directly off the web
@@ -51,19 +69,6 @@ Web Scraping
 Often the data that we want to use from the web has been formatted in HTML for human-readability rather than in tab- or comma-delimited files for inport and export. The process of extracting data from webpages has been dubbed **scraping**. For these sorts of more complex problems we can use the RCurl library to grab HTML or XML structured content directly off the web, and then use the XML library to parse the markup into more standard R data objects. In the example below we grab yield data for Switchgrass from a site in central Illinois off the Biofuel Ecophysiological Traits and Yield database (http://betydb.org), a biofuel data clearinghouse that my lab started in 2008. In this particular case, if you visit the URL given below the data is also available as a CSV, which you can use to check that we 'scraped' the data correctly
 
 ```{r}
-# Install RCurl if necessary
-pkg = rownames(installed.packages())
-if(!("RCurl" %in% pkg)){
-  install.packages("RCurl", dependencies = TRUE)
-}
-library("RCurl")
-
-# Install the XML package if necessary
-if(!("XML" %in% pkg)){
-  install.packages("XML", dependencies = TRUE)
-}
-library("XML")
-
 nu <- function(x){as.numeric(as.character(x))}  ## simple function to convert data to numeric
 
 yield_html <- getURL("https://www.betydb.org/maps/yields?site=783")  ## grab raw html
@@ -143,17 +148,7 @@ sub("RI","VT",myCode[x])  ## substitute VT for RI
 netCDF, wget
 ------------
 
-In this section I want to introduce another command-line utility, wget, which can be used to pull files and content off the web, and to demonstrate how netCDF can be used in R. For this example we will be using data from the WLEF eddy-covariance tower located in northern Wisconsin. Unlike most flux towers, WLEF is a "tall-tower" -- it's actually a 440m TV antenna -- which means that it integrates over a much larger footprint than most towers. Indeed, the tower is instrumented at multiple heights. First, let's make sure the netCDF library is installed
-
-```{r}
-## make sure that netCDF is installed
-if(!("ncdf" %in% rownames(installed.packages()))){
-  install.packages("ncdf", dependencies = TRUE)
-}
-library(ncdf)
-```
-
-Next, let's use wget to grab the data off the web. A few notes: 1) wget could be used from command line rather than as a system command;  2) if you don't have wget installed, use your web browser
+In this section I want to introduce another command-line utility, wget, which can be used to pull files and content off the web, and to demonstrate how netCDF can be used in R. For this example we will be using data from the WLEF eddy-covariance tower located in northern Wisconsin. Unlike most flux towers, WLEF is a "tall-tower" -- it's actually a 440m TV antenna -- which means that it integrates over a much larger footprint than most towers. Indeed, the tower is instrumented at multiple heights. First, let's use wget to grab the data off the web. A few notes: 1) wget could be used from command line rather than as a system command;  2) if you don't have wget installed, use your web browser
 
 ```{r}
 system("wget http://flux.aos.wisc.edu/data/cheas/wlef/netcdf/US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
@@ -194,21 +189,12 @@ SOAP
 
 In addition to data that is directly downloadable, and that which is scraped, there are a number of places on the web where data is available though interactive webservices. One standard protocol for such data sharing is the Simple Object Acces Protocol (SOAP). In this example we will be using SOAP to access the NASA MODIS server, and rather than using the generic SOAP library we'll use a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
 
-While it is possible to grab MODISTools off of CRAN directly, in this example I wanted to show that it is also simple to pull R packages out of code development repositories, such as github, which we'll talk more about next week.
-
-```{r}
-pkg = rownames(installed.packages())
-if(!("devtools" %in% pkg)){
-  install.packages("devtools",dependencies=TRUE)
-}
-library("devtools")
-
-if(!("MODISTools" %in% pkg)){
-  install_github("MODISTools","seantuck12")  ## arguements are the library name and the username of the developer
-}
-library("MODISTools")
+While it is possible to grab MODISTools off of CRAN directly, it is also simple to pull R packages out of code development repositories, such as Github using the devtools library. This is useful because not all R Packages are on CRAN, and even when they are there are sometimes features in the development branch of a tool that are not in the released version. In this example the second argument is the GitHub project or user that's hosting the code.
+```
+install_github("MODISTools","seantuck12") 
 ```
 
+  ## arguements are the library name and the username 
 Next, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product (its definition, calculation, units, and missing data string) is available at https://lpdaac.usgs.gov/products/modis_products_table
 
 ```{r}
