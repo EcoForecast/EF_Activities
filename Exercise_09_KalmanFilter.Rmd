@@ -134,7 +134,7 @@ With the KF function defined, we need to define the inputs to the function and c
 Y   = log10(y)
 
 ## load parameters (assume known)
-load("KFalpha.params.Rdata")
+load("data/KFalpha.params.Rdata")
 
 ## options for process model 
 alpha = 0       ## assume no spatial flux
