@@ -170,7 +170,7 @@ Now we're ready to produce our initial ensemble forecast for the system. to do t
 
 ```{r}
 ## default simulation
-nt = length(time) #800 # production run should be length(time)
+nt = 800 # production run should be length(time)
 output = array(0.0,c(nt,ne,12))
 for(t in 1:nt){
   output[t,,]=as.matrix(SSSEM(X,params,inputs[t,]))
