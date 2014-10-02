@@ -1,7 +1,7 @@
 Particle Filter
 ========================================================
 
-In today's exercise we're going to explore the use of the particle filter to constrain a simple ecosystem model. In keeping with our discussion of Quaife et al 2008, we're going to focus on the Metolius Ameriflux sites in Oregon. Specifically, we'll be looking at the Metolius Intermediate Pine site (US-ME2) http://ameriflux.ornl.gov/fullsiteinfo.php?sid=88 but unlike Quaife, who used a Radiative transfer model to directly assimilate MODIS reflectance, we will be working with derived MODIS data product, LAI. In the code below we will perform three analyses:
+In today's exercise we're going to explore the use of the particle filter to constrain a simple ecosystem model. In keeping with our discussion of Quaife et al 2008, we're going to focus on the Metolius Ameriflux sites in Oregon. Specifically, we'll be looking at the Metolius Intermediate Pine site (US-ME2) http://ameriflux.ornl.gov/fullsiteinfo.php?sid=88 but unlike Quaife, who used a Radiative transfer model to directly assimilate MODIS reflectance, we will be working with a derived MODIS data product, LAI. In the code below we will perform three analyses:
 
 1) Run an ensemble forecast for one year
 2) Use a particle filter to analyse the existing ensemble based on MODIS LAI
@@ -9,7 +9,7 @@ In today's exercise we're going to explore the use of the particle filter to con
 
 The code below is longer than most assignments, but this not due to the complexity of the PF itself. Rather, we will spend a decent amount of code on defining the model, defining the initial conditions, and defining the prior distributions for the model parameters. 
 
-The initial code is set up to run with a small ensemble size (ne=10) and short time (nt=800) to allow you to be able to "Knit" this document. The final run should be conducted with a decently large ensemble (500-5000 depending on what your computer can handle) and be for the full year (nt = length(time). Since this requires large simulation, turn in the final HTML, not the Rmd, and feel free to answer questions separately (e.g. in email or another doc) so you don't have to run a second time to include your answers. Alternatively, you could run the analysis block-by-block and cut-and-paste the figures into a separate document.
+The initial code is set up to run with a small ensemble size (ne=10) and short time (nt=800) to allow you to be able to "Knit" this document. **The final run should be conducted with a decently large ensemble (500-5000 depending on what your computer can handle) and be for the full year (nt = length(time). Since this requires large simulation, turn in the final HTML, not the Rmd, and feel free to answer questions separately (e.g. in email or another doc) so you don't have to run a second time to include your answers.** Alternatively, you could run the analysis block-by-block and cut-and-paste the figures into a separate document.
 
 In addition to getting this code to run, your assignment is:
 
@@ -21,15 +21,33 @@ In addition to getting this code to run, your assignment is:
 Super Simple Stochastic Ecosystem Model
 ---------------------------------------
 
-Let's begin by definining our model itself, as well as a number of ancillary functions that will be useful in simulation and analysis. The model below is very simple but is complex enough to have some chance at capturing observed variability. In addition, unlike other ecosystem models, it contains process variability built in from the bottom up. The model has three state variables (X) that are all expressed in terms of carbon (Mg/ha): Leaf Biomass, Non-leaf Plant Biomass (wood, roots, etc), and soil organic matter (SOM). The model also only has two drivers: photosynthetically active radiation (PAR), and air temperature. First, from Leaf Biomass we estimate LAI based on SLA. Using LAI and light we estimate GPP using a simple light use efficiency approach, which is assumed to have lognormal process error with error $tau_GPP$. GPP is partitioned to autotrophic respiration (Ra), leaf NPP, and woody NPP according to partitioning coefficients that vary according to a Dirichlet distribution (the multivariate generalization of the Beta). Heterotrophic respiration is assumed to follow a standard Q10 formulation and to have lognormal processes error, $tau_Rh$. Finally, biomass turns over from the leaf and woody pools (i.e. litter and Coarse Woody Debris) according to a Beta distributed fraction. Overall, the model outputs a dozen variables: leaf Biomass, wood Biomass, Soil Organic Matter,LAI,NEP,GPP,Ra,NPPw,NPPl,Rh,litter,CWD")
+Let's begin by definining our model itself, as well as a number of ancillary functions that will be useful in simulation and analysis. The model below is very simple but is complex enough to have some chance at capturing observed variability. In addition, unlike other ecosystem models, it contains process variability built in from the bottom up. The model has three state variables (X) that are all expressed in terms of carbon (Mg/ha): Leaf Biomass, Non-leaf Plant Biomass (wood, roots, etc), and soil organic matter (SOM). The model also only has two drivers: photosynthetically active radiation (PAR), and air temperature. First, from Leaf Biomass we estimate LAI based on SLA. Using LAI and light we estimate GPP using a simple light use efficiency approach, which is assumed to have lognormal process error with error $tau_GPP$. GPP is partitioned to autotrophic respiration (Ra), leaf NPP, and woody NPP according to partitioning coefficients that vary according to a Dirichlet distribution (the multivariate generalization of the Beta). Heterotrophic respiration is assumed to follow a standard Q10 formulation and to have lognormal processes error, $tau_Rh$. Finally, biomass turns over from the leaf and woody pools (i.e. litter and Coarse Woody Debris) according to a Beta distributed fraction. Overall, the model outputs a dozen variables: leaf Biomass, wood Biomass, Soil Organic Matter,LAI,NEP,GPP,Ra,NPPw,NPPl,Rh,litter,CWD"
 
 ```{r}
+library(compiler)
+
+## reimplimentation of the rdirichlet function from MCMCpack
+## to fix bug in how it handles alpha as a matrix
+rdirichlet.orig = function (n, alpha) 
+{
+    l <- length(alpha)
+    if(is.matrix(alpha)) l <- ncol(alpha) ## fix
+    x <- matrix(rgamma(l * n, alpha), ncol = l)#, byrow = TRUE)
+    sm <- x %*% rep(1, l)
+    return(x/as.vector(sm))
+}
+rdirichlet <- cmpfun(rdirichlet.orig)  ## byte compile to speed up
+
 ## Super Simple Stochastic Ecosystem Model
 ## X = [leaf,wood,som]
 ## timestep is in seconds, defaults to 30 min
-SSSEM <- function(X,params,inputs,timestep=1800){ 
+SSSEM.orig <- function(X,params,inputs,timestep=1800){ 
+  
   ne = nrow(X)  ## ne = number of ensemble members
   
+  ##Unit Converstion: umol/m2/sec to Mg/ha/timestep
+  k = 1e-6*12*1e-6*10000*timestep #mol/umol*gC/mol*Mg/g*m2/ha*sec/timestep
+
   ## photosynthesis
   LAI = X[,1]*params$SLA*0.1  #0.1 is conversion from Mg/ha to kg/m2
   GPP = ifelse(rep(inputs$PAR>1e-20,ne),
@@ -53,21 +71,7 @@ SSSEM <- function(X,params,inputs,timestep=1800){
   return(data.frame(X1=Xnew[,1],X2=Xnew[,2],X3=Xnew[,3],LAI,NEP=GPP-alloc[,1]-Rh,GPP,
                     Ra=alloc[,1],NPPw=alloc[,2],NPPl=alloc[,3],Rh,litter,CWD))
 }
-
-  ##Unit Converstion: umol/m2/sec to Mg/ha/timestep
-timestep = 1800 #seconds
-k = 1e-6*12*1e-6*10000*timestep #mol/umol*gC/mol*Mg/g*m2/ha*sec/timestep
-
-## reimplimentation of the rdirichlet function from MCMCpack
-## to fix bug in how it handles alpha as a matrix
-rdirichlet = function (n, alpha) 
-{
-    l <- length(alpha)
-    if(is.matrix(alpha)) l <- ncol(alpha) ## fix
-    x <- matrix(rgamma(l * n, alpha), ncol = l)#, byrow = TRUE)
-    sm <- x %*% rep(1, l)
-    return(x/as.vector(sm))
-}
+SSSEM <- cmpfun(SSSEM.orig)  ## byte compile the function to make it faster
 
 ciEnvelope <- function(x,ylo,yhi,...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
@@ -78,7 +82,6 @@ col.alpha <- function(col,alpha=1){
   rgb = col2rgb(col)
   rgb(rgb[1],rgb[2],rgb[3],alpha*255,maxColorValue=255)
 }
-
 
 ## weighted quantile
 wtd.quantile <- function(x,wt,q){ 
@@ -93,7 +96,7 @@ Having defined our model, the next step is to define the ensemble size and gener
 
 ```{r}
 #### SET THE ENSEMBLE SIZE
-ne = 200
+ne = 10 ## production run should be 200 - 5000, depending on what your computer can handle
 
 ### Initial State (Mg/ha)
 Bwood = (c(11983,12097)+c(3668,3799)+c(161,192))*1e-6*10000 ## stem+coarse root + fine root, g/m2->Mg/ha
@@ -150,7 +153,7 @@ OK, so now that we have priors on both the initial conditions and parameters, we
 ```{r}
 ## load met data
 require(ncdf)
-met = open.ncdf("AMF_USMe2_2005_L2_GF_V006.nc")
+met = open.ncdf("data/AMF_USMe2_2005_L2_GF_V006.nc")
 print.ncdf(met)
 PAR = get.var.ncdf(met,"PAR")
 for(i in which(PAR < -10)){PAR[i]=PAR[i-1]} ##uber-naive gapfilling
@@ -166,41 +169,40 @@ Now we're ready to produce our initial ensemble forecast for the system. to do t
 
 ```{r}
 ## default simulation
-nt = length(time)
-output = array(NA,c(nt,ne,12))
+nt = 800 # production run should be length(time)
+output = array(0.0,c(nt,ne,12))
 for(t in 1:nt){
   output[t,,]=as.matrix(SSSEM(X,params,inputs[t,]))
   X=output[t,,1:3]
   if((t %% 48) == 0) print(t/48) ## day counter
 }
 
+## average the output to daily
+bin = 86400/timestep
+out.daily = array(0.0,c(365,ne,12))
+for(i in 1:12){
+  out.daily[,,i] <- apply(output[,,i],2,function(x){tapply(x,rep(1:365,each=bin),mean)})
+}
+
 ## Basic time-series visualizations
 varnames <- c("Bleaf","Bwood","BSOM","LAI","NEP","GPP","Ra","NPPw","NPPl","Rh","litter","CWD")
 units <- c("Mg/ha","Mg/ha","Mg/ha","m2/m2","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","Mg/ha/timestep","Mg/ha/timestep")
 for(i in 1:12){
-  ci = apply(output[,,i],1,quantile,c(0.025,0.5,0.975))
+  ci = apply(out.daily[,,i],1,quantile,c(0.025,0.5,0.975))
   plot(ci[2,],main=varnames[i],xlab="time",ylab=units[i],type='l',ylim=range(ci))
-  ciEnvelope(1:nt,ci[1,],ci[3,],col=col.alpha("lightGrey",0.5))
+  ciEnvelope(1:365,ci[1,],ci[3,],col=col.alpha("lightGrey",0.5))
   lines(ci[2,])
 }
 ```
 
-Next, let's load the MODIS LAI data. The code is set up so that if the data has already been downloaded it will skip redownloading the data if the file is present in order to save time.
+Next, let's load the MODIS LAI data.
 
 ```{r}
-## filter with MODIS LAI
-
-## first time run, download MODIS data
-if(length(list.files(pattern=".asc"))==0){
-  library("MODISTools")
-  MODISSubsets(data.frame(lat=44.4523,long=-121.5574,start.date=2000,end.date=2012),
-               Product="MOD15A2",Bands=c("FparLai_QC","LaiStdDev_1km","Lai_1km"),
-               Size=c(1,1),StartDate=TRUE) 
-}
 
 ## open MODIS data and extract remotely-sensed LAI (LAIr), 
 ## the standard deviation, and the QAQC flags 
-MODIS = read.csv(list.files(pattern=".asc")[1],header=FALSE,as.is=TRUE,na.string="-3000")
+MODIS = read.csv("data/Lat44.45230Lon-121.55740Start2000-01-01End2012-12-31_MOD15A2.asc",
+                 header=FALSE,as.is=TRUE,na.string="-3000")
 MODvar = substr(MODIS[,1],43,52)
 Mtime.raw = substr(MODIS[which(MODvar == "Lai_1km"),3],2,8)
 Mtime = as.Date(Mtime.raw,format="%Y%j")
@@ -331,7 +333,6 @@ for(t in 1:nt){
   }
 
 }
-setwd("~/git/EcoForecast/")
 save(output,output.ensemble,LAIlike,hist.params,inputs,file="Ex10.output.RData") 
 
 ## Extract and summarize LAI (pr = PF, resampling)
