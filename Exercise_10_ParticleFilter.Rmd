@@ -117,16 +117,17 @@ Having defined the initial condition state vector, we'll next define the priors 
 ```{r}
 ## ancillary data
 SLA = 1e3/c(114,120) ## m2/kg
-litter = c(71,94)*0.01 ##gC/m2/yr->Mg/ha/yr
+litter = c(71,94)*0.01*3 ##gC/m2/yr->Mg/ha/yr
 
 ### initial params
 timestep = 1800 #seconds
 params = list()
-alloc = matrix(c(0.5,(1-0.315)/2,0.315/2),1) # prior on allocation
+Ra = 0.75
+alloc = matrix(c(Ra,(1-0.315)*Ra,0.315*Ra),1) # prior on allocation
 Neff = matrix(rpois(ne,100),ne) 
 params$falloc = Neff%*%alloc  ## Ra, wood, leaf
 params$SLA = rnorm(ne,mean(SLA),sd(SLA))
-params$alpha = rlnorm(ne,log(0.01),0.05) ## light use efficiency
+params$alpha = rlnorm(ne,log(0.02),0.05) ## light use efficiency
 params$tau.GPP = 1/sqrt(rgamma(ne,10,10*0.2^2)) ## process error in GPP
 params$Q10 = rnorm(ne,2.1,0.1)  ## soil respiration Q10
 params$tau.Rh = 1/sqrt(rgamma(ne,10,10*0.1^2)) ## prior process error in Rh
@@ -169,7 +170,7 @@ Now we're ready to produce our initial ensemble forecast for the system. to do t
 
 ```{r}
 ## default simulation
-nt = 800 # production run should be length(time)
+nt = length(time) #800 # production run should be length(time)
 output = array(0.0,c(nt,ne,12))
 for(t in 1:nt){
   output[t,,]=as.matrix(SSSEM(X,params,inputs[t,]))
