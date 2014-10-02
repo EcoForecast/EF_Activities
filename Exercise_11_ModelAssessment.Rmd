@@ -5,11 +5,17 @@ In this activity we will use a series of visualizations and statistical measures
 
 Let's start by loading the ensemble output from the previous lab and the observed flux data for the site.
 ```{r}
+## load libraries
+library("plotrix")
+library(dplR)
+library(rpart)
+library(randomForest)
+
 ## load SSSEM output
 load("Ex10.output.RData")
 
 ## load flux tower data
-L4 = read.csv("AMF_USMe2_2005_L4_h_V002.txt",header=TRUE,na.strings="-9999")
+L4 = read.csv("data/AMF_USMe2_2005_L4_h_V002.txt",header=TRUE,na.strings="-9999")
 L4[L4==-9999] = NA
 ```
 
@@ -107,12 +113,12 @@ In the section below we calculate the long-term average NEE for each 30 min peri
 
 ```{r}
 ## flux "climatology"
-fluxfiles = dir(pattern="AMF")
+fluxfiles = dir("data",pattern="AMF")
 fluxfiles = fluxfiles[grep("txt",fluxfiles)]
 fluxfiles = fluxfiles[-grep("2005",fluxfiles)]
 clim.NEE = clim.doy = NULL
 for(f in fluxfiles){
-  ff = read.csv(f,header=TRUE,na.strings="-9999")
+  ff = read.csv(file.path("data",f),header=TRUE,na.strings="-9999")
   ff[ff == -9999] = NA
   clim.NEE = c(clim.NEE,ff$NEE_st_fMDS)
   clim.doy = c(clim.doy,ff$DoY)
@@ -125,6 +131,7 @@ stats["RMSE",3]  = sqrt(mean((C-O)^2))
 stats['Bias',3]  = mean(C-O)
 stats['cor',3]   = cor(C,O)
 stats['slope',3] = coef(NEE.clim.fit)[2]
+colnames(stats)[3] <- "clim"
 stats
 plot(C,O,pch=".",xlab="climatology",ylab='observed',main='NEE (umol/m2/sec)')
 abline(0,1,col=2,lwd=2)
@@ -134,6 +141,7 @@ legend("bottomright",legend=c('obs','1:1','reg'),col=1:3,lwd=3)
 ## example cycle
 plot(L4$DoY,-L4$NEE_st_fMDS,xlim=c(200,210),type='l',lwd=2,ylim=c(-10,20),xlab="Day of Year",ylab="NEE")
 lines(L4$DoY,-NEE.clim,col=4,lwd=2,lty=2)
+legend("topright",legend=c("Obs","clim"),lty=1:2,col=c(1,4),lwd=2)
 ```
 
 Question 4: How does the process model perform relative to the average flux data? Which statistics showed the largest differences between the model and climatology? 
@@ -145,7 +153,6 @@ Next, let's use a Taylor diagram to pull our summary statistics together into on
 
 ```{r}
 ## Taylor diagrams
-library("plotrix")
 taylor.diagram(ref=O,model=E,normalize=TRUE,ref.sd=TRUE)
 taylor.diagram(ref=O,model=P,add=TRUE,normalize=TRUE,col=3)
 taylor.diagram(ref=O,model=C,add=TRUE,normalize=TRUE,col=4)
@@ -200,31 +207,30 @@ The diurnal cycle isn't the only, or nessisarily the largest, time scale that th
 
 ```{r}
 ## wavelet
-library(dplR)
 obs = L4$NEE_st_fMDS; obs[qaqc] = 0; obs[is.na(obs)] = 0
 sel = 2:2^floor(log2(length(obs))) - 1
 wt.o = morlet(obs[sel])
-wt.e = morlet(NEE.ens[sel])
+#wt.e = morlet(NEE.ens[sel])
 wt.er = morlet(obs[sel]-NEE.ens[sel])
-wt.cr = morlet(obs[sel]-NEE.clim[sel])
-wavelet.plot(wt.o,add.sig=FALSE,crn.lab="NEE")
-wavelet.plot(wt.e,add.sig=FALSE,crn.lab="NEE")
-wavelet.plot(wt.er,add.sig=FALSE,crn.lab="NEE")
-wavelet.plot(wt.cr,add.sig=FALSE,crn.lab="NEE")
+#wt.cr = morlet(obs[sel]-NEE.clim[sel])
+wavelet.plot(wt.o,add.sig=FALSE,crn.lab="NEE obs")
+#wavelet.plot(wt.e,add.sig=FALSE,crn.lab="NEE ensemble")
+wavelet.plot(wt.er,add.sig=FALSE,crn.lab="NEE model error")
+#wavelet.plot(wt.cr,add.sig=FALSE,crn.lab="NEE clim error")
 ```
 
-Question 8: What time scales dominate the data, the model, and the two residuals? 
+Question 8: What time scales dominate the data? What time scales dominate the model residuals? 
 
 Mining the Residuals
 --------------------
 
 In the final section we'll use a few off-the-shelf data mining approaches to look at the model residuals and ask what parts of our input space are associated with the largest model error. Note that we are not limited to just examining the effects of the model inputs, we might also look at other potential drivers that are not included in our model, such as soil moisture, to ask if model error is associated with our failure to include this (or other) drivers. Alternatively, we could have looked at other factors such as the time of day or even other model variables (e.g. is model error higher when LAI is larger or small?)
 
-Of the many algorithms out there we'll look at three: the Classification and Regression Tree (CART) model, the General Additive Model (GAM), and the Random Forest model. For all we'll define our error metric as $(E-O)/beta$, where beta is the parameter equivalent to the variance in Laplace distribution. Specifically, we're using the heteroskedastic observation error to reweight the residuals to account for the fact that large residuals at times of high flux is likely due to high measurement error. Thus the errors can be interpreted as similar to the number of of standard deviations.
+Of the many algorithms out there we'll look at two: the Classification and Regression Tree (CART) model and the Random Forest model. For both we'll define our error metric as $(E-O)/beta$, where beta is the parameter equivalent to the variance in Laplace distribution. Specifically, we're using the heteroskedastic observation error to reweight the residuals to account for the fact that large residuals at times of high flux is likely due to high measurement error. Thus the errors can be interpreted as similar to the number of of standard deviations.
 
 The CART model is a classification algorithm which will build a tree that discretely classifies when the model has high and low error.
 
-The GAM and Random Forest models are more like response surfaces. The GAM graph will generate a 3D response surface plot, which the Random Forest will generate 'partial dependence' plots, which indicate the importance of each factor across its range, as well as an overall estimate of the importance of each factor in the model error. 
+The Random Forest model is more like a response surface. The Random Forest will generate 'partial dependence' plots, which indicate the importance of each factor across its range, as well as an overall estimate of the importance of each factor in the model error. 
 
 The key thing to remember in all these plots is that we're modelling the RESIDUALS in order to diagnose errors, not modeling the NEE itself.
 
@@ -236,32 +242,15 @@ colnames(x) = c("PAR","temp")
 smp = sample.int(length(err),1000)  ## take a sample of the data since some alg. are slow
 
 ### Classification tree
-library(rpart)
 rpe = rpart(err ~ x)
 plot(rpe)
 text(rpe)
 
-## general additive models
-library(gam)
-library(akima)
-g.e = gam(err ~ x)
-plot(g.e)
-
 ## Random Forest
-library(randomForest)
 rfe = randomForest(x[smp,],abs(err[smp]))
 rfe$importance
 partialPlot(rfe,x[smp,],"PAR")
 partialPlot(rfe,x[smp,],"temp")
-
-### SVM
-library(kernlab)
-threshold = 2.0
-class.err = err < -threshold | err > threshold ## classified error for classification methods
-table(class.err)
-ko = ksvm(x[smp,],y=class.err[smp],type="C-svc")
-plot(ko,data=x,cex=0.5)
-
 ```
 
 Question 9: Overall, which driver is most important in explaining model error? What conditions are most associated with model success? With model failure?  Where do these results reinforce conclusions we reached earlier and where do they shine light on new patterns you may have missed earlier?
