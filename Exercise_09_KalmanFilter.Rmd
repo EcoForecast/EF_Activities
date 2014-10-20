@@ -109,7 +109,7 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
     } else {
       ##if there's no data, the posterior is the prior
       mu.a[,t] = mu.f[,t]
-      P.a[,,t] = P.a[,,t]
+      P.a[,,t] = P.f[,,t]
     }
 
     ## Forecast step: predict to next step from current
