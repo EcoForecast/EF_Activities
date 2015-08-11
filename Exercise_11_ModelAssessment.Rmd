@@ -242,7 +242,11 @@ colnames(x) = c("PAR","temp")
 smp = sample.int(length(err),1000)  ## take a sample of the data since some alg. are slow
 
 ### Classification tree
-rpe = rpart(err ~ x)
+rpb = rpart(err ~ x) ## bias
+plot(rpb)
+text(rpb)
+e2 = err^2
+rpe = rpart(e2 ~ x) ## sq error
 plot(rpe)
 text(rpe)
 
@@ -254,6 +258,83 @@ partialPlot(rfe,x[smp,],"temp")
 ```
 
 Question 9: Overall, which driver is most important in explaining model error? What conditions are most associated with model success? With model failure?  Where do these results reinforce conclusions we reached earlier and where do they shine light on new patterns you may have missed earlier?
+
+Functional Responses
+--------------------
+
+```{r}
+## raw
+plot(inputs$temp[qaqc],O,pch=".",ylab="NEE")
+points(inputs$temp[qaqc],E,pch=".",col=2)
+
+## binned
+nbin = 25
+#PAR = inputs$PAR[qaqc]
+#x = seq(min(PAR),max(PAR),length=nbin)
+Tair = inputs$temp[qaqc]
+xd = seq(min(Tair),max(Tair),length=nbin)
+xmid = xd[-length(xd)] + diff(xd)
+bin = cut(Tair,xd)
+Obar = tapply(O,bin,mean,na.rm=TRUE)
+Ose  = tapply(O,bin,std.error,na.rm=TRUE)
+Ebar = tapply(E,bin,mean,na.rm=TRUE)
+Ese  = tapply(E,bin,std.error,na.rm=TRUE)
+OCI = -cbind(Obar-1.96*Ose,Obar,Obar+1.96*Ose)
+ECI = -cbind(Ebar-1.96*Ese,Ebar,Ebar+1.96*Ese)
+rng = range(rbind(OCI,ECI))
+
+col2=col.alpha("darkgrey",0.9)
+col1=col.alpha("lightgrey",0.6)
+
+plot(xmid,Obar,ylim=rng,type='n',xlab="Air Temperature (C)",ylab="NEP (umol/m2/s)",cex.lab=1.3)
+ciEnvelope(xmid,ECI[,1],ECI[,3],col=col2)
+lines(xmid,ECI[,2],col="white",lwd=4)
+ciEnvelope(xmid,OCI[,1],OCI[,3],col=col1)
+lines(xmid,OCI[,2],col="lightgrey",lwd=4)
+
+legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.7)
+
+
+```
+
+```{r}
+
+### other summary figures to go in multi-panel
+par(mfrow=c(2,2))
+
+## Time-series visualization, daily means
+DoY = floor(L4$DoY-0.02)
+uDoY = sort(unique(DoY))
+i=5
+ci.pf  = apply(apply(output[,,i],2,tapply,DoY,mean),1,mean)
+NEE = -L4$NEE_st_fMDS
+NEEd = tapply(NEE,DoY,mean)
+plot(uDoY,ci.pf,xlab="time",ylab=units[i],type='l',ylim=range(c(ci.pf,NEEd)),cex.lab=1.3)
+points(uDoY,NEEd,col=2,pch="+")
+legend("topright",legend=c("Model","Data"),lty=c(1,NA),pch=c(NA,"+"),col=1:2,cex=1.3)
+
+## predicted vs observed
+plot(NEEd,ci.pf,xlab="Model",ylab="Data",cex.lab=1.3)
+abline(0,1,lty=2,lwd=4)
+abline(lm(ci.pf ~ NEEd),col=2,lwd=3,lty=3)
+legend("topleft",legend=c("1:1","Reg"),lty=2:3,lwd=4,col=1:2,cex=1.3)
+
+## Functional response
+plot(xmid,Obar,ylim=rng,type='n',xlab="Air Temperature (C)",ylab="NEP (umol/m2/s)",cex.lab=1.3)
+ciEnvelope(xmid,ECI[,1],ECI[,3],col=col2)
+lines(xmid,ECI[,2],col="white",lwd=4)
+ciEnvelope(xmid,OCI[,1],OCI[,3],col=col1)
+lines(xmid,OCI[,2],col="lightgrey",lwd=4)
+
+legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.3)
+
+### Classification tree
+par(mar=c(0,0,0,0))
+rpe = rpart(e2 ~ PAR+temp,as.data.frame(x),method="anova") ## sq error
+plot(rpe,margin=0.1)
+text(rpe,cex=1.5)
+
+```
 
 
 
