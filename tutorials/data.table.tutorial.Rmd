@@ -1,0 +1,32 @@
+---
+title: data.table: Data analysis like a boss
+author: Alexey Shiklomanov
+---
+
+# Introduction: All your base are annoying, slow, and large
+
+Compared to other languages, R has good utilities for managing data. Most 
+prominent among these utilities is R's `data.frame` class, which gives you all 
+the basic features you'd want in a data soring class (e.g. row and column 
+names, mixed data types). 
+
+That being said, `data.frame`s are not without their problems, of which I 
+highlight three (SPOILER ALERT: `data.tables` address all of these problems):
+
+1. **The syntax is cumbersome**. At their core, a `data.frame` is just a list 
+   named list of columns where all of the columns happen to be the same length.  
+   This means that for a common data operation like asking
+
+2. **Operations are slow**. As a list of lists, `data.frame` doesn't do 
+   anything to make your data more compact or organized. On the contrary, this 
+   means that accessing data stored in a `data.frame` is inefficient because it 
+   requires multiple searches through individual lists.
+
+3. **Storage is inefficient**. Similarly to the above, there is no compaction 
+   of data, and in fact, I think the data is very slightly enlarged because 
+   it's wrapped in two layers of R's list structure. This quickly becomes a 
+   problem if you have to work with large datasets locally, since this eats up 
+   your computer's RAM and can severely limit the analyses you can do. 
+
+
+# data.table syntax 
