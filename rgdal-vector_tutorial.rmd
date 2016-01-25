@@ -1,0 +1,20 @@
+---
+title: "rgdal - vector tutorial"
+author: "Paulo Arevalo"
+date: "January 25, 2016"
+output: html_document
+---
+
+##Objectives
+
+The objective of this tutorial is to show some basic functionality to the rgdal package to deal with vector data. 
+
+##Installing and loading the library
+The package can be installled and loaded using the following commands. Note that the CRAN mirror is used as an example, but any other mirror can be used. 
+
+```{r, ECHO=false}
+install.packages("rgdal", repos='http://cran.us.r-project.org')
+library(rgdal)
+```
+
+
