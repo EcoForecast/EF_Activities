@@ -7,14 +7,98 @@ output: html_document
 
 ##Objectives
 
-The objective of this tutorial is to show some basic functionality to the rgdal package to deal with vector data. 
+The objective of this tutorial is to show some basic functionality to the rgdal package to deal with vector data in R. This tutorial assumes that GDAL is properly installed in the system. For options depending on which OS you are using, you can check [here](https://trac.osgeo.org/gdal/wiki/DownloadingGdalBinaries) 
 
 ##Installing and loading the library
 The package can be installled and loaded using the following commands. Note that the CRAN mirror is used as an example, but any other mirror can be used. 
 
-```{r, ECHO=false}
+```{r}
 install.packages("rgdal", repos='http://cran.us.r-project.org')
 library(rgdal)
 ```
 
+##Loading an example dataset and obtaining information
+This layer contains polygons with multiple land cover classes. They could be used as training data for land cover classification. We can use the following commands to download the file from Github:
 
+```{r}
+if (file.exists('training_data.shp') == F) {
+    download.file(url = 'https://raw.githubusercontent.com/parevalo/EF_Activities/master/vector/training_data.zip', 
+                  destfile = 'training_data.zip', method = 'auto')
+    unzip('training_data.zip')
+}
+```
+
+In order to read the dataset, we use the `readOGR` function:
+
+```{r}
+training <- readOGR('training_data.shp', layer='training_data')
+```
+
+The function `summary` shows detailed information about the file:
+```{r}
+summary(training)
+```
+
+The file has three fields, corresponding to "id", "class" (which is numerical, for now) and "Comment", which is a string field. You can also see the extent coordinates and the spatial projection. If we only want to see information contained in the attribute table we could use:
+
+```{r}
+head(training@data)
+```
+
+We can also see the overall structure of the file:
+```{r}
+str(training, max.level = 2)
+```
+
+##Modifying data
+We can alter the attribute table almost the same way we would with a regular dataframe:
+```{r}
+lut <- data.frame(classes=c(1,2,3,4,5,6), labels=c("Forest", "Grasslands", "Shrublands", "Croplands", "Secondary", "Water"))
+
+training@data$label <- lut$labels[match(training@data$Class,lut$classes)]
+
+head(training@data)
+```
+
+In this case we created a  new column, and assign it the string values using a lookup table.  
+
+## Reprojection
+
+We can use the function `spTransform` in order to reproject our shapefile to a different coordinate system. In our case, we can reproject from a plane cordinate system to a geographic (lat-long) coordinate system 
+
+```{r}
+training@proj4string # We check the proj. system
+training_wgs84 <- spTransform(training, CRS("+proj=longlat +datum=WGS84")) # Reprojection
+training_wgs84@proj4string # We check the proj. system again
+```
+
+## Plotting
+
+Plotting is very simple, we can use the `plot` command, and color the polygons according to the class they belong to:
+
+```{r}
+plot(training, col=unique(training@data$Class))
+```
+
+We can also plot along with other files, such as a raster stack. First we will download an example raster and then we will do the plotting on top of it. These two files are in the same projection, but reprojection would be needed otherwise.
+
+```{r}
+library(raster)
+if (file.exists('LE70070592003004_clip.tif') == F) {
+    download.file(url='https://raw.githubusercontent.com/parevalo/EF_Activities/master/LE70070592003004_clip.tif',
+                  destfile='LE70070592003004_clip.tif', method='auto')
+}
+
+example_raster <- brick('LE70070592003004_clip.tif')
+
+plotRGB(example_raster, stretch="lin")
+plot(training, col=unique(training@data$Class), add=T)
+```
+
+## Conversion between formats
+
+Conversion to another file format (e.g. KML) is done using the function `writeOGR`:
+
+```{r}
+writeOGR(training_wgs84, dsn = "training_wgs84.kml", layer = training, driver = "KML")
+```
