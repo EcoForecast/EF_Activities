@@ -7,10 +7,10 @@ output: html_document
 
 ##Objectives
 
-The objective of this tutorial is to show some basic functionality to the rgdal package to deal with vector data in R. This tutorial assumes that GDAL is properly installed in the system. For options depending on which OS you are using, you can check [here](https://trac.osgeo.org/gdal/wiki/DownloadingGdalBinaries) 
+The objective of this tutorial is to show some basic functionality of the rgdal package to deal with vector data in R. This tutorial assumes that GDAL is properly installed in the system. For options depending on which OS you are using, you can check [here](https://trac.osgeo.org/gdal/wiki/DownloadingGdalBinaries) 
 
 ##Installing and loading the library
-The package can be installled and loaded using the following commands. Note that the CRAN mirror is used as an example, but any other mirror can be used. 
+The package can be installled and loaded using the following commands. Note that the CRAN mirror is used as an example, but you might want to change it depending on your location. 
 
 ```{r}
 install.packages("rgdal", repos='http://cran.us.r-project.org')
@@ -28,24 +28,24 @@ if (file.exists('training_data.shp') == F) {
 }
 ```
 
-In order to read the dataset, we use the `readOGR` function:
+In order to read the dataset, we use the `readOGR` function. 
 
 ```{r}
 training <- readOGR('training_data.shp', layer='training_data')
 ```
 
-The function `summary` shows detailed information about the file:
+The function `summary` shows detailed information about the object we just read into R:
 ```{r}
 summary(training)
 ```
 
-The file has three fields, corresponding to "id", "class" (which is numerical, for now) and "Comment", which is a string field. You can also see the extent coordinates and the spatial projection. If we only want to see information contained in the attribute table we could use:
+The file has three fields, corresponding to "id" (sequential number), "class" (which is numerical, for now) and "Comment", which is a string field. You can also see the extent coordinates and the spatial projection. If we only want to see information contained in the attribute table we could use:
 
 ```{r}
 head(training@data)
 ```
 
-We can also see the overall structure of the file:
+We can also see the overall structure of the file, if we need to use other information from it:
 ```{r}
 str(training, max.level = 2)
 ```
@@ -60,7 +60,7 @@ training@data$label <- lut$labels[match(training@data$Class,lut$classes)]
 head(training@data)
 ```
 
-In this case we created a  new column, and assign it the string values using a lookup table.  
+In this case we created a new column, and assign it the string values using a lookup table.  
 
 ## Reprojection
 
@@ -80,12 +80,12 @@ Plotting is very simple, we can use the `plot` command, and color the polygons a
 plot(training, col=unique(training@data$Class))
 ```
 
-We can also plot along with other files, such as a raster stack. First we will download an example raster and then we will do the plotting on top of it. These two files are in the same projection, but reprojection would be needed otherwise.
+We could manually modify the fill color and other graphic properties using additional options in the plot function. We can also plot the file along with other datasets, such as a raster stack. In order to do that, we will download an example raster and then we will do the plotting on top of it. These two files are in the same projection, but reprojection would be needed otherwise.
 
 ```{r}
 library(raster)
 if (file.exists('LE70070592003004_clip.tif') == F) {
-    download.file(url='https://raw.githubusercontent.com/parevalo/EF_Activities/master/LE70070592003004_clip.tif',
+    download.file(url='https://drive.google.com/uc?export=download&id=0B4vxibYhfCLPQXhyNnFOZFpyNk0',
                   destfile='LE70070592003004_clip.tif', method='auto')
 }
 
@@ -100,5 +100,5 @@ plot(training, col=unique(training@data$Class), add=T)
 Conversion to another file format (e.g. KML) is done using the function `writeOGR`:
 
 ```{r}
-writeOGR(training_wgs84, dsn = "training_wgs84.kml", layer = training, driver = "KML")
+writeOGR(training_wgs84, dsn = "training_wgs84.kml", layer = "training_wgs84", driver = "KML")
 ```
