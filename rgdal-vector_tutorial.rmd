@@ -22,9 +22,9 @@ This layer contains polygons with multiple land cover classes. They could be use
 
 ```{r}
 if (file.exists('training_data.shp') == F) {
-    download.file(url = 'https://raw.githubusercontent.com/parevalo/EF_Activities/master/vector/training_data.zip', 
-                  destfile = 'training_data.zip', method = 'auto')
-    unzip('training_data.zip')
+    download.file(url = 'https://raw.githubusercontent.com/parevalo/EF_Activities/master/vector/rgdal-vector_tutorial_shp.zip', 
+                  destfile = 'rgdal-vector_tutorial_shp.zip', method = 'auto')
+    unzip('rgdal-vector_tutorial_shp.zip')
 }
 ```
 
