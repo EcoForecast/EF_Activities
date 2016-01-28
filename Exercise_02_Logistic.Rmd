@@ -109,7 +109,7 @@ lines(p,qnorm(p,-1,2),col=3)
 abline(h=-1,col=3)
 ```
 
-It should be readily apparent that the quantile function is the inverse of the CDF.  This function can be used to find the median of the distribution (p = 0.5) or to estimate confidence intervals at any level desired.
+As you can see, the quantile function is the inverse of the CDF.  This function can be used to find the median of the distribution (p = 0.5) or to estimate confidence intervals at any level desired.
 
 ```{r}
 qnorm(c(0.025,0.975),0,1)		# what width CI is specified by these values?
@@ -144,11 +144,11 @@ Monte Carlo Simulation
 
 Most of the figures from the logistic growth example in Chapter 2 included plots of the median trajectory and 95% interval estimates. These summary statistics are a reflection of the fact that the underlying model prediction was a timeseries of probability distributions, rather than a single trajectory. So how do we project a probability distribution through time?
 
-While there are analytical techniques that can be used to estimate these, in practice most are tedious and on a day-to-day basis are rarely employed unless a problem is very simple (e.g. linear regression). Instead, the effects of uncertainty on forecasts are frequently estmated numerically using **Monte Carlo** approachs. A Monte Carlo method is any algorithm that relys on randomization to approximate a computation. These approaches and other will be discussed in more detail later (Chapters 7, 9, 12, & 13).
+In Chapter 11 we will explore a variety of analytical and numerical approachs to propagating uncertainty, and the trade-offs among them, in much greater detail. Today I wanted to introduce a particularly common and general numerical approach, **Monte Carlo** simulation. A Monte Carlo method is any algorithm that relys on randomization to approximate a computation. These approaches and other will be discussed in more detail later (e.g. Chapters 5, 11, 13, & 14).
 
 The previous example of approximating the Normal distribution with a histogram of samples from the Normal distribution is a simple illustration of this approach. What makes this approach powerful is that we can transform the samples from a distribution through whatever function we would like and the resulting set of samples is the correct histogram for that transformation. This is important because, by contrast, we **cannot** transform the summary statistics, such as the mean of the probability distribution, through an arbitrary function because of **Jensen's Inequality**.
 
-To illustrate this point, consider the function x^2 and a standard Normal distribution (mean = 0, sd = 1). Now if we ignore Jensen's Inequality and tranforme the mean and 95% CI we'd end up with a probability distribution that has a mean of 0^2 = 0, a lower confidence interval of -1.96^2 = 3.84 and an upper confidence interval of 1.96^2 = 3.84. Clearly this can't be correct, since the upper and lower CI are identical and the lower CI is higher than the mean. By contrast, if we do this transformation numerically
+To illustrate this point, consider the function x^2 and a standard Normal distribution (mean = 0, sd = 1). Now if we ignore Jensen's Inequality and tranform the mean and 95% CI we'd end up with a probability distribution that has a mean of 0^2 = 0, a lower confidence interval of -1.96^2 = 3.84 and an upper confidence interval of 1.96^2 = 3.84. Clearly this can't be correct, since the upper and lower CI are identical and the lower CI is higher than the mean. By contrast, if we do this transformation numerically
 
 ```{r}
 x = rnorm(10000,0,1)
@@ -169,14 +169,14 @@ It turns out that this specific transformation (x^2 of a standard Normal), has a
 
 ### Problems
 
-3. Numerically transform a lognormal(meanlog=0,sdlog=0.05) through exp(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+3. Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
 
 Parameter error
 ---------------
 
-We next want to use the Monte Carlo approach to account for parameter uncertainty in the logistic regression
+We next want to use the Monte Carlo approach to account for parameter uncertainty in the logistic growth model
 
-To begin, we need to add parameters that describe our uncertainty in parameters and specify the size of the simulation
+To begin, we need to specify the uncertainty in the model parameters and the size of the simulation
 ```{r}
 r.sd = 0.2     ## standard deviation on r
 K.sd = 1.0     ## standard deviation on K
