@@ -1,6 +1,7 @@
 language: c
 # To build on OSX, switch the previous line to
 # language: objective-c
+sudo: required
 
 script: 
     - Rscript -e "require(knitr); fname = 'Exercise_01_RPrimer.Rmd'; knit(fname); purl(fname)"
