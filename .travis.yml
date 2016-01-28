@@ -5,7 +5,6 @@ sudo: required
 
 script: 
     - Rscript -e "require(knitr); fname = 'Exercise_01_RPrimer.Rmd'; knit(fname); purl(fname)"
-    - pdflatex example
 
 before_install:
     - curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
