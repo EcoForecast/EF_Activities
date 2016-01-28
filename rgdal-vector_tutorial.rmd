@@ -12,7 +12,7 @@ The objective of this tutorial is to show some basic functionality of the rgdal 
 ##Installing and loading the library
 The package can be installled and loaded using the following commands. Note that the CRAN mirror is used as an example, but you might want to change it depending on your location. 
 
-```{r}
+```{r, message=FALSE}
 install.packages("rgdal", repos='http://cran.us.r-project.org')
 library(rgdal)
 ```
@@ -22,7 +22,7 @@ This layer contains polygons with multiple land cover classes. They could be use
 
 ```{r}
 if (file.exists('training_data.shp') == F) {
-    download.file(url = 'https://raw.githubusercontent.com/parevalo/EF_Activities/master/vector/rgdal-vector_tutorial_shp.zip', 
+    download.file(url = 'https://raw.githubusercontent.com/parevalo/EF_Activities/master/rgdal-vector_tutorial_shp.zip', 
                   destfile = 'rgdal-vector_tutorial_shp.zip', method = 'auto')
     unzip('rgdal-vector_tutorial_shp.zip')
 }
@@ -85,8 +85,8 @@ We could manually modify the fill color and other graphic properties using addit
 ```{r}
 library(raster)
 if (file.exists('LE70070592003004_clip.tif') == F) {
-    download.file(url='https://drive.google.com/uc?export=download&id=0B4vxibYhfCLPQXhyNnFOZFpyNk0',
-                  destfile='LE70070592003004_clip.tif', method='auto')
+    download.file(url='https://www.dropbox.com/s/odoeqge9277io6i/LE70070592003004_clip.tif?dl=1',
+                  destfile='LE70070592003004_clip.tif', method='auto', mode='wb')
 }
 
 example_raster <- brick('LE70070592003004_clip.tif')
