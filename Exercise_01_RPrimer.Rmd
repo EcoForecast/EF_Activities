@@ -30,21 +30,27 @@ This exercise is available off of http://github.com/EcoForecast and assumes that
   + Make sure "Enable version control interface" is checked
 4. You will need to introduce yourself to git.
   + From RStudio click Tools > Shell
-  + To set your name, enter the following & hit Return: git config –global user.name “your name”
-  + To set your email, enter the following & hit Return: git config –global user.email “your.email@gmail.com”
+  + To set your name, enter the following & hit Return: 
+```
+git config -–global user.name “your name”
+```
+  + To set your email, enter the following & hit Return: 
+```
+git config -–global user.email “your.email@gmail.com”
+```
   + You can now close this Shell window
   
 The bestest way to get a copy of this exercise, and all the other EcoForecast exercises, is to click on the project pull-down menu in the top-right corner of RStudio and select "New Project...".  
 
 Next, click "Version Control" and then "Git".
 
-Enter the following address in the Repository URL: https://github.com/EcoForecast/EF_Activities.git
+Enter the following address in the Repository URL: git@github.com:EcoForecast/EF_Activities.git
 
 You can optionally choose to name the folder something different than EF_Activities (though be aware that many activities will assume this is the name of the folder) or have the folder saved somewhere other than your Home directory.
 
 When you hit "Create Project" this will clone a copy of the git project from the github.com website.
 
-If you anticipate making changes to a git project on GitHub then, instead of cloning from https://github.com/EcoForecast/EF_Activities you should go to that website and click on the "Fork" button in the top right corner. This requires that you have an account on GitHub, which is free and easy to set up. Once you fork the repository, this will make a copy to https://github.com/username/EF_Activities where _username_ is your GitHub username, and you can use that as your Repository URL.
+If you anticipate making changes to a git project on GitHub then, instead of cloning from https://github.com/EcoForecast/EF_Activities you should go to that website and click on the "Fork" button in the top right corner. This requires that you have an account on GitHub, which is free and easy to set up. Once you fork the repository, this will make a copy to git@github.com:username/EF_Activities where _username_ is your GitHub username, and you can use that as your Repository URL.
 
 If you just can't get Git to work, you can download this activity from the same website, https://github.com/EcoForecast/EF_Activities, by clicking on the "Download ZIP" button in the bottom right.
 

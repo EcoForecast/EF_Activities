@@ -1,0 +1,17 @@
+language: c
+# To build on OSX, switch the previous line to
+# language: objective-c
+sudo: required
+
+script: 
+    - Rscript -e "require(knitr); fname = 'Exercise_01_RPrimer.Rmd'; knit(fname); purl(fname)"
+
+before_install:
+    - curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
+    - chmod 755 ./travis-tool.sh
+    - ./travis-tool.sh bootstrap
+install:
+    - ./travis-tool.sh install_deps
+env:
+  global:
+    - BOOTSTRAP_LATEX="1"  
