@@ -1,0 +1,367 @@
+---
+title: "data.table: Data analysis like a boss"
+author: Alexey Shiklomanov
+---
+
+# Introduction: All your base are annoying, slow, and large
+
+Compared to other languages, R has good utilities for managing data. Most 
+prominent among these utilities is R's `data.frame` class, which gives you all 
+the basic features you'd want in a data soring class (e.g. row and column 
+names, mixed data types). 
+
+That being said, `data.frame`s are not without their problems, of which I 
+highlight two (spoiler alert: `data.table` addresses both):
+
+1. **The syntax is cumbersome**. At its core, a `data.frame` is just a list 
+   named list of columns where all of the columns happen to be the same length.  
+   This means that common data operations like subsetting can have
+   annoyingly redundant syntax.
+
+2. **Operations are slow**. As a list of lists, `data.frame` doesn't do 
+   anything to make your data more compact or organized. On the contrary, this 
+   means that accessing data stored in a `data.frame` is inefficient because it 
+   requires multiple searches through individual lists.
+
+# data.table syntax 
+
+For demosntration purposes, let's load R's built in `iris` database. By 
+default, it's a `data.frame`, so we'll create a copy that's a `data.table`.
+
+```{r}
+library(data.table)
+data(iris)
+iris.dt <- data.table(iris)
+dim(iris.dt)
+class(iris.dt)
+names(iris.dt)
+```
+
+## Implict environment scoping
+
+The first thing to understand about `data.table` syntax is that everything 
+inside brackets is scoped to the `data.table` in question. If you've ever used 
+R's `with` function, it's exactly the same idea.  For instance, to access a 
+column, by default, you do not use quotes because the variable `Sepal.Length` 
+is in the local `data.table` environment.
+
+```{r}
+head(iris.dt[,Sepal.Length])
+```
+
+In fact, if you try to access the variable with quotes or by index, you'll get 
+a strange result:
+
+```{r}
+iris.dt[, "Sepal.Length"]
+iris.dt[, 3]
+```
+
+If you do want to use strings or column indices instead of environment 
+variables (for instance, if you're passing column names from a variable), you 
+can disable the `with` syntax by just adding a `with=FALSE` inside the 
+brackets.
+
+```{r}
+cols <- c("Sepal.Length", "Sepal.Width")
+head(iris.dt[, cols, with=FALSE])
+head(iris.dt[, c(2,4), with=FALSE])
+```
+
+You CAN however, access rows by index without any additional syntax.
+
+```{r}
+iris.dt[2:4]    # Note that the comma is optional
+```
+
+Notice that for a single column, this operation returns a vector, but for 
+multiple columns, it returns a `data.table`.
+
+Granted, this is barely an improvement over `data.frame`, where the same 
+operation is just `iris[, "Sepal.Length"]`. However, where this starts to shine 
+is in subsetting operations. For instance, in base R, if you wanted just the 
+rows with Sepal.Length < 5, you would have to do something like:
+
+```{r}
+slt5 <- iris[iris$Sepal.Length < 5,]
+head(slt5)
+```
+
+By contrast, the same operation in `data.table` is:
+
+```{r}
+slt5 <- iris.dt[Sepal.Length < 5]  # The comma is optional
+```
+
+## Operating on columns
+
+Another cool feature is that you can call functions directly on columns within 
+the `data.table`. For instance, if I wanted to get the mean sepal width for 
+only plants with sepal length < 5, I could do:
+
+```{r}
+iris.dt[Sepal.Length < 5, mean(Sepal.Width)]
+head(iris.dt[, Sepal.Width * Sepal.Length])
+```
+
+It gets better. Built into `data.table` is a `by` option that lets you perform 
+aggregation functions by subsets based on columns. For example:
+
+```{r}
+iris.dt[ ,mean(Sepal.Width), by=Species]
+iris.dt[ ,mean(Sepal.Width), by=list(Species, Sepal.Length < 5)]
+```
+
+Note that I used a `list` in the `by` statement to select multiple columns. A 
+common mistake is to use the `c` function instead (i.e.  
+`by=c(column1,column2)`), but that won't work UNLESS you have the `with=FALSE` 
+flag.
+
+## Unique operations
+
+Similar to this is a very useful function in `data.table` -- `.N`, which counts 
+the numbers of each element. 
+
+```{r}
+iris.dt[, .N, by=list(Species, Sepal.Length < 5)]
+```
+
+Notice that each of these returns a `data.table` that you can save and 
+manipulate however you want.
+
+Yet another construct is `.SD`, which refers by default to all of the columns 
+in the `data.table` not referenced by the subset command or a subset of columns 
+specified by the user.  This is very handy if you have a lot of columns and 
+want to calculate some conditional statistic for each. The trick is to 
+recognize that a `data.table` is still a `list` of columns and therefore can be 
+worked on by the `lapply` function:
+
+```{r}
+iris.dt[, lapply(.SD, mean), by=list(Species, Sepal.Length < 5)]
+```
+
+Notice that the mean sepal lengths were not calculated because it was used as a 
+criterion for subsetting. Also, `data.table` is not smart enough to selectively 
+apply functions to only numeric columns, so you may get unexpected results if 
+you have numeric functions applied to non-numeric columns.
+
+```{r}
+iris.dt[, lapply(.SD, mean), by=Sepal.Length < 5]
+```
+
+To specify columns, add the `.SDcols` argument. Note that `.SDcols` are given 
+as a character vector, NOT as a list.
+
+```{r}
+iris.dt[, lapply(.SD, mean), by=Species, .SDcols=c("Sepal.Width", "Sepal.Length")]
+```
+
+## Adding columns
+
+Adding a new column to a `data.table` can be accomplished by using standard, 
+`data.frame` syntax...
+
+```{r}
+iris.dt$random.index <- sample(nrow(iris.dt))
+```
+
+...but there is also a way that lets you more conveniently leverage the 
+`data.table` subsetting syntax.
+
+```{r}
+iris.dt[, longer.than.five := FALSE][Sepal.Length > 5, longer.than.five := TRUE]
+iris.dt[, .N, by=longer.than.five]
+```
+
+A few points about that last bit. First, notice the `:=` internal assignment 
+operator. When you perform `data.table` assignments in this way, nothing is 
+returned because the `data.table` is modified in place.
+
+Second, notice that `data.table` lets you chain commands by simply stacking
+brackets back-to-back. The commands are executed sequentially -- first, a 
+column of all `FALSE` values was added to `iris.dt`, and then some of the 
+values in this `data.table` were changed to TRUE.
+
+## Renaming columns
+
+One major difference between `data.table` and `data.frame` operations is that 
+the former generally modify the object in place while the latter make lots of 
+copies. This is a core aspect of what makes `data.table` so fast and effective 
+for working with large data, but it does mean that certain `data.frame` 
+functions don't work for `data.table`. Instead, they are replaced by `set` 
+functions, such as the `setnames` function. 
+
+`setnames` is very intuitive. It takes 2-3 arguments: the name of the 
+`data.table`, [optionally] a vector of old names that you're changing, and a 
+vector of new names that map to the old ones (or all the columns by default).
+
+```{r}
+names(iris.dt)
+setnames(iris.dt, c("Sepal.Length", "Sepal.Width"), c("sl", "sw"))
+names(iris.dt)
+setnames(iris.dt, c("sl", "sw"), c("Sepal.Length", "Sepal.Width"))
+```
+
+A similar function is the `setcolorder` function for--you guessed 
+it--reordering columns.
+
+## Keys: Faster and more convenient searches
+
+I hinted earlier that searching operations in `data.frame` are very 
+inefficient, and are much faster in `data.table`. But if you're working with 
+really big data, you'll want to squeeze even more speed out, which you can do 
+by telling `data.table` more about how your data is organized and letting it 
+optimize its memory to access it as fast as possible. The operation for doing 
+this is the `setkey` operation.
+
+Say I'm going to be doing a lot of calculations in the `iris` database by 
+species. Before doing everything, I'll run:
+
+```{r}
+setkey(iris.dt, Species)
+print(iris.dt)
+```
+
+You may have noticed that the `data.table` is now sorted alphabetically by 
+species. This isn't just eye candy -- it has major performance implications, 
+since it's much easier to perform operations on contiguous data that to search 
+for each case. 
+
+Another effect of setting a key is that I can now subset based on the key 
+without actually saying what I'm searching for. For instance:
+
+```{r}
+head(iris.dt["setosa"])
+iris.dt[c("setosa", "virginica"), .N, by=Species]
+```
+
+You can set and reset keys as many times as you'd like, and you can even set 
+multiple keys, although you need the `setkeyv` function for that. (The 
+difference is that `setkey` takes columns as they are--no quotes--while 
+`setkeyv` interprets column names from strings. This also means you can pass it 
+a preset vector of column names for keying, which you can't do with `setkey`).
+
+```{r}
+keys <- c("Species", "longer.than.five")
+setkeyv(iris.dt, keys)
+iris.dt
+```
+
+## Merging data tables
+
+First, let's create data to merge in.
+
+```{r}
+iris.supp <- data.table(species_name = c("setosa","versicolor", "virginica"),
+                        testcode = c("SET", "VER", "VGA"))
+```
+
+The basic `data.frame` merge syntax will work.
+
+```{r}
+iris.merge <- merge(iris.dt, iris.supp, by.x = "Species", by.y="species_name")
+```
+
+That said, a much faster merge can be done using custom `data.table` syntax 
+that harnesses the power of keys.
+
+```{r}
+setkey(iris.dt, Species)
+setkey(iris.supp, species_name)
+iris.merge <- iris.dt[iris.supp]
+```
+
+Note that this is only a partial join -- i.e. `iris.dt` will only take values 
+from `iris.supp` that are in `iris.dt`, and any values in `iris.supp` that are 
+not in `iris.dt` will not be added. For full joins, use the `merge` function 
+with the `all=TRUE` argument.
+
+
+# Performance -- speed and size
+
+Whether or not `data.table` syntax is better than `data.frame` is a subjective 
+quesiton. However, the speed of `data.table` is unquestionable.  To do this, 
+let's simulate a large dataset. (Feel free to change the value of `nvals` and 
+`nvals.write` to see how `data.table` speeds scale, or to accomodate slower 
+PC's with less memory).
+
+```{r}
+nvals <- 1e7
+col1 <- sample(letters[1:5], nvals, replace=TRUE)
+col2 <- rnorm(nvals)
+system.time(dat.df <- data.frame(col1, col2))
+system.time(dat.dt <- data.table(col1, col2))
+```
+
+Note the almost twofold increase in speed in creating a `data.frame` compared 
+to a `data.table`. Now, let's compare the calculation of an average.
+
+```{r}
+system.time(with(dat.df, tapply(col2, col1, mean)))
+system.time(dat.dt[, mean(col2), by=col1])
+setkey(dat.dt, col1)
+system.time(dat.dt[, mean(col2), by=col1])
+```
+
+Without keys, `data.table` is approximately 5 times faster on my machine. With 
+keys, it's close to 30 times faster. Hard to argue with that.
+
+On a similar note, the `data.table` function `fread` is dramatically faster at 
+reading in large files than base R's `read.table` (or its derivatives like 
+`read.csv`).
+
+```{r}
+nvals.write <- 1e6
+write.table(dat.dt[1:nvals.write], file="testfile.dat", row.names=FALSE)
+system.time(test.df <- read.table("testfile.dat"))
+system.time(test.dt <- fread("testfile.dat", header=TRUE))
+```
+
+Not only is `fread` dramatically faster, but, if the process takes more than a 
+second or two, it helpfully prints information on its progress, including the 
+size of the file and the percentage read so far. 
+
+That speed isn't completely free though -- `fread` achieves its speed by 
+quickly determining features of the file and assuming they are constant 
+throughout. I've run into situations where weird line endings or similar things 
+can cause `fread` to fail in situations where `read.table` worked just fine.  
+But, `fread` does have the advantage that you can fine-tune exactly what it 
+reads in to speed it up even more. For example, you can tell it to ignore the 
+first *n* lines of a file (useful for reading in instrument data that has long 
+headers), to only read in specific rows or columns (allowing you to subset data 
+before even reading it in to save memory and time), or to assume columns have a 
+specific class (rather than making it try to figure it out independently).
+
+# Common `data.table` mistakes
+
+Below are some important examples of counterintuitive behavior by `data.table` 
+that have tripped me up in the past. This is an evolving list that I'll update 
+as I get tripped up by other things.
+
+## Shallow vs. true copying
+
+Because `data.table` is optimized for working with very large datasets, it 
+doesn't treat variables the way you expect. Specifically, when you reassign a 
+`data.table` to a new variable name, both the old and new variable names 
+**point to the same object**, meaning that any changes you make to one are 
+**applied to both**. Case in point:
+
+```{r}
+names(iris.dt)
+iris.dt2 <- iris.dt
+iris.dt2[, random.index.2 := sample(letters, nrow(iris.dt2), replace=TRUE)]
+names(iris.dt2)
+names(iris.dt)
+```
+
+The way to do a full object copy is simple, through the aptly named `copy` 
+command.  You just have to remember to do it!
+
+```{r}
+iris.dt[, random.index.2 := NULL]
+iris.dt2 <- copy(iris.dt)
+iris.dt2[, random.index.2 := sample(letters, nrow(iris.dt2), replace=TRUE)]
+names(iris.dt2)
+names(iris.dt)
+```
+
