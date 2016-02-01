@@ -1,0 +1,181 @@
+---
+title: "Activity 1 - Raster Package Tutorial"
+author: "Eric Bullock"
+date: "February 1, 2016"
+output: html_document
+---
+
+## Objective and Background
+
+The 'Raster' package is a package developed for working with raster-formatted spatial data. The functions of the package include reading the data into arrays, data manipulation, calculations between rasters, working with projections, and writing data to new raster files. For more information on the details of the 'Raster' package see <https://cran.r-project.org/web/packages/raster/raster.pdf>.
+
+## Dependencies
+
+The tutorial requires the following packages:
+
+Raster: Main package for working with rasters.
+
+RGDAL: R binding for popular GDAL tool for reading and writing data.
+
+sp: Classes for Spatial Data
+
+RGDAL requires GDAL to be installed on your system. This is a very useful set of tools to have installed on your system if you intend on doing spatial analysis of any sort. GDAl is freely available and is widely considered one of the best cross-platform tool for reading spatial data. The framework can be installed on your machine from <http://trac.osgeo.org/gdal/wiki/DownloadingGdalBinaries>
+
+Once GDAL is installed, packages can be installed with:
+
+```{r results='hide', warning=FALSE, message=FALSE}
+install.packages(c('raster','rgdal', 'sp'), repos="http://cran.rstudio.com/")
+```
+
+The packages can then be loaded with:
+
+```{r results='hide', warning=FALSE, message=FALSE}
+library(rgdal)
+library(raster)
+library(sp)
+```
+
+
+## Reading and Visualizing Raster Data
+
+This tutorial will use an two images hosted remotely as working examples. However, any GDAL-readable raster image will work (see <http://www.gdal.org/formats_list.html> for available formats). 
+
+First, set your working directory
+
+```{r}
+setwd('/Users/ericbullock/Google Drive/Class/Ecological_Forecasting/EF_Activities')
+```
+
+Now, download the two images needed for this activity
+
+```{r eval=TRUE}
+
+download.file(url='https://cdn.rawgit.com/bullocke/sample_data/master/Example1989.gtif', destfile = 'Example1989.gtif', method="curl", mode="wb")
+download.file(url='https://cdn.rawgit.com/bullocke/sample_data/master/Example2015.gtif', destfile = 'Example2015.gtif', method="curl", mode="wb")
+```
+
+Now read in the band 4 (TM/ETM+ Near-Infrared) of the 2015 example image downloaded. 
+
+```{r}
+rast <- raster('Example2015.gtif', band=4)
+```
+
+You can view the attributes of the raster simply by calling the object:
+
+```{r}
+rast
+```
+
+To visualize a one band raster you can use the 'plot()' function:
+
+```{r}
+plot(rast)
+```
+
+This is useful for visualizing single-layer data, such as Digital Elevation Models (DEMs), but not so much for optical remote sensing images. To work with multi-layer images you will need to use one of two different types of classes: 
+
+RasterStack: A multi-layer data stack containing layers (spectral bands in optical remote sensing data) from one or multiple data sources. 
+RasterBrick: The same as a RasterStack, but each layer comes from the same data source. This is usually faster but is more restrictive. 
+
+To read and visualize a 3-band, RGB image from a single data source, read in the bands into a RasterBrick: 
+
+```{r}
+img <- brick('Example2015.gtif', package="raster")
+```
+
+The brick can then be visualized with the 'plotRGB()' function:
+
+```{r}
+plotRGB(img, 3, 2, 1, stretch="lin")
+```
+
+And now you have an image! Try using a different band combination to highlight the different spectral bands. You can also choose between a linear or histogram stretch:
+
+```{r}
+plotRGB(img, 4, 3, 2, stretch="hist")
+```
+
+Finally, if you want to view individual pixel values, you can do so using the 'extract()' function:
+
+First, pick a pixel value based on it's row and column number:
+
+```{r}
+cells <- cellFromRowCol(img, 50, 50)
+```
+
+Then extract the values from the raster brick at that cell location:
+
+```{r}
+extract(img, cells)
+```
+
+## Raster math
+
+When doing raster analysis, it may be useful to perform arithmetics between varying layers or images. This can easily be done by treating a raster as a data array. This is useful for creating difference images for change analysis, or for creating an image transform. 
+
+An image transform is a manipulation of a subset of the spectral bands that is meant to highlight certain features in the image. For example, the most widely used and well known transform is the Normalized Difference Vegetation Index (NDVI). NDVI is meant to highlight the difference between the red and near-infrared bands. In vegetation, this difference is normally very high due to the red band typically being dark and near-infrared being very bright. The general formula for NDVI is:
+
+(nir - red) / (nir + red)
+
+Now perform this transform on the example image:
+
+```{r}
+ndvi <- (img[[4]] - img[[3]]) / (img[[4]] + img[[3]])
+```
+
+Now plot the result:
+
+```{r}
+plot(ndvi)
+```
+
+Notice that the water is much lower in NDVI than the land. You might be wondering what the blocks of low NDVI are on land. This subset is in the Mekong Delta in Vietnam, where shrimp farming is typical. These shrimp farms are filled with water, resulting in a low NDVI. Transforms like these can help showcase varying land cover types based on their water content and vegetation. 
+
+Raster math can also be useful for change analysis. Open the second example image in the folder (Example1989.gtif), calculate NDVI, and then calculate the difference between the 2: 
+
+```{r}
+img2 <- brick('Example1989.gtif')
+ndvi2 <- (img2[[4]] - img2[[3]]) / (img2[[4]] + img2[[3]])
+dif <- ndvi - ndvi2
+plot(dif)
+```
+
+Note that there's a high positive difference in NDVI right along the water for the difference plot. This is because the first image is from 2015, and the second is from 1989. This means that when differencing them the way we did, the first image has much higher NDVI along the water. These images come from a project studying mangrove expansion, and that high difference in NDVI is because in 1989 the mangrove forest was barely there at all!
+
+## Subsetting an image
+
+If you do not wish to work on the full image, it may be useful for computational purposes to create a subset of the image. First, you need to draw the extent to be subset. Make sure you have the image up in your plot environment:
+
+```{r eval=FALSE, warning=FALSE, message=FALSE}
+ext <- drawExtent()
+```
+
+Now, you can draw on the bounding box of the area you wish to subset on the image. To use this extent to subset the image, use the 'crop()' command:
+
+```{r eval=FALSE}
+sub <- crop(img, ext)
+plotRGB(sub, stretch="lin")
+```
+
+
+## Reprojecting an image
+
+To view the current projection of the image simply use the 'projection()' command:
+
+```{r}
+projection(img)
+```
+
+The notation that R uses is from the PROF.4 library (see https://github.com/OSGeo/proj.4 for information and https://http://spatialreference.org/ for a projection database). Currently, the image is in WGS84 Datum and projected to UTM zone 48. Universal Transverse Mercator is a Cartesian coordinate system that is divided up into zones, with all areas on earth falling into a different zone. This is useful for single-scene analysis, but not so much for combining data from different UTM zones. An alternative is to use a global projection such as the related Mercator. To reproject the image to Mercator, once again use the 'projection()' function with the appropriate PROJ.4 definition (note, this is not necessarily recommended to do for this scene, and much time should be taken to choose an appropriate projection):
+
+```{r }
+projection(img) <- "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+```
+
+## Writing a file
+
+Finally, once you have done your analysis you may want to save the results to a new file. This can be done with the 'writeRaster()' function. Here, the NDVI difference image is being saved to the file 'NDVI_dif.tif':
+
+```{r}
+writeRaster(dif, filename="NDVI_dif.tif", overwrite=TRUE)
+```
