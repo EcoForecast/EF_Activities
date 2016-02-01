@@ -1,0 +1,210 @@
+---
+title: "Exercise_01"
+author: "Tim Condon"
+date: "January 31, 2016"
+output: html_document
+---
+
+1a.
+```{r}
+log(1)
+```
+b.
+```{r}
+log(0)
+```
+c.
+```{r}
+log(exp(1))
+```
+d.
+```{r}
+log(-5)
+```
+e.
+```{r}
+-log(5)
+```
+f.
+```{r}
+log(1/5)
+```
+g. NaNs
+
+2. To convert from radians to degrees.
+3. The atan2 function uses two variables while the atan function only uses one.
+4. log is the natural logarithm (ln) while log10 computes common logarithms with base 10.
+5. 
+```{r}
+sqrt(5^2+13^2)
+```
+6. 
+```{r}
+5*(1+0.04)^pi
+```
+7.
+```{r}
+x<-1993/8
+x-8
+```
+8. Sum returns the sum of all vectors present in an argument while cumsum returns a vector with each value the cumulative sum of the elements of the argument. For example, sum of 1:3 gives 8, while cumsum gives the vector 1,3,6.
+9.
+```{r}
+seq(-6,6,by=2)
+```
+10.
+```{r}
+seq(-4.8,-3.43,length=8)
+```
+a.
+```{r}
+diff(seq(-4.8,-3.43,length=8)
+)
+```
+b.
+```{r}
+sum(exp(seq(-4.8,-3.43,length=8)
+))
+```
+11. The difference of differences is zero.
+```{r}
+diff(diff(1:10))
+```
+12.
+```{r}
+dat<-read.table('data/Lab1_frogs.txt',header=TRUE)
+write.table(dat,'frogs.csv',row.names=FALSE,sep='|')
+```
+"frogs"|"tadpoles"|"color"|"spots"
+1.1|2.03698175474231|"red"|TRUE
+1.3|2.87623092770957|"red"|FALSE
+```{r}
+dat2<-read.table('frogs.csv',header=TRUE,sep='|')
+```
+13.
+```{r}
+as.character(dat$spots)
+```
+14.
+```{r}
+dat[3:8,1:3]
+```
+15.
+```{r}
+dat[1:3,]
+```
+16.
+```{r}
+c('Thor','Captain America','Iron Man','Hulk')
+```
+17.
+```{r}
+dat[seq(1,nrow(dat),by=2),]
+```
+18.
+a.
+```{r}
+dat[dat$spots=='TRUE',]
+```
+b.
+```{r}
+dat[dat$color=='blue',]
+```
+c.
+```{r}
+sum(dat$tadpoles[dat$color=='blue'])
+```
+d.
+```{r}
+tads<-subset(dat,dat$tadpoles>3&dat$tadpoles<5)
+tads
+```
+e.
+```{r}
+red.f<-subset(dat,dat$color=='red')    #first create subset of red frogs
+red.f[red.f$frogs<2.5,]
+```
+f.
+```{r}
+dat[dat$frogs>5|dat$spots=='FALSE',]
+```
+19.
+a.
+```{r}
+plot(log(0:3),type='l')
+```
+b.
+```{r}
+plot(exp(0:-3),type='l')
+```
+20.
+```{r}
+barplot(tapply(dat$frogs,dat$spots,mean))
+```
+21.
+```{r}
+blue.f<-subset(dat,dat$color=='blue')
+hist(blue.f$frogs)
+```
+22.
+```{r}
+apply(dat[,1:2],2,sd)
+```
+23.
+a.
+```{r}
+red.f<-subset(dat,dat$color=='red')
+lmt.f<-lm(red.f$tadpoles~red.f$frogs)
+summary(lmt.f)
+```
+b.
+```{r}
+plot(red.f$tadpoles~red.f$frogs)
+abline(lmt.f)
+```
+c. The linear model using just frogs is the most complex that is supported by the data.
+```{r}
+lm.t.f<-lm(dat$tadpoles~dat$frogs)
+lm.t.f.s<-lm(dat$tadpoles~dat$frogs+dat$spots)
+lm.t.f.s.c<-lm(dat$tadpoles~dat$frogs+dat$spots+dat$color)
+summary(lm.t.f)
+summary(lm.t.f.s)
+summary(lm.t.f.s.c)
+```
+24.
+```{r}
+if(all(x>0)) {
+  plot(x)  
+} else {
+  hist(x)
+}
+```
+25.
+```{r}
+tadpoles<-subset(dat,dat$tadpoles>=5)    #subset for later testing
+
+fancy.plot<-function(x,y,col,z) {
+  plot(y~x,cex=1.5,col=as.character(col),pch=z+1,cex.axis=1.3,
+       xlab='X Density',ylab='Y Density',cex.lab=1.3)
+  abline(lm(y~x),col='green',lwd=3)
+}
+
+fancy.plot(tadpoles$frogs,tadpoles$tadpoles,tadpoles$color,tadpoles$spots)
+```
+26.
+```{r}
+for( i in 1:10){
+  print(i+5)
+}
+```
+27.
+```{r}
+NT<-20        
+N0<-1              
+r<-0.2            
+N<-rep(N0,NT)
+for(t in 1:NT){
+    N[t]=N0*(1+r)^t    
+}
+plot(N)
+```
