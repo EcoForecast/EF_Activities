@@ -206,7 +206,7 @@ Unfortunately, R doesn't have a built in function for plotting shaded CI on time
 ```{r}
 ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
-  ylo[1])), border = NA,...) 
+  ylo[1])), border = NA,col=col,...) 
 }
 ```
 
