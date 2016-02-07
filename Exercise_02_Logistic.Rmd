@@ -32,8 +32,34 @@ plot(time,n,ylim=c(0,12),lwd=3,type='l',
 
 ### Problems
 
-1. Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
 
+
+1. Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+```{r}
+iter=list(1.95, 2.05, 2.5, 2.8)
+for (it in (iter)) {
+
+#Iterate simulation
+  n = rep(n0,NT)    ## vector to store results
+  for(t in 2:NT){
+  n[t] = n[t-1] + it*n[t-1]*(1-n[t-1]/K)
+  }
+
+#Plot the results
+  plot(time,n,ylim=c(0,12),lwd=3,type='l',
+     ,bty='l',cex.lab=1.5,
+      xlab="Time",ylab=paste("Population Size at r=", it, 1, sep = ""))
+}
+```
+
+#Explanation
+1.95: Lowest growth rate of the plots. This causes a slight variance in the projection once it hits carrying capacity, but it looks to be evening out.
+
+2.05: There is a more uniform variance after the population hits carrying capacity and it does not appear to be evening out. 
+
+2.5: There is a large variance after carying capacity. The variance starts off small then drastically increases and becomes steady. 
+
+2.8: The variance after carrying capacity is around the same as with 2.5, but it immedietely becomes that large. 
 
 Probability distributions in R
 ------------------------------
@@ -139,7 +165,37 @@ This example demonstrates that as the number of random draws from a probability 
 
 2. Choose another probability distribution and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
 
+
+#Probability density function
+I am choosing the Weibull distribution
+
+```{r}
+x = seq(0,100,by=1)
+plot(x,dweibull(x, 5,50),type='l')    	## that’s a lowercase “L” for “line”
+
+```
+
+```{r}
+#Cumulative distribution function
+plot(x,pweibull(x, 5, 50), type='l')
+```
+
+```{r}
+#Quantile function
+plot(x,qweibull(seq(0,1,by=.01), 5, 50), type='l')
+```
+
+```{r}
+#Histogram
+x = seq(0,1000,by=1)
+hist(rweibull(x,5,10),probability=TRUE,breaks=100) 
+lines(x,dweibull(x, 5,10),type='l',col='red') 
+```
+
+
+
 Monte Carlo Simulation
+
 ----------------------
 
 Most of the figures from the logistic growth example in Chapter 2 included plots of the median trajectory and 95% interval estimates. These summary statistics are a reflection of the fact that the underlying model prediction was a timeseries of probability distributions, rather than a single trajectory. So how do we project a probability distribution through time?
@@ -170,6 +226,26 @@ It turns out that this specific transformation (x^2 of a standard Normal), has a
 ### Problems
 
 3. Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+```{r}
+x = rlnorm(10000,0,.5)
+y = sin(x)
+x.stats = quantile(x,c(0.025,0.5,0.975))
+y.stats = quantile(y,c(0.025,0.5,0.975))
+hist(x,main="Original distribution",breaks=40)
+
+abline(v=quantile(x,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(x),col="red",lwd=3,lty=3)
+text(5,700,sprintf("Mean = %.3f", mean(x)))
+text(5,550,sprintf("Median = %.3f", x.stats[2]))
+text(5,400,sprintf("95%% CI = %f, %f", x.stats[1],x.stats[3]))
+
+h2=hist(y,main="Transformed distribution",breaks=40)
+abline(v=quantile(y,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(y),col="red",lwd=3,lty=3)
+text(-.5,1500,sprintf("Mean = %.3f", mean(y)))
+text(-.5,1350,sprintf("Median = %.3f", y.stats[2]))
+text(-.5,1200,sprintf("95%% CI = %f, %f", y.stats[1],y.stats[3]))
+```
 
 Parameter error
 ---------------
@@ -203,10 +279,10 @@ n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
 ```
 
 Unfortunately, R doesn't have a built in function for plotting shaded CI on time-series plots, so we'll define one. Unlike plot, which just takes x and y as arguements, this function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
-```{r}
+```{r eval=FALSE}
 ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
-  ylo[1])), border = NA,...) 
+  ylo[1])), border = NA,col=col,...) 
 }
 ```
 
@@ -214,13 +290,45 @@ ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
 
 4. Plot histograms of the samples of r and K used for the simulation.
 
+```{r}
+hist(rE,main="Sample r", breaks=50)
+hist(KE,main="Sample K", breaks=50)
+```
+
 5. Plot a sample of 10 different trajectories from your ensemble (on one graph).
+
+```{r}
+
+subset<-sample(1:NE,10,replace=TRUE) #get random subset
+colors <- rainbow(10) #Get 10 random colors
+plot(time,n[subset[1],],lwd=3,type='l',xlab="Time",main="Logistic Growth",ylab="Population Size",col=colors[1],ylim=c(0,15))
+for (i in 2:10){
+  lines(time,n[subset[i],],lwd=3,type='l',col=colors[i])
+}
+```
 
 6. Plot a histogram of your population forecast at time = 15.
 
+```{r}
+hist(n[,15],xlab="Population Size",main="Population Size at Time = 15")
+```
+
 7. Plot the median trajectory and 95% CI.
 
+```{r eval=FALSE}
+plot(time,n.stats[2,],ylim=c(0,max(n.stats[3,])),type='l',lwd=3,xlab="Time",ylab="Population Size")
+ciEnvelope(time,n.stats[1,],n.stats[3,])
+lines(time,n.stats[2,],type='l',lwd=3)
+```
+
 8. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
+
+```{r eval=FALSE}
+n.stats2 = apply(n,2,quantile,c(0.25,0.5,0.75))
+ciEnvelope(time,n.stats2[1,],n.stats2[3,],col='light blue')
+lines(time,n.stats[2,],type='l',lwd=3)
+legend("bottomright",lwd=5,lty=1,c('Median','95% CI','50% CI'),col=c('black','grey','light blue'))
+```
 
 Extra Credit: Initial conditions
 --------------------------------
@@ -243,7 +351,34 @@ for(i in 1:NE){
 
 9. Plot the median & 95% interval.
 
+```{r eval=FALSE}
+
+n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+plot(time,n.stats[2,],ylim=c(0,max(n.stats[3,])),type='l',lwd=3,xlab="Time",ylab="Population Size",main="r=.3")
+ciEnvelope(time,n.stats[1,],n.stats[3,])
+lines(time,n.stats[2,],type='l',lwd=3)
+
+```
+
 10. Repeat with r equal to 1.95, 2.05, and 2.8
 
+```{r eval=FALSE}
+iter=list(1.95, 2.05, 2.8)
+for (it in (iter)) {
+  r = it
+  n0.sd = 0.6
+  n0s = rlnorm(NE,log(n0),n0.sd)
+  n = matrix(n0s,NE,NT)
+  for(i in 1:NE){
+    for(t in 2:NT){
+     n[i,t] = n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K)
+    }
+  }
 
+  n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+  plot(time,n.stats[2,],ylim=c(0,max(n.stats[3,])),type='l',lwd=3,xlab="Time",ylab="Population Size",main=sprintf("r=%.3f",it))
+  ciEnvelope(time,n.stats[1,],n.stats[3,])
+  lines(time,n.stats[2,],type='l',lwd=3)
+}
 
+```
