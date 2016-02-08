@@ -98,6 +98,8 @@ Parameter error
 ---------------
 
 ```{r}
+r = 1
+K = 10    
 r.sd = 0.2     ## standard deviation on r
 K.sd = 1.0     ## standard deviation on K
 NE = 1000      ## Ensemble size
@@ -135,7 +137,6 @@ hist(KE, main='Histogram of sample of K')
 5. Plot a sample of 10 different trajectories from your ensemble (on one graph).
 
 ```{r}
-# THIS CHUNK IS INCORRECTLY KNITED BUT LOOKS CORRECT WHEN RUN SEPARATELY
 sti <- sample(1000, 10)
 colors <- rainbow(10)
 plot.new()
@@ -149,7 +150,6 @@ for(s in 2:10){
 6. Plot a histogram of your population forecast at time = 15.
 
 ```{r}
-# THIS CHUNK IS INCORRECTLY KNITED BUT LOOKS CORRECT WHEN RUN SEPARATELY
 hist(n3[,15], main='Histogram of population at time 15')
 ```
 
@@ -157,7 +157,6 @@ hist(n3[,15], main='Histogram of population at time 15')
 8. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
 
 ```{r}
-# THIS CHUNK IS INCORRECTLY KNITED BUT LOOKS CORRECT WHEN RUN SEPARATELY
 plot(n.stats[2,], type='l', lty=1, ylim=c(0,12), main='Median trajectory and CI (50%, orange and 95%, blue)', xlab='Time', ylab='Population')
 lines(n.stats[1,], type='l',lty=2, col='blue')
 lines(n.stats[3,], type='l',lty=2, col='blue')
