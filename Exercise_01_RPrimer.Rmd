@@ -1,5 +1,5 @@
 ---
-title: 'Activity 1 - R Primer'
+title: "Activity 1 - R Primer"
 author: "Tim condon"
 date: "January 31, 2016"
 output: html_document
@@ -248,7 +248,9 @@ a.	What is the difference between values in this sequence?
 b.	What is the sum of the exponential of this sequence?
 11.	Calculate a second difference [a difference of differences] for the sequence 1:10 (show code)
 ```
+
 8. Sum returns the sum of all vectors present in an argument while cumsum returns a vector with each value the cumulative sum of the elements of the argument. For example, sum of 1:3 gives 8, while cumsum gives the vector 1,3,6.
+
 9.
 ```{r}
 seq(-6,6,by=2)
@@ -267,6 +269,7 @@ b.
 sum(exp(seq(-4.8,-3.43,length=8)
 ))
 ```
+
 11. The difference of differences is zero.
 ```{r}
 diff(diff(1:10))
