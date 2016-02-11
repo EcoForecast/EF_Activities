@@ -1,4 +1,6 @@
 Exercise 3: Tools for big data
+Eric Bullock
+02/15/2016
 ========================================================
 
 The objective of today's exercise is to provide a quick introduction to some common tools for dealing with big data. For each tool we are just using the most basic syntax and you are encouraged to go back and read the help for each at a later date. This exercise also focuses on "general purpose" tools. There are a multitude of R libraries available for accessing specific data sources and web services. A quick summary of some of these is available at http://cran.r-project.org/web/views/WebTechnologies.html. In addition, a Google search on many of the tools and topics covered in Chapters 3 and 4 will provide a lot of additional info on big data tools outside of R.
