@@ -329,7 +329,7 @@ check_date <- function(curdate, database){
    datasets <- length(fia_table[,"CSV Files"])
    for (i in seq(1,datasets)) {
      update = julian(as.Date(fia_table[,"Last Modified Date"][i]))
-     if (curdate > update) { 
+     if (curdate == update) { 
         csv_name <- fia_table[,"CSV Files"][i] ##The CSV that is out of date
         url_name<-paste('http://apps.fs.fed.us/fiadb-downloads',csv_name,sep="") ##The URL of the out of date CSV
         getURL(url_name,csv_name,mode="w") ##Download the csv. 
