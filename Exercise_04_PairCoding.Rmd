@@ -1,0 +1,265 @@
+---
+title: "Activity 04 - Pair coding"
+author: "Michael Dietze"
+date: "February 11, 2016"
+output: html_document
+---
+
+## Objectives
+
+The primary goal of this exercise is to gain experience working collaboratively to develop a scientific workflow. As such, this assignment is best completed with a partner. Specifically, we will outline a simple analysis, break the overall job into parts, and have each person complete part of the project. To put these parts together we will be using Github. Along the way we will also be exploring the statistical concept of Likelihood.
+
+## Prairie Phenology
+
+The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_canopy_0001_1day_v4.csv 
+
+The workflow for this analysis with have three components: 
+
+1. Download PhenoCam data for the U. Illinois Tall Grass Prairie site
+2. Visualize the data with a mean and 95% confidence interval
+3. Fit a simple logistic model to spring leaf out for one specific year
+
+From this overall design, let's next outline the specific steps involved as pseudocode
+
+```
+### Prairie Phenology Workflow
+
+## Download phenology data
+
+## Plot overall phenology data
+
+## Create and visualize subset of data for leaf out
+
+## Fit logistic model
+
+## Visualize model and data
+```
+
+## Modular Design
+
+From this overall design we can look for ways to modularize the analysis. One feature that jumps out is that we need to visualize the data three times, so we should definitely make a function to do that. The inputs to the function would be an x-axis (`date`), y-axis (`gcc_mean`), and error estimate (`gcc_std`), which we might pass as a dataframe for convinience. Since this is a graphing function we'd also like the ability to set all sorts of plot characteristics, which can be done in R by passing `...` as an argument and then passing that on to the internal _plot_ call. The proposed function interface would thus be
+
+```
+##' Plot Phenocam data
+##' 
+##' @param dat  dataframe of date, gcc_mean, gcc_std
+##' @param ...  additional graphing parameters
+plot.phenocam <- function(dat,...)
+```
+
+Next, because the raw data will be downloaded off the web and has embedded meta-data to handle, let's go ahead and create a download function. This function just needs to know the URL for where to find the data. Unlike the plot function, this function will return something (the data that was downloaded), so it would be good design to document what is returned and how it will be formatted
+
+```
+##' Download Phenocam data
+##' 
+##' @param URL  web address where data is located
+##' @return data.frame with days as rows, variables as columns
+download.phenocam <- function(URL)
+```
+
+Let's also create a function to fit the logistic model to the spring leaf-out data, since we could easily see applying this same function to other data sets. The input to such a fit would obviously be the same data.frame that we're using to make the plot. To do the fit itself we'll use Maximum Likelihood, so in addition to the data we'll need to provide an initial guess at the model parameters, which we'll pass on to the numerical optimization. We'll also want to return the full output from that numerical optimization so that we can check if it converged successfully.
+
+```
+##' Fit logistic model
+##' 
+##' @param dat  dataframe of day of year (doy), gcc_mean, gcc_std
+##' @param par  vector of initial parameter guess
+##' @return  output from numerical optimization
+fit.logistic <- function(dat,par)
+```
+Finally, because we'll want to make a plot of the logistic model after we're done, let's create a function for performing the model calculation. This function will also come in handy within the _fit.logistic_ function.
+```
+##' Logistic model
+##'
+##' @param theta  parameter vector
+##' @param x      vector of x values
+##' @return vector of model predictions
+pred.logistic <- function(theta,x)
+```
+
+At this point we've spent a good bit of time up front on organization -- we have a detailed plan of attack and have thought carefully about what each module is responsible for doing. Each task has well-defined inputs, outputs, and goals. Rather than facing a thankless job of documenting our code after we're done, even though we haven't written a single line of code yet we are largely done with our documentation. What remains to do is implementation.
+
+## Task 1: Create Repository 
+
+Because we're going to employ version control in our project, our first step is to create the repository that our project will be stored in.  **To ensure that both you and your partner get to see every step of how to work with version control, in the for the rest of this exercise you are going to complete every step twice, once from the perspective of the OWNER of the repository and once as the COLLABORATOR**.
+
+###OWNER
+
+1. Go to your account on github.com and under the Repositories tab click on the "New" button with a picture of a book on it
+2. Choose a name for your repository (make sure it's different from your partner's)
+3. Click the "Initialize this repository with a README" checkbox
+4. Optionally also provide a Description, Add a licence (e.g. MIT), and add R to the .gitignore
+5. Click "Create Repository"
+6. Copy the URL of your new repository by clicking the clipboard icon
+7. To clone the repository,open up RStudio and create a New Project using this URL Note: this current project will close when you do so, so you'll need to re-open this file from within the new project
+ + Select New Project from the menu in the top right corner
+ + Select Version Control then Git
+ + Paste the URL in and click Create Project
+ 
+## Task 2: 
+
+At this point the overall workflow is defined, but none of the code internal to the Actors are. What this shows us is that in some sense it no longer matters HOW the internal operation of each Actor is defined, so long as the inputs and outputs behave as expected. For example, in the code below for Min/Max to SD we use a Maximum Likelihood estimator to estimate the standard deviation for each observation independently, and then fit a regression between SD and GCC to estimate the heteroskedasticity. We could swap this module out for one that took a Bayesian approach and estimated all the standard deviations in a hierarchical model, yet the rest of the workflow would not care. This modularity is certainly possible using traditional coding techniques, but the workflow makes it particularly clear what is being done. It also makes it easier for another developer/collaborator to focus just on specific Actors in isolation of the rest of the workflow. Finally, it even allows one to easily move between languages – if someone wanted to implement Min/Max to SD in Python and someone else implemented Plot Phenology in Matlab, the overall workflow would continue to function just as before.
+
+Now lets define the code!
+
+```
+## Master script for phenology analysis
+
+URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv"
+
+prairie.pheno <- download.phenocam(URL)
+
+plot.phenocam(prairie.pheno)
+
+```
+
+
+The code for Pull Phenocam Data is straightforward:
+
+```{r}
+##' Download Phenocam data
+##' 
+##' @param URL  web address where data is located
+download.phenocam <- function(URL) {
+  ## check that we've been passed a URL
+  if (length(URL) == 1 & is.character(URL) & substr(URL,1,4)=="http") {
+
+      ## read data
+      dat <- read.csv(URL,skip = 22)
+  
+      ## convert date
+      dat$date <- as.Date(as.character(dat$date))
+  
+      return(dat)
+  } else {
+    print(paste("download.phenocam: Input URL not provided correctly",URL))
+  }
+}
+```
+
+
+First it checks that the input URL was provided, and if so it reads the data from the web and saves it as an RData binary. The only complicated syntax is the part for generating the binary filename based on the original csv filename, which involves splitting the URL into parts based on forward slashes and then using the last part as the filename.
+
+Next, let’s implement the code for Plot Phenology since it is also straightforward:
+
+ 
+```{r}
+
+## Define ciEnvelope function
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+  ## identify chunks of data with no missing values
+  has.na = apply(is.na(cbind(x,ylo,yhi)),1,sum)
+  block = cumsum(has.na);block[has.na>0] = NA
+  blocks = na.omit(unique(block))
+  
+  for(i in blocks){
+    sel = which(block==i)
+    polygon(cbind(c(x[sel], rev(x[sel]), x[sel[1]]), c(ylo[sel], rev(yhi[sel]),
+                                      ylo[sel[1]])), col=col,border = NA,...) 
+  }
+}
+
+##' Plot Phenocam data
+##' 
+##' @param dat  dataframe of date, gcc_mean, gcc_std
+##' @param ...  additional graphing parameters
+plot.phenocam <- function(dat,...){
+  
+  if(!is.null(dat)){
+    
+    ## QC flags
+    gcc_mean = dat$gcc_mean
+    gcc_mean[dat$outlierflag_gcc_mean>-9999] = NA
+    
+    ## base plot
+    plot(dat$date,dat$gcc_mean,type='l',...)
+    
+    ## calculate CI
+    ylo = dat$gcc_mean-1.96*dat$gcc_std
+    yhi = dat$gcc_mean+1.96*dat$gcc_std
+    
+    ## add confidence envelope
+    ciEnvelope(dat$date,ylo,yhi)
+    
+    ## replot mean line
+    lines(dat$date,dat$gcc_mean,lwd=1.5)
+
+  } else {
+    print("plot.phenocam: input data not provided")
+  }
+  
+}
+
+
+```
+
+
+First we define the  ciEnvelope function, which is slightly more complicated that the one we used previously, but has just been modified to account for NA values in the data. Second, we load the data if the filename was provided. Third, if the data exists in the file then we plot the data. Fourth, if the object sd_lm exists, then we define the upper and lower interval and add this to the plot.
+
+```{r}
+spring = as.Date(c("2015-01-01","2015-06-01"))
+
+plot.phenocam(prairie.pheno,xlim=spring)
+
+dat = subset(prairie.pheno,date > spring[1] & date < spring[2],select=c(date,gcc_mean,gcc_std))
+plot.phenocam(dat)
+
+
+dat$doy = as.POSIXlt(dat$date)$yday
+
+##' Logistic model
+##'
+##' @param theta  parameter vector
+##' @param x      vector of x values
+##' @return vector of model predictions
+pred.logistic <- function(theta,x){
+   z = exp(theta[3]+theta[4]*x)
+   Ey = theta[1]+theta[2]*z/(1+z) 
+}
+
+##' Fit logistic model
+##' 
+##' @param dat  dataframe of day of year (doy), gcc_mean, gcc_std
+##' @param par  vector of initial parameter guess
+##' @return  output from numerical optimization
+fit.logistic <- function(dat,par){
+  
+  ## define log likelihood
+  lnL.logistic <- function(theta,dat){
+    -sum(dnorm(dat$gcc_mean,pred.logistic(theta,dat$doy),dat$gcc_std,log=TRUE))
+  }
+  
+  ## fit by numerical optimization
+  optim(par,fn = lnL.logistic,dat=dat)
+}
+
+par = c(0.33,0.11,-10,0.1)
+plot.phenocam(dat)
+lines(dat$date,pred.logistic(fit$par,dat$doy),col=2)
+
+
+```
+
+
+
+Our final actor, Min/Max to SD, is a bit more complicated so we’ll attack it in parts (all of which you’ll need to put into the Actor). The basic idea is that we want to estimate the standard deviation on the observations, but the reported statistics are the mean, min, and max, and sample size. To do this we’ll rely on the concept of order statistics – if you draw n random values from a probability distribution and sort them in order, what is the probability distribution for the ith largest value? Specifically we’re interested in asking the question, for a given proposed value of the standard deviation, what is the probability distribution for the min and max. Since the Normal is symmetric we’ll just deal with the case for the max and transform this for dealing with the min as well. For any probability distribution, the distribution of the maximum is given as:
+f_Z (z)=nf_X (z) F_X (z)^(n-1)
+where fX is the original pdf, FX is the original cdf, and fZ is the max pdf. We’ll code this up for the Normal as
+To see what this looks like, below is a plot of onorm over a range of z values for the standard normal distribution (mean=0, sd=1) for different sample sizes (n indicated by different colors). Not surprisingly, as n increases the pdf for the largest value increases. Somewhat less intuitively, the distribution also narrows, as values close to the mean become increasingly less likely, but as rare events in the tails still retain low probability.
+ 
+Figure 0.1 PDF for the maximum value drawn from a Normal distribution with different colors indicating different sample sizes
+
+In order to estimate the standard deviation we will use the likelihood principle which states that “a parameter value is more likely than another if it is the one for which the data are more probable”. To do this we need to define a Likelihood, which is the relationship between the value of the parameter and the probability of some observed data. [For the record, the Likelihood is not a probability distribution because it does not integrate to 1]. So, for example, if we made an observation of x=1 and knew a priori that the standard deviation was 2 but we didn’t know what the mean was, then we could plot the probability of observing x=1, L = N(1|μ,2), as a function of the possible values of the mean, μ. This is the opposite of our our typical plot of the normal pdf where mu and sd are known and we vary x.
+ 
+Figure 0.2 Plot of Likelihood (top panel) and negative log Likelihood (bottom panel) for a Normal with standard deviation of 2 and an observation x=1:  N(1 | mu, 2)
+
+Applying the likelihood principle we would then look for the most likely value of μ, which we call the Maximum Likelihood estimate. Not surprisingly, the most likely value of mu is 1. For a number or reasons that will become clear in later lectures, it is common to work with negative log likelihoods instead of likelihoods, in which case the negative implies that instead of looking for the maximum we’re now looking for the minimum. The fact that logarithm is a monotonic transformation means that taking the log does not change the location of this minimum, it is still at mu=1. To apply the likelihood principle to our standard deviation problem, we will instead take the mean as known (the reported sample mean), and then determine the value of the standard deviation that is most likely given the data (observed min and max). The code for this comes in two parts. First is the negative log likelihood function itself:
+ 
+The second is code that loops over all the observations and uses a numerical optimization function, optimize, to find the Maximum Likelihood estimate for each.
+ 
+
+The remainder of the code then calls this function, sd.mle, and performs from diagnostics on the results. From previous exploratory analysis it became apparent that there was a strong relationship between the mean value of our phenological data (gcc) and the estimated standard deviation, which implies heteroskedasticity. Therefore, what we pass on to Plot Phenology isn’t the mean SD but the slope and intercept of this relationship.
+
+ 
+
+At this point your workflow should be complete and you should be able to run the analysis.
