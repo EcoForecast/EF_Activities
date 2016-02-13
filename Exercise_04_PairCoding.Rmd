@@ -79,7 +79,7 @@ pred.logistic <- function(theta,x)
 
 At this point we've spent a good bit of time up front on organization -- we have a detailed plan of attack and have thought carefully about what each module is responsible for doing. Each task has well-defined inputs, outputs, and goals. Rather than facing a thankless job of documenting our code after we're done, even though we haven't written a single line of code yet we are largely done with our documentation. What remains to do is implementation.
 
-## Task 1: Create Repository 
+## Task 1: Create & Clone Repository 
 
 Because we're going to employ version control in our project, our first step is to create the repository that our project will be stored in.  **To ensure that both you and your partner get to see every step of how to work with version control, in the for the rest of this exercise you are going to complete every step twice, once from the perspective of the OWNER of the repository and once as the COLLABORATOR**.
 
@@ -96,25 +96,9 @@ Because we're going to employ version control in our project, our first step is 
  + Select Version Control then Git
  + Paste the URL in and click Create Project
  
-## Task 2: 
+## Task 2: Add the first function: download.phenocam
 
-At this point the overall workflow is defined, but none of the code internal to the Actors are. What this shows us is that in some sense it no longer matters HOW the internal operation of each Actor is defined, so long as the inputs and outputs behave as expected. For example, in the code below for Min/Max to SD we use a Maximum Likelihood estimator to estimate the standard deviation for each observation independently, and then fit a regression between SD and GCC to estimate the heteroskedasticity. We could swap this module out for one that took a Bayesian approach and estimated all the standard deviations in a hierarchical model, yet the rest of the workflow would not care. This modularity is certainly possible using traditional coding techniques, but the workflow makes it particularly clear what is being done. It also makes it easier for another developer/collaborator to focus just on specific Actors in isolation of the rest of the workflow. Finally, it even allows one to easily move between languages – if someone wanted to implement Min/Max to SD in Python and someone else implemented Plot Phenology in Matlab, the overall workflow would continue to function just as before.
-
-Now lets define the code!
-
-```
-## Master script for phenology analysis
-
-URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv"
-
-prairie.pheno <- download.phenocam(URL)
-
-plot.phenocam(prairie.pheno)
-
-```
-
-
-The code for Pull Phenocam Data is straightforward:
+Within this project we'll create separate files for each part of the analysis. To make the order of the workflow clear we'll want to name the files systematically. In the first file we'll implement the download.phenocam function
 
 ```{r}
 ##' Download Phenocam data
@@ -137,14 +121,26 @@ download.phenocam <- function(URL) {
 }
 ```
 
+### OWNER
 
-First it checks that the input URL was provided, and if so it reads the data from the web and saves it as an RData binary. The only complicated syntax is the part for generating the binary filename based on the original csv filename, which involves splitting the URL into parts based on forward slashes and then using the last part as the filename.
+1. In RStudio, click File > New File > R Script
+2. Copy and Paste the above function into this file
+3. Save the file as "01_download.phenocam.R"
+4. From the Git tab, click the box next to the file you just created. This is equivalent to _git add_
+5. Click Commit, enter a log message, and click Commit. This is equivalent to _git commit_
+6. To push the change up to Github click on the green up arrow. This is equivalent to _git push_
 
-Next, let’s implement the code for Plot Phenology since it is also straightforward:
+## Task 3: Collaborator adds plot.phenocam
 
- 
+With the first function complete, let's now imagine that a **COLLABORATOR** has been tasked with adding the second function. To do so they must first fork and clone the repository
+
+### COLLABORATOR
+
+1. Go to Github and navigate to the project repository within the OWNER's workspace.
+2. Click Fork, which will make a copy of the repository to your own workspace.
+3. Copy the URL to your own version and follow the instructions above for cloning the repository in RStudio.
+4. Open a new file, enter the code below, and then save the file as "02_plot.phenocam.R"
 ```{r}
-
 ## Define ciEnvelope function
 ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
   ## identify chunks of data with no missing values
@@ -189,24 +185,28 @@ plot.phenocam <- function(dat,...){
   }
   
 }
-
-
 ```
+5. Follow the instructions above to Add, Commit, and Push the file back to your Github
+6. Next you want to perform a "pull request", which will send a request to the OWNER that they pull your new code into their mainline version. From your Github page for this project, click **New Pull Request**.
+7. Follow the instructions, creating a title, message, and confirming that you want to create the pull request
 
+### OWNER
 
-First we define the  ciEnvelope function, which is slightly more complicated that the one we used previously, but has just been modified to account for NA values in the data. Second, we load the data if the filename was provided. Third, if the data exists in the file then we plot the data. Fourth, if the object sd_lm exists, then we define the upper and lower interval and add this to the plot.
+1. Once the COLLABORATOR has created the pull request, you should get an automatic email and also be able to see the pull request under the "Pull Requests" tab on the Github page for the project.
+2. Read the description of the proposed changes and then click on "Files Changed" to view the changes to the project. New code should be in green, while deleted code will be in pink.
+3. The purpose of a pull request is to allow the OWNER to evaluat the code being added before it is added. As you read through the code, if you hover your mouse over any line of code you can insert an inline comment in the code. The COLLABORATOR would then have the ability to respond to any comments. In larger projects, all participants can discuss the code and decide whether it should be accepted or not. Furthermore, if the COLLABORATOR does any further pushes to Github before the pull request is accepted these changes will automatically become part of the pull request. While this is a very handy feature, it can also easily backfire if the COLLABORATOR starts working on something different in the meantime. This is the reason that experienced users of version control will use BRANCHES to keep different parts separate.
+4. Click on the "Conversation" page to return where you started. All participants can also leave more general comments on this page. 
+5. If you are happy with the code, click "Merge Pull Request". Alternatively, to outright reject a pull request click "Close pull request"
 
+## Task 4: Owner adds pred.logistic and fit.logistic
+
+We are now past the 'set up' stage for both the OWNER and the COLLABORATOR, so for this task we'll explore the normal sequence of steps that the OWNER will use for day-to-day work
+
+### OWNER
+
+1. Pull the latest code from Github. In RStudio this is done by clicking the light blue down arrow on the Git tab. This is equivalent to the commandline _git pull origin master_ where origin refers to where the where you did your orginal clone from and master refers to your main branch (if you use branches you can pull other branches)
+2. Next, open up a new R file, add the code below, and save as "03_logistic.R"
 ```{r}
-spring = as.Date(c("2015-01-01","2015-06-01"))
-
-plot.phenocam(prairie.pheno,xlim=spring)
-
-dat = subset(prairie.pheno,date > spring[1] & date < spring[2],select=c(date,gcc_mean,gcc_std))
-plot.phenocam(dat)
-
-
-dat$doy = as.POSIXlt(dat$date)$yday
-
 ##' Logistic model
 ##'
 ##' @param theta  parameter vector
@@ -233,33 +233,75 @@ fit.logistic <- function(dat,par){
   optim(par,fn = lnL.logistic,dat=dat)
 }
 
+```
+3. As before, add your new file under the Git tab, Commit the change, and push it back to Github
+
+To estimate the parameters in the logistic model we will use the likelihood principle which states that “a parameter value is more likely than another if it is the one for which the data are more probable”. To do this we need to define a Likelihood, which is the relationship between the value of the parameter and the probability of some observed data. [For the record, the Likelihood is not a probability distribution because it does not integrate to 1]. In this case we'll start by assuming a Normal likelihood and use the standard deviation that's reported in the data to represent the uncertainty. In a more detailed analysis we'd want to follow up to check both these assumptions, but it's a simple starting point.
+
+Applying the likelihood principle we would then look for the most likely value of $\theta$, the vector parameters in the logistic model, which we call the Maximum Likelihood estimate. For a number or reasons that will become clear in later lectures, it is common to work with negative log likelihoods instead of likelihoods, in which case the negative implies that instead of looking for the maximum we’re now looking for the minimum. The fact that logarithm is a monotonic transformation means that taking the log does not change the location of this minimum. 
+
+The code for this comes in three parts. First is the logistic model itself, _pred.logistic_, which translates the equation 
+$$\theta_1 + \theta_2 {{exp(\theta_3 + \theta_4 x)}\over{1+exp(\theta_3 + \theta_4 x)}}$$ 
+into code. The logistic has an overall S shape, with $\theta_1$ defining the minimum and $\theta_1 + \theta_2$ defining the max. The midpoint of the curve -- the x value where the function is halfway between the minimum and maximum -- occurs at $-\theta_3 / \theta_4$, while the slope at that point is $\theta_4/4$.
+
+Second is the negative log likelihood function, _lnL.logistic_, which we're trying to minimize. The core of this is the Normal probability density, dnorm. The first arguement is the data, the second the is model, and the third is the standard deviation. The fourth arguement says that we want to return the log density, which is much more accurate if it's performed internally than if we take the log of what's returned by dnorm. Since we have many data points dnorm returns a vector, which we then sum up and change the sign to turn this into a minimization problem.
+
+The third part is a call to a numerical optimization function, _optim_, that searches through parameter space to find the set of parameters that minimize the negative log likelihood (i.e. that Maximize the Likelihood). Arguements are the initial parameter guess, the function being minimized, and any additional parameters that get passed on to that function.
+
+## Task 5: Collaborator adds the master script
+
+The day-to-day workflow for the COLLABORATOR is similar, but not exactly the same as the OWNER. The biggest differences are that the COLLABORATOR needs to pull from the OWNER, not their own repository, and needs to do a pull request after the push.
+
+### COLLABORATOR
+
+1. Pull from OWNER. Unfortunately, this has to be done from the command line rather than the pull button within RStudio, which just pulls from the COLLABORATOR's repository. In RStudio go to Tools > Shell to open a terminal
+2. At the terminal type
+```
+git pull URL master
+```
+where URL is the address of the OWNER's Github repository. Because it is a pain to always remember and type in the OWNER's URL, it is common to define this as _upstream_
+```
+git remote add upstream URL
+```
+which is a one-time task, after which you can do the pull as
+```
+git pull upstream master
+```
+2. Open a new Rmd file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
+```{r}
+## Master script for phenology analysis
+
+## Load required functions
+if(file.exists("01_download.phenocam.R")) source("01_download.phenocam.R")
+if(file.exists("02_plot.phenocam.R"))     source("02_plot.phenocam.R")
+if(file.exists("03_logistic.R"))          source("03_logistic.R")
+
+## Download phenology data
+URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv"
+prairie.pheno <- download.phenocam(URL)
+
+## Plot overall phenology data
+plot.phenocam(prairie.pheno)
+
+## Create and visualize subset of data for leaf out
+spring = as.Date(c("2015-01-01","2015-06-01"))
+dat = subset(prairie.pheno,date > spring[1] & date < spring[2], select=c(date,gcc_mean,gcc_std))
+plot.phenocam(dat)
+
+## Fit logistic model
+dat$doy = as.POSIXlt(dat$date)$yday
 par = c(0.33,0.11,-10,0.1)
+fit = fit.logistic(dat,par)
+
+## Visualize model and data
 plot.phenocam(dat)
 lines(dat$date,pred.logistic(fit$par,dat$doy),col=2)
-
-
 ```
+3. Save this file as "04_Master.Rmd". 
+4. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
+5. On Github.com, submit a pull request
 
-
-
-Our final actor, Min/Max to SD, is a bit more complicated so we’ll attack it in parts (all of which you’ll need to put into the Actor). The basic idea is that we want to estimate the standard deviation on the observations, but the reported statistics are the mean, min, and max, and sample size. To do this we’ll rely on the concept of order statistics – if you draw n random values from a probability distribution and sort them in order, what is the probability distribution for the ith largest value? Specifically we’re interested in asking the question, for a given proposed value of the standard deviation, what is the probability distribution for the min and max. Since the Normal is symmetric we’ll just deal with the case for the max and transform this for dealing with the min as well. For any probability distribution, the distribution of the maximum is given as:
-f_Z (z)=nf_X (z) F_X (z)^(n-1)
-where fX is the original pdf, FX is the original cdf, and fZ is the max pdf. We’ll code this up for the Normal as
-To see what this looks like, below is a plot of onorm over a range of z values for the standard normal distribution (mean=0, sd=1) for different sample sizes (n indicated by different colors). Not surprisingly, as n increases the pdf for the largest value increases. Somewhat less intuitively, the distribution also narrows, as values close to the mean become increasingly less likely, but as rare events in the tails still retain low probability.
- 
-Figure 0.1 PDF for the maximum value drawn from a Normal distribution with different colors indicating different sample sizes
-
-In order to estimate the standard deviation we will use the likelihood principle which states that “a parameter value is more likely than another if it is the one for which the data are more probable”. To do this we need to define a Likelihood, which is the relationship between the value of the parameter and the probability of some observed data. [For the record, the Likelihood is not a probability distribution because it does not integrate to 1]. So, for example, if we made an observation of x=1 and knew a priori that the standard deviation was 2 but we didn’t know what the mean was, then we could plot the probability of observing x=1, L = N(1|μ,2), as a function of the possible values of the mean, μ. This is the opposite of our our typical plot of the normal pdf where mu and sd are known and we vary x.
- 
-Figure 0.2 Plot of Likelihood (top panel) and negative log Likelihood (bottom panel) for a Normal with standard deviation of 2 and an observation x=1:  N(1 | mu, 2)
-
-Applying the likelihood principle we would then look for the most likely value of μ, which we call the Maximum Likelihood estimate. Not surprisingly, the most likely value of mu is 1. For a number or reasons that will become clear in later lectures, it is common to work with negative log likelihoods instead of likelihoods, in which case the negative implies that instead of looking for the maximum we’re now looking for the minimum. The fact that logarithm is a monotonic transformation means that taking the log does not change the location of this minimum, it is still at mu=1. To apply the likelihood principle to our standard deviation problem, we will instead take the mean as known (the reported sample mean), and then determine the value of the standard deviation that is most likely given the data (observed min and max). The code for this comes in two parts. First is the negative log likelihood function itself:
- 
-The second is code that loops over all the observations and uses a numerical optimization function, optimize, to find the Maximum Likelihood estimate for each.
- 
-
-The remainder of the code then calls this function, sd.mle, and performs from diagnostics on the results. From previous exploratory analysis it became apparent that there was a strong relationship between the mean value of our phenological data (gcc) and the estimated standard deviation, which implies heteroskedasticity. Therefore, what we pass on to Plot Phenology isn’t the mean SD but the slope and intercept of this relationship.
-
- 
+###OWNER
+1. Evaluate and accept pull request.
 
 At this point your workflow should be complete and you should be able to run the analysis.
