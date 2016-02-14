@@ -49,11 +49,12 @@ myCode[x]
 ```
 
 netCDF, wget
+-------------
 
 **Question 4:** 
 
 Download and plot the air temperature data for Boston for 2004 that's located on the ORNL DAAC server `http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4`.  The underlying file is quite large so make sure to grab just the subset you need. To do so you'll need to first grab the lat, lon, and time variables to find _which_ grid cell to grab for lat and lon and how many values to grab from time (i.e. _length_). 
-------------
+
 ```{r}
 airtemp <- nc_open("http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4")
 lat <- ncvar_get(airtemp, "lat")
@@ -63,7 +64,7 @@ time_length <- length(time)
 boston_lat <- which(lat > 42.2 & lat < 42.4)
 boston_lon <- which(lon > 71 & lon < 71.5)
 boston_at <- ncvar_get(airtemp,"tair",c(boston_lon, boston_lat,1),c(1, 1,time_length))
-plot(as.Date(time, origin=as.Date("1700-01-01")), boston_at,ylab="Mean Air Temperature (K)", 
+plot(as.Date(time, origin=as.Date("1700-01-01")), boston_at, ylab="Mean Air Temperature (K)", 
      main="Boston Mean Temperature in 2004")
 nc_close(airtemp)
 
