@@ -1,0 +1,136 @@
+---
+title: "Exercise 3: Answers"
+author: "Paulo Arevalo"
+date: "February 8, 2016"
+output: html_document
+---
+
+Pulling data directly off the web
+---------------------------------
+**Question 1:**
+
+Using the US Forest Service's Forest Inventory and Analysis (FIA) data set, plot the rank vs log(abundance) curve for tree seedling counts from Rhode Island. Data is available at http://apps.fs.fed.us/fiadb-downloads/RI_SEEDLING.CSV and the relevant columns are TREECOUNT (raw seedling counts) and SPCD (species codes). 
+Hints: tapply, sum, na.rm=TRUE, sort, decreasing=TRUE, log='y'
+
+```{r}
+library("RCurl")
+library("XML")
+library("ncdf4")
+library("devtools")
+library("MODISTools")
+tsc <- read.csv('http://apps.fs.fed.us/fiadb-downloads/RI_SEEDLING.CSV')
+spr <- sort(tapply(tsc$TREECOUNT, tsc$SPCD, sum, na.rm = TRUE), decreasing = TRUE)
+plot(log(spr), ylab = 'log(abundance)', xlab = 'Species code') #How to plot specific number labels?
+
+```
+
+Web Scraping
+------------
+**Question 2:**
+Create a sorted table of how many FLUXNET eddy-covariance towers are in each country according to the website at http://fluxnet.ornl.gov/site_status. Hint: use substring to extract the country code from the overall FLUXNET ID code.
+
+```{r}
+ect_html <- getURL("http://fluxnet.ornl.gov/site_status")
+ect_table = readHTMLTable(ect_html)[[1]]
+country <- substring(ect_table$`FLUXNET ID`, 1,2)
+ect_table$country <- country
+table(ect_table$country)
+```
+
+grep, system, RegExp
+--------------------
+
+**Question 3:** Within the object myCode, find all the lines that begin with the comment character, #.
+
+```{r}
+myCode = readLines("Exercise_03_BigData.Rmd")  ## read unstructured text
+x = grep("^#",myCode)   
+myCode[x]
+```
+
+netCDF, wget
+
+**Question 4:** 
+
+Download and plot the air temperature data for Boston for 2004 that's located on the ORNL DAAC server `http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4`.  The underlying file is quite large so make sure to grab just the subset you need. To do so you'll need to first grab the lat, lon, and time variables to find _which_ grid cell to grab for lat and lon and how many values to grab from time (i.e. _length_). 
+------------
+```{r}
+airtemp <- nc_open("http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4")
+lat <- ncvar_get(airtemp, "lat")
+lon <- ncvar_get(airtemp, "lon")
+time <- ncvar_get(airtemp, "time")
+time_length <- length(time)
+boston_lat <- which(lat > 42.2 & lat < 42.4)
+boston_lon <- which(lon > 71 & lon < 71.5)
+boston_at <- ncvar_get(airtemp,"tair",c(boston_lon, boston_lat,1),c(1, 1,time_length))
+plot(as.Date(time, origin=as.Date("1700-01-01")), boston_at,ylab="Mean Air Temperature (K)", 
+     main="Boston Mean Temperature in 2004")
+nc_close(airtemp)
+
+```
+
+SOAP
+----
+
+**Question 5:** Plot EVI versus time and compare to the CO2 flux observations.
+
+```{r}
+GetProducts()
+GetBands(Product="MOD13Q1")
+MODISSubsets(data.frame(lat=46.0827,long=-89.9792,start.date=2012,end.date=2012),
+  Product="MOD13Q1",Bands="250m_16_days_EVI",Size=c(1,1),StartDate=TRUE)
+
+MODIS = read.csv(list.files(pattern=".asc")[1],header=FALSE,as.is=TRUE,na.string="-3000")
+
+EVI = apply(MODIS[,11:ncol(MODIS)],1,mean,na.rm=TRUE)*0.0001
+time = as.Date(substr(MODIS[,10],1,7),format="%Y%j")
+
+par(mar = c(5, 5, 3, 5))
+plot(time, EVI, xlab="Date", col="green4")
+par(new=TRUE)
+plot(doy,filter(NEE[1,],rep(1/24,24)),type='l',axes = FALSE, ylab = NA, xlab=NA, col="blue")
+axis(side=4)
+mtext("Net ecosystem exchange of CO2 at 30 m height ", side=4, line=3)
+```
+
+
+cron
+----
+
+**Question #6:**
+
+Imagine you are working with the full FIA database and want to ensure that the data you are using is always up to date. However, the total size of the database is large, the USFS server is slow, and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
+
+* Write out the pseudocode/outline for how to keep the files up to date
+* Write out what the cron table would look like to schedule this job (assume the update only needs to be done weekly)
+
+This is a very rough version of the code and has the following assumptions and issues:
+* Assumes that there are already local copies of the files
+* Assumes that all files are valid, but clearly there are files with NA in their "Last modified date" field
+* Currently, it doesn't overwrite the CSV file, which is kind of a problem...
+
+```{r}
+dataupdate <- function(){
+  fia_db <- getURL("http://apps.fs.fed.us/fiadb-downloads/")
+  fia_table <- readHTMLTable(fia_db)[[6]] #This is the table with each indiv. state
+  datalist <- length(fia_table[, "CSV Files"])
+  for (d in seq(1, datalist)){
+    local_date <- as.Date(file.info(d)$mtime)
+    server_date <- as.Date(fia_table[,"Last Modified Date"][d])
+    if (server_date > local_date){
+      csv_name <- fia_table[,"CSV Files"][d]
+      url_name <- paste(database,csv_name,sep="")
+      download.file(url_name, destfile = paste(csv_name,".csv"), method = 'auto', mode='wb')
+      print(paste(csv_name, " has bee updated"))
+    else
+      print(paste(csv_name, " is the most recent version"))
+    }
+  }
+  
+}
+
+dataupdate()
+
+MAILTO= parevalo@bu.edu
+0 0 * * 7 /usr3/graduate/parevalo/EcoFor/DB_update.R
+```
