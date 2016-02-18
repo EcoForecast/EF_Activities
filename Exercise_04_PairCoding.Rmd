@@ -1,0 +1,307 @@
+---
+title: "Activity 04 - Pair coding"
+author: "Michael Dietze"
+date: "February 11, 2016"
+output: html_document
+---
+
+## Objectives
+
+The primary goal of this exercise is to gain experience working collaboratively to develop a scientific workflow. As such, this assignment is best completed with a partner. Specifically, we will outline a simple analysis, break the overall job into parts, and have each person complete part of the project. To put these parts together we will be using Github. Along the way we will also be exploring the statistical concept of Likelihood.
+
+## Prairie Phenology
+
+The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_canopy_0001_1day_v4.csv 
+
+The workflow for this analysis with have three components: 
+
+1. Download PhenoCam data for the U. Illinois Tall Grass Prairie site
+2. Visualize the data with a mean and 95% confidence interval
+3. Fit a simple logistic model to spring leaf out for one specific year
+
+From this overall design, let's next outline the specific steps involved as pseudocode
+
+```
+### Prairie Phenology Workflow
+
+## Download phenology data
+
+## Plot overall phenology data
+
+## Create and visualize subset of data for leaf out
+
+## Fit logistic model
+
+## Visualize model and data
+```
+
+## Modular Design
+
+From this overall design we can look for ways to modularize the analysis. One feature that jumps out is that we need to visualize the data three times, so we should definitely make a function to do that. The inputs to the function would be an x-axis (`date`), y-axis (`gcc_mean`), and error estimate (`gcc_std`), which we might pass as a dataframe for convinience. Since this is a graphing function we'd also like the ability to set all sorts of plot characteristics, which can be done in R by passing `...` as an argument and then passing that on to the internal _plot_ call. The proposed function interface would thus be
+
+```
+##' Plot Phenocam data
+##' 
+##' @param dat  dataframe of date, gcc_mean, gcc_std
+##' @param ...  additional graphing parameters
+plot.phenocam <- function(dat,...)
+```
+
+Next, because the raw data will be downloaded off the web and has embedded meta-data to handle, let's go ahead and create a download function. This function just needs to know the URL for where to find the data. Unlike the plot function, this function will return something (the data that was downloaded), so it would be good design to document what is returned and how it will be formatted
+
+```
+##' Download Phenocam data
+##' 
+##' @param URL  web address where data is located
+##' @return data.frame with days as rows, variables as columns
+download.phenocam <- function(URL)
+```
+
+Let's also create a function to fit the logistic model to the spring leaf-out data, since we could easily see applying this same function to other data sets. The input to such a fit would obviously be the same data.frame that we're using to make the plot. To do the fit itself we'll use Maximum Likelihood, so in addition to the data we'll need to provide an initial guess at the model parameters, which we'll pass on to the numerical optimization. We'll also want to return the full output from that numerical optimization so that we can check if it converged successfully.
+
+```
+##' Fit logistic model
+##' 
+##' @param dat  dataframe of day of year (doy), gcc_mean, gcc_std
+##' @param par  vector of initial parameter guess
+##' @return  output from numerical optimization
+fit.logistic <- function(dat,par)
+```
+Finally, because we'll want to make a plot of the logistic model after we're done, let's create a function for performing the model calculation. This function will also come in handy within the _fit.logistic_ function.
+```
+##' Logistic model
+##'
+##' @param theta  parameter vector
+##' @param x      vector of x values
+##' @return vector of model predictions
+pred.logistic <- function(theta,x)
+```
+
+At this point we've spent a good bit of time up front on organization -- we have a detailed plan of attack and have thought carefully about what each module is responsible for doing. Each task has well-defined inputs, outputs, and goals. Rather than facing a thankless job of documenting our code after we're done, even though we haven't written a single line of code yet we are largely done with our documentation. What remains to do is implementation.
+
+## Task 1: Create & Clone Repository 
+
+Because we're going to employ version control in our project, our first step is to create the repository that our project will be stored in.  **To ensure that both you and your partner get to see every step of how to work with version control, in the for the rest of this exercise you are going to complete every step twice, once from the perspective of the OWNER of the repository and once as the COLLABORATOR**.
+
+###OWNER
+
+1. Go to your account on github.com and under the Repositories tab click on the "New" button with a picture of a book on it
+2. Choose a name for your repository (make sure it's different from your partner's)
+3. Click the "Initialize this repository with a README" checkbox
+4. Optionally also provide a Description, Add a licence (e.g. MIT), and add R to the .gitignore
+5. Click "Create Repository"
+6. Copy the URL of your new repository by clicking the clipboard icon
+7. To clone the repository,open up RStudio and create a New Project using this URL Note: this current project will close when you do so, so you'll need to re-open this file from within the new project
+ + Select New Project from the menu in the top right corner
+ + Select Version Control then Git
+ + Paste the URL in and click Create Project
+ 
+## Task 2: Add the first function: download.phenocam
+
+Within this project we'll create separate files for each part of the analysis. To make the order of the workflow clear we'll want to name the files systematically. In the first file we'll implement the download.phenocam function
+
+```{r}
+##' Download Phenocam data
+##' 
+##' @param URL  web address where data is located
+download.phenocam <- function(URL) {
+  ## check that we've been passed a URL
+  if (length(URL) == 1 & is.character(URL) & substr(URL,1,4)=="http") {
+
+      ## read data
+      dat <- read.csv(URL,skip = 22)
+  
+      ## convert date
+      dat$date <- as.Date(as.character(dat$date))
+  
+      return(dat)
+  } else {
+    print(paste("download.phenocam: Input URL not provided correctly",URL))
+  }
+}
+```
+
+### OWNER
+
+1. In RStudio, click File > New File > R Script
+2. Copy and Paste the above function into this file
+3. Save the file as "01_download.phenocam.R"
+4. From the Git tab, click the box next to the file you just created. This is equivalent to _git add_
+5. Click Commit, enter a log message, and click Commit. This is equivalent to _git commit_
+6. To push the change up to Github click on the green up arrow. This is equivalent to _git push_
+
+## Task 3: Collaborator adds plot.phenocam
+
+With the first function complete, let's now imagine that a **COLLABORATOR** has been tasked with adding the second function. To do so they must first fork and clone the repository
+
+### COLLABORATOR
+
+1. Go to Github and navigate to the project repository within the OWNER's workspace.
+2. Click Fork, which will make a copy of the repository to your own workspace.
+3. Copy the URL to your own version and follow the instructions above for cloning the repository in RStudio.
+4. Open a new file, enter the code below, and then save the file as "02_plot.phenocam.R"
+```{r}
+## Define ciEnvelope function
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+  ## identify chunks of data with no missing values
+  has.na = apply(is.na(cbind(x,ylo,yhi)),1,sum)
+  block = cumsum(has.na);block[has.na>0] = NA
+  blocks = na.omit(unique(block))
+  
+  for(i in blocks){
+    sel = which(block==i)
+    polygon(cbind(c(x[sel], rev(x[sel]), x[sel[1]]), c(ylo[sel], rev(yhi[sel]),
+                                      ylo[sel[1]])), col=col,border = NA,...) 
+  }
+}
+
+##' Plot Phenocam data
+##' 
+##' @param dat  dataframe of date, gcc_mean, gcc_std
+##' @param ...  additional graphing parameters
+plot.phenocam <- function(dat,...){
+  
+  if(!is.null(dat)){
+    
+    ## QC flags
+    gcc_mean = dat$gcc_mean
+    gcc_mean[dat$outlierflag_gcc_mean>-9999] = NA
+    
+    ## base plot
+    plot(dat$date,dat$gcc_mean,type='l',...)
+    
+    ## calculate CI
+    ylo = dat$gcc_mean-1.96*dat$gcc_std
+    yhi = dat$gcc_mean+1.96*dat$gcc_std
+    
+    ## add confidence envelope
+    ciEnvelope(dat$date,ylo,yhi)
+    
+    ## replot mean line
+    lines(dat$date,dat$gcc_mean,lwd=1.5)
+
+  } else {
+    print("plot.phenocam: input data not provided")
+  }
+  
+}
+```
+5. Follow the instructions above to Add, Commit, and Push the file back to your Github
+6. Next you want to perform a "pull request", which will send a request to the OWNER that they pull your new code into their mainline version. From your Github page for this project, click **New Pull Request**.
+7. Follow the instructions, creating a title, message, and confirming that you want to create the pull request
+
+### OWNER
+
+1. Once the COLLABORATOR has created the pull request, you should get an automatic email and also be able to see the pull request under the "Pull Requests" tab on the Github page for the project.
+2. Read the description of the proposed changes and then click on "Files Changed" to view the changes to the project. New code should be in green, while deleted code will be in pink.
+3. The purpose of a pull request is to allow the OWNER to evaluat the code being added before it is added. As you read through the code, if you hover your mouse over any line of code you can insert an inline comment in the code. The COLLABORATOR would then have the ability to respond to any comments. In larger projects, all participants can discuss the code and decide whether it should be accepted or not. Furthermore, if the COLLABORATOR does any further pushes to Github before the pull request is accepted these changes will automatically become part of the pull request. While this is a very handy feature, it can also easily backfire if the COLLABORATOR starts working on something different in the meantime. This is the reason that experienced users of version control will use BRANCHES to keep different parts separate.
+4. Click on the "Conversation" page to return where you started. All participants can also leave more general comments on this page. 
+5. If you are happy with the code, click "Merge Pull Request". Alternatively, to outright reject a pull request click "Close pull request"
+
+## Task 4: Owner adds pred.logistic and fit.logistic
+
+We are now past the 'set up' stage for both the OWNER and the COLLABORATOR, so for this task we'll explore the normal sequence of steps that the OWNER will use for day-to-day work
+
+### OWNER
+
+1. Pull the latest code from Github. In RStudio this is done by clicking the light blue down arrow on the Git tab. This is equivalent to the commandline _git pull origin master_ where origin refers to where the where you did your orginal clone from and master refers to your main branch (if you use branches you can pull other branches)
+2. Next, open up a new R file, add the code below, and save as "03_logistic.R"
+```{r}
+##' Logistic model
+##'
+##' @param theta  parameter vector
+##' @param x      vector of x values
+##' @return vector of model predictions
+pred.logistic <- function(theta,x){
+   z = exp(theta[3]+theta[4]*x)
+   Ey = theta[1]+theta[2]*z/(1+z) 
+}
+
+##' Fit logistic model
+##' 
+##' @param dat  dataframe of day of year (doy), gcc_mean, gcc_std
+##' @param par  vector of initial parameter guess
+##' @return  output from numerical optimization
+fit.logistic <- function(dat,par){
+  
+  ## define log likelihood
+  lnL.logistic <- function(theta,dat){
+    -sum(dnorm(dat$gcc_mean,pred.logistic(theta,dat$doy),dat$gcc_std,log=TRUE))
+  }
+  
+  ## fit by numerical optimization
+  optim(par,fn = lnL.logistic,dat=dat)
+}
+
+```
+3. As before, add your new file under the Git tab, Commit the change, and push it back to Github
+
+To estimate the parameters in the logistic model we will use the likelihood principle which states that “a parameter value is more likely than another if it is the one for which the data are more probable”. To do this we need to define a Likelihood, which is the relationship between the value of the parameter and the probability of some observed data. [For the record, the Likelihood is not a probability distribution because it does not integrate to 1]. In this case we'll start by assuming a Normal likelihood and use the standard deviation that's reported in the data to represent the uncertainty. In a more detailed analysis we'd want to follow up to check both these assumptions, but it's a simple starting point.
+
+Applying the likelihood principle we would then look for the most likely value of $\theta$, the vector parameters in the logistic model, which we call the Maximum Likelihood estimate. For a number or reasons that will become clear in later lectures, it is common to work with negative log likelihoods instead of likelihoods, in which case the negative implies that instead of looking for the maximum we’re now looking for the minimum. The fact that logarithm is a monotonic transformation means that taking the log does not change the location of this minimum. 
+
+The code for this comes in three parts. First is the logistic model itself, _pred.logistic_, which translates the equation 
+$$\theta_1 + \theta_2 {{exp(\theta_3 + \theta_4 x)}\over{1+exp(\theta_3 + \theta_4 x)}}$$ 
+into code. The logistic has an overall S shape, with $\theta_1$ defining the minimum and $\theta_1 + \theta_2$ defining the max. The midpoint of the curve -- the x value where the function is halfway between the minimum and maximum -- occurs at $-\theta_3 / \theta_4$, while the slope at that point is $\theta_4/4$.
+
+Second is the negative log likelihood function, _lnL.logistic_, which we're trying to minimize. The core of this is the Normal probability density, dnorm. The first arguement is the data, the second the is model, and the third is the standard deviation. The fourth arguement says that we want to return the log density, which is much more accurate if it's performed internally than if we take the log of what's returned by dnorm. Since we have many data points dnorm returns a vector, which we then sum up and change the sign to turn this into a minimization problem.
+
+The third part is a call to a numerical optimization function, _optim_, that searches through parameter space to find the set of parameters that minimize the negative log likelihood (i.e. that Maximize the Likelihood). Arguements are the initial parameter guess, the function being minimized, and any additional parameters that get passed on to that function.
+
+## Task 5: Collaborator adds the master script
+
+The day-to-day workflow for the COLLABORATOR is similar, but not exactly the same as the OWNER. The biggest differences are that the COLLABORATOR needs to pull from the OWNER, not their own repository, and needs to do a pull request after the push.
+
+### COLLABORATOR
+
+1. Pull from OWNER. Unfortunately, this has to be done from the command line rather than the pull button within RStudio, which just pulls from the COLLABORATOR's repository. In RStudio go to Tools > Shell to open a terminal
+2. At the terminal type
+```
+git pull URL master
+```
+where URL is the address of the OWNER's Github repository. Because it is a pain to always remember and type in the OWNER's URL, it is common to define this as _upstream_
+```
+git remote add upstream URL
+```
+which is a one-time task, after which you can do the pull as
+```
+git pull upstream master
+```
+2. Open a new Rmd file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
+```{r}
+## Master script for phenology analysis
+
+## Load required functions
+if(file.exists("01_download.phenocam.R")) source("01_download.phenocam.R")
+if(file.exists("02_plot.phenocam.R"))     source("02_plot.phenocam.R")
+if(file.exists("03_logistic.R"))          source("03_logistic.R")
+
+## Download phenology data
+URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv"
+prairie.pheno <- download.phenocam(URL)
+
+## Plot overall phenology data
+plot.phenocam(prairie.pheno)
+
+## Create and visualize subset of data for leaf out
+spring = as.Date(c("2015-01-01","2015-06-01"))
+dat = subset(prairie.pheno,date > spring[1] & date < spring[2], select=c(date,gcc_mean,gcc_std))
+plot.phenocam(dat)
+
+## Fit logistic model
+dat$doy = as.POSIXlt(dat$date)$yday
+par = c(0.33,0.11,-10,0.1)
+fit = fit.logistic(dat,par)
+
+## Visualize model and data
+plot.phenocam(dat)
+lines(dat$date,pred.logistic(fit$par,dat$doy),col=2)
+```
+3. Save this file as "04_Master.Rmd". 
+4. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
+5. On Github.com, submit a pull request
+
+###OWNER
+1. Evaluate and accept pull request.
+
+At this point your workflow should be complete and you should be able to run the analysis.
