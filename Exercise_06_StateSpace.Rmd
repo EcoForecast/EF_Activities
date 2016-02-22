@@ -85,6 +85,7 @@ jags.out   <- coda.samples (model = j.model,
 
 Given the full joint posteror samples, we're next going to visualize the output by just looking at the 95% credible interval of the timeseries of X's and compare that to the observed Y's. To do so we'll convert the coda output into a matrix and then calculate the quantiles. Looking at colnames(out) will show you that the first two columns are `tau_add` and `tau_obs`, so we calculate the CI starting from the 3rd column. We also transform the samples back from the log domain to the linear domain.
 ```{r}
+time.rng = c(540,length(time)) ## adjust to zoom in and out
 ciEnvelope <- function(x,ylo,yhi,...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
                                       ylo[1])), border = NA,...) 
@@ -92,9 +93,14 @@ ciEnvelope <- function(x,ylo,yhi,...){
 out <- as.matrix(jags.out)
 ci <- apply(exp(out[,3:ncol(out)]),2,quantile,c(0.025,0.5,0.975))
 
-plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y')
+plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
 ciEnvelope(time,ci[1,],ci[3,],col="lightBlue")
 points(time,y,pch="+",cex=0.5)
+points(time,ytrue,pch="+",col=is.na(y)+1)
 ```
 
 Next, lets look at the posterior distributions for `tau_add` and `tau_obs`, which we'll convert from precisions back into standard deviations. We'll also want to look at the joint distribution of the two parameters to check whether the two parameters strongly covary.
