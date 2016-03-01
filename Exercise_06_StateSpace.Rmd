@@ -1,7 +1,7 @@
 Activity 6 - State-space models
 ========================================================
 
-This activity will explore the state-space framework for modeling time-series and spatial data sets. Chapter 7.6 provides a more in-depth description of the state-space model, but in a nutshell it is based on separating the process model, which describes how the system evolves in time or space, from the observation error model. Furthermore, the state-space model gets its name because the model estimates that true value of the underlying **latent** state variables.
+This activity will explore the state-space framework for modeling time-series and spatial data sets. Chapter 8 provides a more in-depth description of the state-space model, but in a nutshell it is based on separating the process model, which describes how the system evolves in time or space, from the observation error model. Furthermore, the state-space model gets its name because the model estimates that true value of the underlying **latent** state variables.
 
 For this activity we will write all the code, process all the data, and visualize all the outputs in R, but the core of the Bayesian computation will be handled by JAGS (Just Another Gibbs Sampler, http://mcmc-jags.sourceforge.net). Therefore, before we get started you will want to download both the JAGS software and the rjags library, which allows R to call JAGS.
 
@@ -12,7 +12,7 @@ library(rjags)
 Next we'll want to grab the data we want to analyze. For this example we'll use the Google Flu Trends data for the state of Massachusetts, which we saw how to pull directly off the web in Activity 3.
 
 ```{r}
-gflu = read.csv("http://www.google.org/flutrends/us/data.txt",skip=11)
+gflu = read.csv("http://www.google.org/flutrends/about/data/flu/us/data.txt",skip=11)
 time = as.Date(gflu$Date)
 y = gflu$Massachusetts
 plot(time,y,type='l',ylab="Flu Index",lwd=2,log='y')
@@ -85,6 +85,7 @@ jags.out   <- coda.samples (model = j.model,
 
 Given the full joint posteror samples, we're next going to visualize the output by just looking at the 95% credible interval of the timeseries of X's and compare that to the observed Y's. To do so we'll convert the coda output into a matrix and then calculate the quantiles. Looking at colnames(out) will show you that the first two columns are `tau_add` and `tau_obs`, so we calculate the CI starting from the 3rd column. We also transform the samples back from the log domain to the linear domain.
 ```{r}
+time.rng = c(1,length(time)) ## adjust to zoom in and out
 ciEnvelope <- function(x,ylo,yhi,...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
                                       ylo[1])), border = NA,...) 
@@ -92,7 +93,11 @@ ciEnvelope <- function(x,ylo,yhi,...){
 out <- as.matrix(jags.out)
 ci <- apply(exp(out[,3:ncol(out)]),2,quantile,c(0.025,0.5,0.975))
 
-plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y')
+plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
+## adjust x-axis label to be monthly if zoomed
+if(diff(time.rng) < 100){ 
+  axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
+}
 ciEnvelope(time,ci[1,],ci[3,],col="lightBlue")
 points(time,y,pch="+",cex=0.5)
 ```
@@ -109,8 +114,17 @@ cor(out[,1:2])
 Assignment:
 -----------
 
-In order to look at how observation frequency affects data assimilation, convert 3 out of every 4 observations to NA (i.e. treat the data as approximately monthly) and refit the model. 
+To look at how observation frequency affects data assimilation, convert 3 out of every 4 observations to NA (i.e. treat the data as approximately monthly) and refit the model. 
 
 * Generate a time-series plot for the CI of x that includes the observations (as above). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
 * Compare the CI between the two runs.
 * Generate a predicted (median) vs observed plot for the data points that were removed
+* Comment on the accuracy and precision of the estimates.
+
+Extra Credit:
+-------------
+
+Return to the original data and instead of removing 3/4 of the data remove the last 40 observations (convert to NA) and refit the model to make a forecast for this period
+
+* Generate a time-series plot for the CI of x that includes the observations (as above but zoom the plot on the last ~80 observations). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
+* Comment on how well the random walk model performed (both accuracy and precision) and how it might be modified to improve both these criteria.

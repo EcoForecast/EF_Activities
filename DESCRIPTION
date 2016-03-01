@@ -1,0 +1,13 @@
+Depends:
+    mvtnorm,
+    coda,
+    rjags,
+    vioplot,
+    MCMCpack,
+    knitr,
+    RCurl,
+    XML,
+    ncdf4,
+    devtools,
+    MODISTools
+RoxygenNote: 5.0.1
