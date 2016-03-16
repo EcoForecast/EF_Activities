@@ -23,6 +23,7 @@ if(!require(PEcAn.data.land)){
   devtools::install_github("PecanProject/pecan/utils")
   devtools::install_github("PecanProject/pecan/db")
   devtools::install_github("PecanProject/pecan/modules/data.land")
+  require(PEcAn.data.land)
 }
 require(rjags)
 ```
