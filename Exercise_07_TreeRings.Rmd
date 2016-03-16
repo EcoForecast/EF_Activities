@@ -18,7 +18,12 @@ For steps 2-4 we will leverage functions already written to deal with these step
 
 
 ```{r}
-if(!require(PEcAn.data.land)) devtools::install_github("PecanProject/pecan/modules/data.land")
+if(!require(PEcAn.data.land)){
+  install.packages(c("digest","dplR"))
+  devtools::install_github("PecanProject/pecan/utils")
+  devtools::install_github("PecanProject/pecan/db")
+  devtools::install_github("PecanProject/pecan/modules/data.land")
+}
 require(rjags)
 ```
 
@@ -31,7 +36,7 @@ ciEnvelope <- function(x,ylo,yhi,...){
 ```
 
 
-```{r, fig.height=8}
+```{r}
 ## 1. Read tree data
 trees <- read.csv("data/H2012AdultFieldData.csv")
 
@@ -270,7 +275,7 @@ model{
 
 Next, lets generate some diagnostic plots to look at the model. First, lets plot the posterior CI for growth and DBH and compare these to observations. Since we have scores of cores and trees, we'll pick a random subset of trees to check. One thing that's critical to note is that for the confidence intervals on growth that these are calculated pathwise -- we're looking at the growth from a whole MCMC iteration -- rather than pairwise (i.e. subtracting the posterior distribution for DBH at one point from the posterior distribution of DBH at the next). Because there's high correlations between successive time points, the pathwise uncertainty estimates are considerably lower in uncertainty -- essentially saying that we know can know the growth rate of the tree better than we can know the actual size of the tree
 
-```{r}
+```{r, fig.height=8}
   #### Diagnostic plots
   
   ### DBH
