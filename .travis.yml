@@ -11,6 +11,7 @@ script:
     - Rscript -e "require(knitr); fname = 'Exercise_05_JAGS.Rmd'; knit(fname); purl(fname)"
     - Rscript -e "require(knitr); fname = 'Exercise_06_StateSpace.Rmd'; knit(fname); purl(fname)"
     - Rscript -e "require(knitr); fname = 'Exercise_07_TreeRings.Rmd'; knit(fname); purl(fname)"
+    - Rscript -e "require(knitr); fname = 'Exercise_09_KalmanFilter.Rmd'; knit(fname); purl(fname)"
 
 before_install:
     - curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
