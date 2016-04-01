@@ -372,7 +372,7 @@ Assignment:
 
 1. Run the model initially with random effects off
 
-2. Rerun the model with random effects on. Compare this to the previous run.
+2. Rerun the model with random effects on. Compare this to the previous run. What is the relative partitioning of uncertainties in the different versions of the model among observation error, process error, and the different random effects? What does the size of these effects suggest about the drivers of uncertainty in tree growth?
 
 3. Based on the diagnostics, propose an additional effect (fixed or random) to add to the model. Such an effect should plausibly chip away at a sizable fraction of the unexplained variability -- you wouldn't want to propose an effect that isn't associated with systematic variability. 
 
