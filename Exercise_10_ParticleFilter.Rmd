@@ -39,14 +39,14 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
   ## photosynthesis
   LAI = X[,1]*params$SLA*0.1  #0.1 is conversion from Mg/ha to kg/m2
   if(inputs$PAR>1e-20){
-      GPP = log(params$alpha*(1-exp(-0.5*LAI))*inputs$PAR)
+      GPP = params$alpha*(1-exp(-0.5*LAI))*inputs$PAR
   } else {
       GPP = rep(0,ne)
   }
   
   ## respiration & allocation
   alloc = GPP*params$falloc ## Ra, NPPwood, NPPleaf
-  Rh = pmin(log(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10)),X[,3]/k) ## pmin ensures SOM never goes negative
+  Rh = pmin(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),X[,3]/k) ## pmin ensures SOM never goes negative
   
   ## turnover
   litter = X[,1]*params$litter
@@ -180,6 +180,8 @@ for(t in 1:nt){
   X=output[t,,1:3]
   if((t %% 48) == 0) print(t/48) ## day counter
 }
+output[is.nan(output)] = 0
+output[is.infinite(output)] = 0
 
 ## average the output to daily
 bin = 86400/timestep
