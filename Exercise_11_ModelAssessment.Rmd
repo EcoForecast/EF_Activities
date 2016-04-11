@@ -1,7 +1,7 @@
 Model Assessment
 ========================================================
 
-In this activity we will use a series of visualizations and statistical measures to assess the performance of our Super Simple Stochastic Ecosystem Model at the Metolius site.
+In this activity we will use a series of visualizations and statistical measures to assess the performance of our Super Simple Ecosystem Model at the Metolius site.
 
 Let's start by loading the ensemble output from the previous lab and the observed flux data for the site.
 ```{r}
@@ -11,7 +11,7 @@ library(dplR)
 library(rpart)
 library(randomForest)
 
-## load SSSEM output
+## load SSEM output
 load("Ex10.output.RData")
 
 ## load flux tower data
@@ -88,7 +88,7 @@ stats['cor','ens']  = cor(E,O)
 stats['cor','pf']   = cor(P,O)
 stats['slope','ens'] = coef(NEE.ens.fit)[2]
 stats['slope','pf']  = coef(NEE.pf.fit)[2]
-stats
+knitr::kable(stats)
 
 ## predicted-observed
 plot(E,O,pch=".",xlab="ensemble",ylab='observed',main='NEE (umol/m2/sec)')
@@ -132,7 +132,7 @@ stats['Bias',3]  = mean(C-O)
 stats['cor',3]   = cor(C,O)
 stats['slope',3] = coef(NEE.clim.fit)[2]
 colnames(stats)[3] <- "clim"
-stats
+knitr::kable(stats)
 plot(C,O,pch=".",xlab="climatology",ylab='observed',main='NEE (umol/m2/sec)')
 abline(0,1,col=2,lwd=2)
 abline(NEE.clim.fit,col=3,lwd=3,lty=2)
@@ -262,6 +262,8 @@ Question 9: Overall, which driver is most important in explaining model error? W
 Functional Responses
 --------------------
 
+In this section we look at how well the model performed by assessing the modeled relationships between inputs and outputs and comparing that to the same relationship in the data. The raw relationships are very noisy, as many covariates are changing beyond just the single input variable we are evaluating, so in addition we calculate binned means for both the model and data.
+
 ```{r}
 ## raw
 plot(inputs$temp[qaqc],O,pch=".",ylab="NEE")
@@ -296,6 +298,13 @@ legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.7)
 
 
 ```
+
+Question 10: Evaluate the model's ability to capture functional responses to both Temperature and PAR.
+
+Overall 
+-------
+
+Below is a final summary figure of the model's performance on a daily timescale that combines many of the previous assessments.
 
 ```{r}
 

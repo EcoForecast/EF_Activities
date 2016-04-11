@@ -9,3 +9,4 @@
 *.html
 *.md
 EF_Activities.Rproj
+MODIS_download.R
