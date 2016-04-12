@@ -184,10 +184,12 @@ output[is.nan(output)] = 0
 output[is.infinite(output)] = 0
 
 ## average the output to daily
+library(iotools)
 bin = 86400/timestep
 out.daily = array(0.0,c(ceiling(nt/bin),ne,12))
 for(i in 1:12){
-  out.daily[,,i] <- apply(output[,,i],2,function(x){tapply(x,rep(1:365,each=bin)[1:nt],mean)})
+  print(i)
+  out.daily[,,i] <- apply(output[,,i],2, ctapply, rep(1:365,each=bin)[1:nt], mean)
 }
 
 ## Basic time-series visualizations
