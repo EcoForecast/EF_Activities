@@ -125,8 +125,8 @@ litter = c(71,94)*0.01*3 ##gC/m2/yr->Mg/ha/yr
 timestep = 1800 #seconds
 params = list()
 
-Ra = 0.75
-alloc = matrix(c(Ra,(1-0.315)*Ra,0.315*Ra),1) # prior mean on allocation
+Ra = 0.5
+alloc = matrix(c(Ra,(1-0.315)*(1-Ra),0.315*(1-Ra)),1) # prior mean on allocation
 Neff = matrix(rpois(ne,100),ne) 
 params$falloc = rdirichlet(ne,Neff%*%alloc)  ## Ra, wood, leaf
 

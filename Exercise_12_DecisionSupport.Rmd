@@ -1,0 +1,27 @@
+---
+title: "Activity 12: Scenario Development"
+author: "Michael Dietze"
+output: html_document
+---
+
+Stakeholder Role Playing Exercise
+---------------------------------
+
+There are few environmental issues as controversial in New England as the cod fishery. Prior to industrialization, much of the economy, culture, and history of the region was centered around fishing. To this day a ‘sacred cod’ still hangs in the Massachusetts state house.
+
+In 1992 the cod fishery collapsed and since then the fishing industry has been subject to tight regulation. However, fishery stocks continue to remain low. Against this backdrop, ocean food webs continue to change as fishing of other species has continued and non-harvest species (e.g. jellyfish) increase in numbers to fill vacant niches, while surface pollution and atmospheric deposition has altered ocean chemistry. Furthermore, ocean temperatures are projected to rise, posing an additional risk to this cold-water species, but at a regional scale there may also be changes in ocean circulation, salinity, and pH due to glacial melt and atmospheric CO2.
+
+The goal of this exercise is to apply the principles of structured decision making to generate a consequence table for cod management. 
+
+
+
+
+Members of the class will represent the following five stakeholders.
+
+*	New England Fisheries Management Council: This agency is most directly responsible for setting local management policy. This stakeholder is responsible for knowing something about policy history and options.
+*	Northeast Seafood Coalition: This group represents the fishing industry for the region and disputes the accuracy of the science. This stakeholder is responsible for knowing something about the economics and the industry’s critiques of the science
+*	Environmental groups: This stakeholder represents the coalition of local, regional, and national groups pushing for marine conservation and is responsible for knowing the conservation history and options.
+*	US Fish and Wildlife: Shares regulatory authority at the national level with NOAA. This stakeholder is responsible for knowing the essentials of cod ecology and ecophysiology, and how the various environmental pressures might be affecting on cod populations.
+*	NOAA: Shares national regulatory authority with USFS, but more generally is also involved in predicting changes in climate and ocean chemistry, temperature, circulation, etc.  This stakeholder is responsible for knowing something about the global change scenarios for the region.
+
+Members of the class should independently prepare ahead of time and then use the 50 min class period to develop a suite of scenario storylines. This is not a debate, but a discussion. The class as a whole will turn in a single written description of these scenarios (~2 pages) by Sunday, Dec 1.
