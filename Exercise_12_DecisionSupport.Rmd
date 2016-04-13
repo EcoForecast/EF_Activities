@@ -1,6 +1,5 @@
 ---
-title: "Activity 12: Scenario Development"
-author: "Michael Dietze"
+title: "Activity 12: Consequence Table"
 output: html_document
 ---
 
@@ -11,17 +10,26 @@ There are few environmental issues as controversial in New England as the cod fi
 
 In 1992 the cod fishery collapsed and since then the fishing industry has been subject to tight regulation. However, fishery stocks continue to remain low. Against this backdrop, ocean food webs continue to change as fishing of other species has continued and non-harvest species (e.g. jellyfish) increase in numbers to fill vacant niches, while surface pollution and atmospheric deposition has altered ocean chemistry. Furthermore, ocean temperatures are projected to rise, posing an additional risk to this cold-water species, but at a regional scale there may also be changes in ocean circulation, salinity, and pH due to glacial melt and atmospheric CO2.
 
-The goal of this exercise is to apply the principles of structured decision making to generate a consequence table for cod management. 
+The goal of this exercise is to apply the principles of structured decision making to generate a consequence table for _long-term_ cod management. This should look beyond near-term stock-assessment and prediction and focus instead on the challenges facing, and options available for, the long-term management of Gulf of Maine and Georges Bank stocks.
 
+The consequence table is generated through the following steps:
 
+![Decision Support Flowchart](images/DecisionSupportFlowchart.50.png)
 
+1. **Determine Objectives:** Objectives consist of a few words that summarize something that matters to the stakeholders, in the specific context of the decision being discussed, and the desired direction of change (e.g. maximize fisheries revenue). Different stakeholders need not agree on how much they value a specific objective, but inclusion does validate that a specific objective has value. 
+2. **Select Performance Measures:** Performance measures should quantify objectives in units that are appropriate for that objective and should not be monetized unless it is normal to think about the objective in monetary terms. Performance measures _define_ the metrics being used, they don't _calculate_ them.
+3. **Generate Alternatives and Scenarios:** Construct 4 - 12 alternatives that creative explore the space of possible choices. Alternatives need to be complete, comparable, and internally consistent solutions. This means that all alternatives address the same problem, evaluated over the same time, to the same level of detail, and with the same assumptions and performance metrics. 
+4. **Forecast Consequences:** Forecasting consequences robustly has been the focus of this entire course, so generating precise, data-driven forecasts is beyond the scope of this activity. Here you will rely on elicitation (Box 5.5.1) and back-of-the-envelope [Fermi estimation](https://en.wikipedia.org/wiki/Fermi_problem) to generate first-pass estimates. Such estimates are valuable, even in real decision making, for sorting out where more detailed, quantitative forecasting is nessisary.
+5. **Evaluate Trade-offs:** Iteratively improve the set of alternatives by (1) deleting bad alternatives and insensitive performance measures and (2) refining your understanding of the key trade-offs. The goal isn't to provide a single recommendation, but to elimnate dominated alternatives and clarify the fundamental trade-offs that policy makers face.
 
 Members of the class will represent the following five stakeholders.
 
 *	New England Fisheries Management Council: This agency is most directly responsible for setting local management policy. This stakeholder is responsible for knowing something about policy history and options.
 *	Northeast Seafood Coalition: This group represents the fishing industry for the region and disputes the accuracy of the science. This stakeholder is responsible for knowing something about the economics and the industry’s critiques of the science
 *	Environmental groups: This stakeholder represents the coalition of local, regional, and national groups pushing for marine conservation and is responsible for knowing the conservation history and options.
-*	US Fish and Wildlife: Shares regulatory authority at the national level with NOAA. This stakeholder is responsible for knowing the essentials of cod ecology and ecophysiology, and how the various environmental pressures might be affecting on cod populations.
+*	US Fish and Wildlife: Shares regulatory authority at the national level with NOAA. This stakeholder is responsible for knowing the essentials of cod ecology and ecophysiology, and how various environmental pressures might be affecting cod populations.
 *	NOAA: Shares national regulatory authority with USFS, but more generally is also involved in predicting changes in climate and ocean chemistry, temperature, circulation, etc.  This stakeholder is responsible for knowing something about the global change scenarios for the region.
 
-Members of the class should independently prepare ahead of time and then use the 50 min class period to develop a suite of scenario storylines. This is not a debate, but a discussion. The class as a whole will turn in a single written description of these scenarios (~2 pages) by Sunday, Dec 1.
+Members of the class should independently prepare ahead of time and then use the 50 min class period to develop the consequence table itself. The goal of this role playing exercise is not to simulate a debate, but stakeholder meeting. Individuals need to accurately represent the perspectives of the group the represent. The goal of such stakeholder meetings is explictly to foster constructive dialog focused on solving a _specific problem_, rather than resolving more general philosophical debates.
+
+Groups should turn in a _single_ written document that includes (1) a quick "executive summary" of the final consequence table and trade-offs and (2) brief summaries of what you did at each step.
