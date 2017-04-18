@@ -1,0 +1,198 @@
+---
+title: "Exercise 2:Answers"
+author: "Paulo Arevalo"
+date: "February 1, 2016"
+output: html_document
+---
+
+Simulating the discrete-time logistic
+-------------------------------------
+
+1. Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+
+Constants
+```{r}
+r = 1
+K = 10        ## carrying capacity      
+n0 = .1       ## initial population size
+NT = 30       ## number of time steps to simulate
+time = 1:NT
+```
+
+Define function to do simulation and plot
+```{r}
+simplot <- function(r) {
+  n = rep(n0,NT)    ## vector to store results
+  for(t in 2:NT){
+    n[t] = n[t-1] + r*n[t-1]*(1-n[t-1]/K)
+  }
+    plot(time,n,ylim=c(0,12),lwd=3,type='l',
+       ,bty='l',cex.lab=1.5,
+        xlab="Time",ylab="Population Size")
+  }
+```
+
+Run and plot
+```{r}
+rlist <- c(1, 1.95, 2.05, 2.5, 2.8)
+for(r in rlist){
+  simplot(r)
+}
+```
+
+All of the trajectories show a relatively stable behavior from time 0 to 5. After that point, the higher the intrinsic growth rate, the higher the variability in the population size, although the average value remains more or less close to 10. With lower values (1 to 2.05), the population after time 5 shows some periodic fluctuation, and with the higher values this fluctuation becomes drastic.
+
+Probability distributions in R
+------------------------------
+2. Choose another probability distribution and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+
+```{r}
+set.seed(737)
+x = seq(-5,5,by=0.1)
+plot(x, dcauchy(x),type='l', main='Cauchy PDF')
+plot(x, pcauchy(x),type='l', main='Cauchy CDF')
+
+p = seq(0,1,by=0.01)
+
+plot(p, qcauchy(p, 0,1),type='l', main='Quantile function - Cauchy distribution')
+```
+
+PARTIAL histograms for multiple sample sizes of the Cauchy distribution
+```{r}
+n2 = c(10,100,1000,10000)	# sequence of sample sizes
+for(i in 1:4){			
+  hist(rcauchy(n2[i]),main=n2[i],freq=FALSE,probability=TRUE,breaks=5000, xlim=c(-6,6))  
+	lines(x,dcauchy(x),col='orange')
+}
+```
+
+Monte Carlo Simulation
+----------------------
+3. Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+
+```{r}
+x = rlnorm(10000,0,0.5)
+y = sin(x)
+
+hist(x,main="Original distribution",breaks=40)
+abline(v=quantile(x,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="blue")
+abline(v=mean(x),col="red",lwd=3,lty=3)
+```
+
+Mean: `r mean(x)`  
+Median: `r median(x)`  
+95% confidence interval: `r quantile(x,c(0.025,0.975))`
+
+
+```{r}
+hist(y,main="Transformed distribution",breaks=40)
+abline(v=quantile(y,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="blue", xlab='sin(x)')
+abline(v=mean(y),col="red",lwd=3,lty=3)
+```
+
+Mean: `r mean(y)`  
+Median: `r median(y)`  
+95% confidence interval: `r quantile(y,c(0.025,0.975))`  
+
+Parameter error
+---------------
+
+```{r}
+r = 1
+K = 10    
+r.sd = 0.2     ## standard deviation on r
+K.sd = 1.0     ## standard deviation on K
+NE = 1000      ## Ensemble size
+
+n3 = matrix(n0,NE,NT)   # storage for all simulations
+rE = rnorm(NE,r,r.sd)  # sample of r
+KE = rnorm(NE,K,K.sd)  # sample of K
+for(i in 1:NE){        # loop over samples
+  for(t in 2:NT){      # for each sample, simulate throught time
+    n3[i,t] = n3[i,t-1] + rE[i]*n3[i,t-1]*(1-n3[i,t-1]/KE[i])
+  }
+}
+
+n.stats = apply(n3,2,quantile,c(0.025,0.5,0.975)) # Calculate median and CI
+```
+
+
+```{r, eval=FALSE}
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),ylo[1])), border = NA,
+          col = col,...) 
+}
+
+ciEnvelope(time, n.stats[1,], n.stats[3,])
+lines(n.stats[2,], col='blue')
+```
+
+4. Plot histograms of the samples of r and K used for the simulation.
+
+```{r}
+hist(rE, main='Histogram of sample of r')
+hist(KE, main='Histogram of sample of K')
+```
+
+5. Plot a sample of 10 different trajectories from your ensemble (on one graph).
+
+```{r}
+sti <- sample(1000, 10)
+colors <- rainbow(10)
+plot.new()
+plot(time, n3[sti[1],], type='l', main='Logistic growth - 10 trajectories', ylab = 'Population', xlab = 'Time', col = colors[1],
+     ylim=c(0, 13))
+for(s in 2:10){
+  lines(time, n3[sti[s],], type='l', col=colors[s])
+}
+```
+
+6. Plot a histogram of your population forecast at time = 15.
+
+```{r}
+hist(n3[,15], main='Histogram of population at time 15')
+```
+
+7. Plot the median trajectory and 95% CI.
+8. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
+
+```{r}
+plot(n.stats[2,], type='l', lty=1, ylim=c(0,12), main='Median trajectory and CI (50%, orange and 95%, blue)', xlab='Time', ylab='Population')
+lines(n.stats[1,], type='l',lty=2, col='blue')
+lines(n.stats[3,], type='l',lty=2, col='blue')
+
+n.stats2 = apply(n3,2,quantile,c(0.25,0.5,0.75)) # Calculate median and CI
+lines(n.stats2[2,], type='l', lty=1) 
+lines(n.stats2[1,], type='l',lty=2, col='orange')
+lines(n.stats2[3,], type='l',lty=2, col='orange')
+```
+
+Extra Credit: Initial conditions
+--------------------------------
+9. Plot the median & 95% interval.
+10. Repeat with r equal to 1.95, 2.05, and 2.8
+
+```{r}
+rlist2 <- c(0.3, 1.95, 2.05, 2.08)
+n0.sd = 0.6
+n0s = rlnorm(NE,log(n0),n0.sd)
+n = matrix(n0s,NE,NT)
+
+initcond <- function(r){
+  for(i in 1:NE){
+    for(t in 2:NT){
+      n[i,t] = n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K)
+    }
+  }
+  n.stats3 = apply(n,2,quantile,c(0.025,0.5,0.975))
+  plot(time, n.stats3[2,], type='l', lty=1, ylim=c(0,12),main=sprintf("Median and CI, r=%.2f",r),
+       xlab = 'Time', ylab = 'Population')
+  lines(n.stats3[1,], type='l',lty=2, col='blue')
+  lines(n.stats3[3,], type='l',lty=2, col='blue')
+}
+
+for(r in rlist2){
+  initcond(r)
+}
+```
+
