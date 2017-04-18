@@ -1,0 +1,187 @@
+---
+title: "exercise_02_condontd"
+author: "Tim Condon"
+date: "February 1, 2016"
+output: html_document
+---
+
+1.
+```{r}
+#set the various parameters with the first r value
+r<-1.95         
+K<-10             
+n0<-.1       
+NT<-30       
+time<-1:NT
+
+#iterate through
+n<-rep(n0,NT)    
+for(t in 2:NT){
+  n[t] = n[t-1] + r*n[t-1]*(1-n[t-1]/K)
+}
+
+#plot
+plot(time,n,ylim=c(0,12),lwd=3,type='l',
+     ,bty='l',cex.lab=1.5,
+      xlab="Time",ylab="Population Size")
+```
+```{r}
+r<-2.05    #change r
+
+#iterate and plot
+n<-rep(n0,NT)    
+for(t in 2:NT){
+  n[t] = n[t-1] + r*n[t-1]*(1-n[t-1]/K)
+}
+
+plot(time,n,ylim=c(0,12),lwd=3,type='l',
+     ,bty='l',cex.lab=1.5,
+      xlab="Time",ylab="Population Size")
+```
+```{r}
+r<-2.5    #change r
+#iterate and plot
+n<-rep(n0,NT)    
+for(t in 2:NT){
+  n[t] = n[t-1] + r*n[t-1]*(1-n[t-1]/K)
+}
+
+plot(time,n,ylim=c(0,12),lwd=3,type='l',
+     ,bty='l',cex.lab=1.5,
+      xlab="Time",ylab="Population Size")
+```
+```{r}
+r<-2.8    #change r
+#iterate and plot
+n<-rep(n0,NT)    
+for(t in 2:NT){
+  n[t] = n[t-1] + r*n[t-1]*(1-n[t-1]/K)
+}
+
+plot(time,n,ylim=c(0,12),lwd=3,type='l',
+     ,bty='l',cex.lab=1.5,
+      xlab="Time",ylab="Population Size")
+```
+
+As the intrinsic growth rate r increases, once the carrying capacity is reached, the values become more chaotic. This is shown in the greater oscillations of the graphs of the higher r values when compared to the lower values.
+
+2.
+```{r}
+#expontial pdf
+x<-seq(0,10,by=0.1)
+plot(x,dexp(x),type='l')
+```
+```{r}
+#exponential cdf
+plot(x,pexp(x),type='l')
+```
+```{r}
+#exponential quantile function
+p<-seq(0,1,by=0.01)
+plot(p,qnorm(p,0,1),type='l',ylim=range(x))
+```
+```{r}
+#exponential histogram samples
+n<-c(10,100,1000,10000)
+for(i in 1:4) {
+  hist(rexp(n[i]),main=n[i],probability=TRUE)
+  lines(x,dexp(x),col='goldenrod')
+}
+```
+
+3.
+
+```{r}
+#original lognormal
+x=rlnorm(1000,0,0.5)
+y<-sin(x)
+hist(x,main='Original Lognormal',breaks=30)
+abline(v=mean(x),col='green',lwd=3)
+abline(v=median(x),col='orange',lwd=3)
+abline(v=quantile(x,c(0.025,0.975)),col='red',lwd=3)
+summary(x)
+
+#transformed
+hist(y,main='Transformed Distribution',breaks=30)
+abline(v=mean(y),col='green',lwd=3)
+abline(v=median(y),col='orange',lwd=3)
+abline(v=quantile(y,c(0.025,0.975)),col='red',lwd=3)
+summary(y)
+```
+
+```{r}
+r.sd=0.2
+K.sd=1.0
+NE=1000
+
+n=matrix(n0,NE,NT)   
+rE=rnorm(NE,r,r.sd)  
+KE=rnorm(NE,K,K.sd)  
+for(i in 1:NE){        
+  for(t in 2:NT){ 
+    n[i,t] = n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i])
+  }
+}
+
+n.stats=apply(n,2,quantile,c(0.025,0.5,0.975))
+
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+  ylo[1])), border = NA,...) 
+}
+```
+4.
+```{r}
+#plot samples of r and K
+hist(rE)
+hist(KE)
+```
+5.
+```{r}
+par(mfrow=c(2,5)) 
+plot(n[1,])
+plot(n[2,])
+plot(n[3,])
+plot(n[4,])
+plot(n[5,])
+plot(n[6,])
+plot(n[7,])
+plot(n[8,])
+plot(n[9,])
+plot(n[10,])
+```
+
+6.
+```{r}
+par(mfrow=c(1,1))
+plot(n[15,])
+```
+
+7.
+```{r}
+par(mfrow=c(1,3))
+plot(n.stats[2,],main='Median')
+plot(n.stats[1,],main='95% Low')
+plot(n.stats[3,],main='95% High')
+```
+
+8.
+```{r}
+n.stats2=apply(n,2,quantile,c(0.25,0.75))
+par(mfrow=c(1,5))
+plot(n.stats[2,],main='Median')
+plot(n.stats[1,],main='95% Low')
+plot(n.stats[3,],main='95% High')
+plot(n.stats2[1,],main='50% Low')
+plot(n.stats2[2,],main='50% High')
+```
+
+
+
+
+
+
+
+
+
+

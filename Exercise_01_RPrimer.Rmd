@@ -1,7 +1,7 @@
 ---
-title: 'Activity 1 - R Primer'
-author: "Michael Dietze"
-date: "August 25, 2014"
+title: "Activity 1 - R Primer"
+author: "Tim condon"
+date: "January 31, 2016"
 output: html_document
 ---
 
@@ -158,7 +158,48 @@ g.	How does R represent when the output of a function is not a number?
 6.	If a population starts with a density of 5 individuals/hectare and grows exponentially at a growth rate r=0.04/year, what is the size of the population in π years? (show code)
 7.	Subtract the month you were born from the remainder left after you divide the year you were born by the day you were born (show code)
 ```
+1a.
+```{r}
+log(1)
+```
+b.
+```{r}
+log(0)
+```
+c.
+```{r}
+log(exp(1))
+```
+d.
+```{r}
+log(-5)
+```
+e.
+```{r}
+-log(5)
+```
+f.
+```{r}
+log(1/5)
+```
+g. NaNs
 
+2. To convert from radians to degrees.
+3. The atan2 function uses two variables while the atan function only uses one.
+4. log is the natural logarithm (ln) while log10 computes common logarithms with base 10.
+5. 
+```{r}
+sqrt(5^2+13^2)
+```
+6. 
+```{r}
+5*(1+0.04)^pi
+```
+7.
+```{r}
+x<-1993/8
+x-8
+```
 
 ## R Scripts
 
@@ -206,6 +247,32 @@ Questions:
 a.	What is the difference between values in this sequence?
 b.	What is the sum of the exponential of this sequence?
 11.	Calculate a second difference [a difference of differences] for the sequence 1:10 (show code)
+```
+
+8. Sum returns the sum of all vectors present in an argument while cumsum returns a vector with each value the cumulative sum of the elements of the argument. For example, sum of 1:3 gives 8, while cumsum gives the vector 1,3,6.
+
+9.
+```{r}
+seq(-6,6,by=2)
+```
+10.
+```{r}
+seq(-4.8,-3.43,length=8)
+```
+a.
+```{r}
+diff(seq(-4.8,-3.43,length=8)
+)
+```
+b.
+```{r}
+sum(exp(seq(-4.8,-3.43,length=8)
+))
+```
+
+11. The difference of differences is zero.
+```{r}
+diff(diff(1:10))
 ```
 
 ## Loading and Saving Data
@@ -263,6 +330,16 @@ Within the Environment window, clicking on a variable will show you the contents
 
 ```
 12.	Save the frog data file delimited in a pipe-delimited format (i.e. separated by ‘|’). Open the file up in a text editor and cut-and-paste the first few lines of the file into your Rscript file (just so I can see what you did).  Load the data back up into R as ‘dat2’ (show code)
+```
+12.
+```{r}
+write.table(dat,'frogs.csv',row.names=FALSE,sep='|')
+```
+"frogs"|"tadpoles"|"color"|"spots"
+1.1|2.03698175474231|"red"|TRUE
+1.3|2.87623092770957|"red"|FALSE
+```{r}
+dat2<-read.table('frogs.csv',header=TRUE,sep='|')
 ```
 
 
@@ -340,6 +417,19 @@ as.matrix(dat)
 14.	Show the 3rd through 8th rows of the 1st  though 3rd columns
 15.	Show the first 3 rows
 ```
+13.
+```{r}
+as.character(dat$spots)
+```
+14.
+```{r}
+dat[3:8,1:3]
+```
+15.
+```{r}
+dat[1:3,]
+```
+
 
 ## Combining vectors
 
@@ -374,6 +464,15 @@ rbind(q,p)		# bind as rows
 ```
 16.	Create a character vector that contains the names of 4 super heros.
 17.	Show just the odd numbered rows in the frog data. Write this code for the GENERAL CASE (i.e. don’t just type c(1,3,5,…) but use functions that you learned in previous sections to set up the sequence.
+```
+
+16.
+```{r}
+c('Thor','Captain America','Iron Man','Hulk')
+```
+17.
+```{r}
+dat[seq(1,nrow(dat),by=2),]
 ```
 
 ## Logical operators and indexing
@@ -486,6 +585,36 @@ as.numeric(y>13)
   e.	display just the rows where there are less than 2.5 red frogs
   f.	display where either frogs do not have spots or there are more than 5 frogs
 ```
+
+18.
+a.
+```{r}
+dat[dat$spots=='TRUE',]
+```
+b.
+```{r}
+dat[dat$color=='blue',]
+```
+c.
+```{r}
+sum(dat$tadpoles[dat$color=='blue'])
+```
+d.
+```{r}
+tads<-subset(dat,dat$tadpoles>3&dat$tadpoles<5)
+tads
+```
+e.
+```{r}
+red.f<-subset(dat,dat$color=='red')    #first create subset of red frogs
+red.f[red.f$frogs<2.5,]
+```
+f.
+```{r}
+dat[dat$frogs>5|dat$spots=='FALSE',]
+```
+
+
 ## Plots, tables, and exploratory analysis
 
 Often understanding our data requires more than just being able to subset the raw data, but also the ability to summarize and visualize data. The **table** command can do basic tabulation and cross tabulation of data
@@ -552,6 +681,30 @@ Within the Plot window, graphs can be cut-and-pasted into other documents or sav
   21.	Plot a histogram of blue frogs
   22.	Use apply to calculate the across-population standard deviations in the numbers of frogs and tadpoles
 
+19.
+a.
+```{r}
+plot(log(0:3),type='l')
+```
+b.
+```{r}
+plot(exp(0:-3),type='l')
+```
+20.
+```{r}
+barplot(tapply(dat$frogs,dat$spots,mean))
+```
+21.
+```{r}
+blue.f<-subset(dat,dat$color=='blue')
+hist(blue.f$frogs)
+```
+22.
+```{r}
+apply(dat[,1:2],2,sd)
+```
+
+
 ## Classical tests
 
 Since R evolved out of the statistical programming language S, it can easily perform a wide variety of statistical tests and analyses. In R linear regression is done with the function “lm” (linear models)
@@ -609,6 +762,29 @@ legend("topleft",
   c.	Fit a series of linear models of tadpoles as a function of frogs, spots, color, and their interaction terms. Build up from a simple model to the most complex model that is supported by the available data (i.e. all terms should be significant). Also test the full model that includes all variables and interaction terms.
 ```
 
+23.
+a.
+```{r}
+red.f<-subset(dat,dat$color=='red')
+lmt.f<-lm(red.f$tadpoles~red.f$frogs)
+summary(lmt.f)
+```
+b.
+```{r}
+plot(red.f$tadpoles~red.f$frogs)
+abline(lmt.f)
+```
+c. The linear model using just frogs is the most complex that is supported by the data.
+```{r}
+lm.t.f<-lm(dat$tadpoles~dat$frogs)
+lm.t.f.s<-lm(dat$tadpoles~dat$frogs+dat$spots)
+lm.t.f.s.c<-lm(dat$tadpoles~dat$frogs+dat$spots+dat$color)
+summary(lm.t.f)
+summary(lm.t.f.s)
+summary(lm.t.f.s.c)
+```
+
+
 ## IF statements
 
 Logical operators are not just used for subsetting data, but can be used to control the flow of an analysis and make decisions. The idea is that we want to tell the computer a set of rules, such as “if X happens, then do Y, otherwise do Z”.  The syntax for this in R is 
@@ -658,6 +834,16 @@ Aside: As is very common in R, as we learn more we often find more efficient way
 24.	Write an if statement that makes a scatter plot of x if all the values are positive, and plots a histogram otherwise.
 ```
 
+24.
+```{r}
+if(all(x>0)) {
+  plot(x)  
+} else {
+  hist(x)
+}
+```
+
+
 ## Defining custom functions
 
 One of the powerful things about computer languages is that they allow us to encapsulate repetitive tasks into functions, making it easier to abstract a problem. In R you are not limited to the pre-defined functions but you can define your own functions as well. For example, if we found that we were repeating the previous block of ‘if’ code multiple places in our code, we might want to convert it to a function so that we could save on retyping the code again and again. Putting the code in one place also means that if we change the code we only need to change it once and it applies everywhere. At the extreme, its often argued that anything you do more than once in a piece of code should be converted to a function.  So how do we define a function in R?  
@@ -691,6 +877,19 @@ my.division(x,"5")
  
 ```
 25.	Convert the more complicated graphing example at the end of  “Classic Tests” into a function that will make the same plots for any data set. Show how you would call the function passing it just the subset of data where there are 5 or more tadpoles.
+```
+
+
+25.
+```{r}
+tadpoles<-subset(dat,dat$tadpoles>=5)    #subset for later testing
+fancy.plot<-function(x,y,col,z) {
+  plot(y~x,cex=1.5,col=as.character(col),pch=z+1,cex.axis=1.3,
+       xlab='X Density',ylab='Y Density',cex.lab=1.3)
+  abline(lm(y~x),col='green',lwd=3)
+}
+
+fancy.plot(tadpoles$frogs,tadpoles$tadpoles,tadpoles$color,tadpoles$spots)
 ```
 
 ## For loops
@@ -729,6 +928,25 @@ plot(N)
 26.	Starting with a vector x = 1:10, write a for loop that adds 5 to each value in the vector. Note that it is permissible to assign an element in a vector to itself (e.g. x[i] = x[i] + 5)
 27.	Modify the logistic growth code to simulate discrete-time exponential growth and plot the output.
 ```
+
+26.
+```{r}
+for( i in 1:10){
+  print(i+5)
+}
+```
+27.
+```{r}
+NT<-20        
+N0<-1              
+r<-0.2            
+N<-rep(N0,NT)
+for(t in 1:NT){
+    N[t]=N0*(1+r)^t    
+}
+plot(N)
+```
+
 
 ## Vector and Matrix Math
 
