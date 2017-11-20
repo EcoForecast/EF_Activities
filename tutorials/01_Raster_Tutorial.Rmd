@@ -43,7 +43,7 @@ This tutorial will use an two images hosted remotely as working examples. Howeve
 First, set your working directory
 
 ```{r}
-setwd('/Users/ericbullock/Google Drive/Class/Ecological_Forecasting/EF_Activities')
+#setwd('/Users/ericbullock/Google Drive/Class/Ecological_Forecasting/EF_Activities')
 ```
 
 Now, download the two images needed for this activity

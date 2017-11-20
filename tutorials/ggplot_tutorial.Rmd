@@ -15,11 +15,11 @@ ls() #list variables
 rm(list=ls()) #clear variables
 ls() #list variables again (to check)
 
-setwd('/Users/juliejung/Desktop/') #set working directory
+#setwd('/Users/juliejung/Desktop/') #set working directory
 getwd() #show working directory (to check)
 
 #install the package
-install.packages("ggplot2")
+#install.packages("ggplot2")
 
 #load the libraries you'll need in your script
 library(ggplot2)

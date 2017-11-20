@@ -13,7 +13,7 @@ The objective of this tutorial is to show some basic functionality of the rgdal 
 The package can be installled and loaded using the following commands. Note that the CRAN mirror is used as an example, but you might want to change it depending on your location. 
 
 ```{r, message=FALSE}
-install.packages("rgdal", repos='http://cran.us.r-project.org')
+#install.packages("rgdal", repos='http://cran.us.r-project.org')
 library(rgdal)
 ```
 
