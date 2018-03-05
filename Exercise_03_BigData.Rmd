@@ -71,16 +71,16 @@ Often the data that we want to use from the web has been formatted in HTML for h
 ```{r}
 nu <- function(x){as.numeric(as.character(x))}  ## simple function to convert data to numeric
 
-fia_html <- getURL("http://apps.fs.fed.us/fiadb-downloads/datamart.html")  ## grab raw html
-fia_table = readHTMLTable(fia_html)[[6]]    ## We're interested in the 6th table on this webpage
+fia_html <- getURL("https://apps.fs.usda.gov/fia/datamart/CSV/datamart_csv.html")  ## grab raw html
+fia_table = readHTMLTable(fia_html)[[3]]    ## We're interested in the 3rd table on this webpage
 update = as.Date(fia_table[,"Last Modified Date"])
 hist(update,"months")                       ## Plot a histogram of update times
-fia_table[which(update > "2016/01/01"),]
+recent <- fia_table[which(update > "2016/01/01"),]
 ```
 
 
 **Question 2:**
-Create a sorted table of how many FLUXNET eddy-covariance towers are in each country according to the website at http://fluxnet.ornl.gov/site_status. Hint: use substring to extract the country code from the overall FLUXNET ID code.
+Create a sorted table of how many FLUXNET eddy-covariance towers are in each country according to the website at http://fluxnet.fluxdata.org/sites/site-list-and-pages/. Hint: use substring to extract the country code from the overall FLUXNET ID code.
 
 grep, system, RegExp
 --------------------
