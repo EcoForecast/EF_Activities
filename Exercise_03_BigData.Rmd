@@ -26,8 +26,9 @@ get.pkg("RCurl")
 get.pkg("XML")
 get.pkg("ncdf4")
 get.pkg("devtools")
-get.pkg("MODISTools")
+library("MODISTools")
 ```
+Note: The MODISTools library is no longer on CRAN, but can be downloaded manually from the ORNL DAAC here: https://modis.ornl.gov/data/modis_webservice.html
 
 Pulling data directly off the web
 ---------------------------------
@@ -201,12 +202,6 @@ SOAP
 ----
 
 In addition to data that is directly downloadable, and that which is scraped, there are a number of places on the web where data is available though interactive webservices. One standard protocol for such data sharing is the Simple Object Acces Protocol (SOAP). In this example we will be using SOAP to access the NASA MODIS server, and rather than using the generic SOAP library we'll use a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
-
-While it is possible to grab MODISTools off of CRAN directly, it is also simple to pull R packages out of code development repositories, such as Github using the devtools library. This is useful because not all R Packages are on CRAN, and even when they are there are sometimes features in the development branch of a tool that are not in the released version. In this example the second argument is the GitHub project or user that's hosting the code.
-```
-install_github("MODISTools","seantuck12") 
-```
-  ## arguements are the library name and the username 
 
 Next, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product (its definition, calculation, units, and missing data string) is available at https://lpdaac.usgs.gov/products/modis_products_table
 
