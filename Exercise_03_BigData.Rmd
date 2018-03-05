@@ -59,7 +59,7 @@ For more information, please visit http://www.google.org/flutrends
 
 **Question 1:**
 
-Using the US Forest Service's Forest Inventory and Analysis (FIA) data set, plot the rank vs log(abundance) curve for tree seedling counts from Rhode Island. Data is available at http://apps.fs.fed.us/fiadb-downloads/CSV/RI_SEEDLING.csv and the relevant columns are TREECOUNT (raw seedling counts) and SPCD (species codes). 
+Using the US Forest Service's Forest Inventory and Analysis (FIA) data set, plot the rank vs log(abundance) curve for tree seedling counts from Rhode Island. Data is available at https://apps.fs.usda.gov/fia/datamart/CSV/RI_SEEDLING.csv and the relevant columns are TREECOUNT (raw seedling counts) and SPCD (species codes). 
 Hints: tapply, sum, na.rm=TRUE, sort, decreasing=TRUE, log='y'
 
 
