@@ -267,7 +267,7 @@ which is a one-time task, after which you can do the pull as
 ```
 git pull upstream master
 ```
-2. Open a new Rmd file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
+3. Open a new Rmd file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
 ```{r}
 ## Master script for phenology analysis
 
@@ -277,7 +277,7 @@ if(file.exists("02_plot.phenocam.R"))     source("02_plot.phenocam.R")
 if(file.exists("03_logistic.R"))          source("03_logistic.R")
 
 ## Download phenology data
-URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv"
+URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day.csv"
 prairie.pheno <- download.phenocam(URL)
 
 ## Plot overall phenology data
@@ -297,9 +297,10 @@ fit = fit.logistic(dat,par)
 plot.phenocam(dat)
 lines(dat$date,pred.logistic(fit$par,dat$doy),col=2)
 ```
-3. Save this file as "04_Master.Rmd". 
-4. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
-5. On Github.com, submit a pull request
+
+4. Save this file as "04_Master.Rmd". 
+5. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
+6. On Github.com, submit a pull request
 
 ###OWNER
 1. Evaluate and accept pull request.
