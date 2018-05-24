@@ -1,23 +1,22 @@
 ---
 title: "Introduction to JAGS"
 author: "Michael Dietze"
-date: "February 15, 2016"
 output: html_document
 ---
 
 ```{r,echo=FALSE}
-require(rjags)
-require(coda)
+library(rjags)
+library(coda)
 ```
 
 
 # Introduction
 
-The aim of this activity is to provide a tutorial on JAGS (Just Another Gibbs Sampler), a statistical software package designed specifically to do Bayesian analyses of simple to intermediate complexity using Markov Chain Monte Carlo (MCMC) numerical simulation methods. JAGS is one of a set of generalized software tools for doing Bayesian computation, with BUGS and STAN being two other popular options. These tools use very similar and simple scripting languages that focus on specifying data and process models. The great thing about these tools is that they keeps a lot of the mathematical and computational details “under the hood” so that you can focus on the structure of your model at a high level rather than being bogged down in the details. Also, since JAGS is designed just to do Bayesian MCMC computation it is very efficient at this, which is nice since Bayesian MCMC computations can be time consuming. In this tutorial we will work through the basics of using BUGS: writing and compiling a model, loading data, executing the model, and evaluating the numerical output of the model.
+The aim of this activity is to provide a tutorial on JAGS (Just Another Gibbs Sampler), a statistical software package designed specifically to do Bayesian analyses of simple to intermediate complexity using Markov Chain Monte Carlo (MCMC) numerical simulation methods. JAGS is one of a set of generalized software tools for doing Bayesian computation, with BUGS, NIMBLE, and STAN being other popular options. These tools use very similar and simple scripting languages that focus on specifying data and process models. The great thing about these tools is that they keeps a lot of the mathematical and computational details “under the hood” so that you can focus on the structure of your model at a high level rather than being bogged down in the details. Also, since JAGS is designed just to do Bayesian MCMC computation it is very efficient at this, which is nice since Bayesian MCMC computations can be time consuming. In this tutorial we will work through the basics of using BUGS: writing and compiling a model, loading data, executing the model, and evaluating the numerical output of the model.
 
 While tools like JAGS can be run by themselves, they are not really designed for managing or manipulating data, and thus it is common to use R packages to interface with these tools. In the example below we will use the rjags package to call JAGS. To be able to install rjags you will need to first install JAGS itself: http://mcmc-jags.sourceforge.net/
 
-The reason for choosing JAGS in this course is that it has much better cross-platform support than the earlier BUGS language, which really only operates well in Windows. The STAN langage is much newer, also works across platforms, and is becoming increasingly popular. 
+The reason for choosing JAGS in this course is that it has much better cross-platform support than the earlier BUGS language, which really only operates well in Windows. The STAN language is newer, also works across platforms, and is becoming increasingly popular. 
 
 
 ### Resources
@@ -26,8 +25,6 @@ JAGS itself provides a reference manual that is useful for looking up the syntax
 There’s a large amount of info in both the JAGS and BUGS manuals but I wanted to point out a few sections that you’ll find yourself coming back to repeatedly. One of these topics is the BUGS “Model Specification” which provides a lot of detail on how to write models in BUGS/JAGS, how data must be formatted, and the list of functions and distributions that BUGS/JAGS knows about. The naming convention for distributions in BUGS/JAGS is very similar to the convention in R, but there are a few cases where the parameterization is different (e.g. Weibull) so it is always good to check that the values you are passing to a BUGS/JAGS distribution are what you think they are. One very important example of this is that the Normal distribution in BUGS/JAGS, dnorm, is parameterized in terms of a mean and precision (1/variance) rather than a mean and standard deviation, which is the parameterization in R. To make life even more complicated, there are a small number of places where the JAGS syntax is slightly different from the BUGS version, so it's best to check the JAGS manual specifically for the definitions of any distributions and functions.
 
 Within the BUGS Examples page you'll find three volumes of examples that provided written explanations of analyses with the BUGS code. Working through these is a great way to learn more about how BUGS works. When you first start analyzing your own data it is often easiest to start from an existing example and modify it to meet your needs rather than starting from scratch.
-
-
 
 
 # A Simple JAGS model
@@ -42,7 +39,7 @@ As noted earlier JAGS parameterizes the Normal distribution in terms of a mean a
 $$ \mu \sim N(\mu_0,T) $$
 $$ X \sim N(\mu, S) $$
 
-This problem has an exact analytical solution so we can compare the numerical results to the analytical one (Dietze 2016, Eqn 5.7). 
+This problem has an exact analytical solution so we can compare the numerical results to the analytical one (Dietze 2017, Eqn 5.7). 
 
 $$ P(\mu | X) \sim N \left( {{S}\over{S+T}}X + {{T}\over{S+T}}\mu_0,S+T\right) $$
 
@@ -53,12 +50,12 @@ model {
 ## model goes here ##
 }
 ```
-When writing models in JAGS we have to specify the data model, process model, and parameter model using the second (tilda) notation. However, we don't need to specify explicitly the connections between them—JAGS figures them out based on the conditional probabilities involved. Deterministic calculations (e.g. process model) always make use of an arrow ( <- ) for assignment (similar to R syntax we’ve mentioned before). Assignment of random variables is always done with a tilde (~). **The equal sign ( = ) cannot be used for either process or data models. Furthermore, deterministic calculations and distributions can not be combined in the same line of code.** For example, a regression model where we're trying to predict data y based on observation x might include
+When writing models in JAGS we have to specify the data model, process model, and parameter model using the tilda notation. However, we don't need to specify explicitly the connections between them — JAGS figures this out based on the conditional probabilities involved. Deterministic calculations (e.g. process model) always make use of an arrow ( <- ) for assignment (similar to R syntax). Assignment of random variables is always done with a tilde (~). **The equal sign ( = ) cannot be used for either process or data models. Furthermore, deterministic calculations and distributions can not be combined in the same line of code.** For example, a regression model where we're trying to predict data y based on observation x might include
 ```
 mu <- b0 + b1* x # process model 
 y ~ dnorm(mu,tau) # data model
 ```
-but in JAGS the same model can NOT be expressed as
+but in JAGS the same model can **NOT** be expressed as
 ```
 y ~ dnorm(b0 + b1* x, tau)
 ```
@@ -71,7 +68,7 @@ X ~ dnorm(mu,S) # data model
 ```
 The first line of this model specifies the prior and says that “mu” is a random variable (~) that is Normally distributed (dnorm) with an expected value of "mu0" and a precision of T. The second line specifies the likelihood and says that there is a single data point “X” that is a random variable that has a Normal distribution with expected value “mu” and precision “S”.
 
-Hopefully the above JAGS code seems pretty clear. However there are a few quirks to how JAGS evaluates a model, some of which are just ideosynchacies (like no =) while others are deeply embedded in the logic but often misleading to newcomers. One of the more disorienting is that because JAGS isn't evaluating the code sequentially the order of the code doesn't matter -- the above model is equivalent to
+Hopefully the above JAGS code seems pretty clear. However there are a few quirks to how JAGS evaluates a model, some of which are just ideosynchacies (like no =) while others are deeply embedded in the logic but often misleading to newcomers. One of the more disorienting features is that, because JAGS isn't evaluating the code sequentially, the order of the code doesn't matter -- the above model is equivalent to
 ```
 model {
 X ~ dnorm(mu,S) # data model
@@ -79,14 +76,15 @@ mu ~ dnorm(mu0,T) # prior on the mean
 }
 ```
 If you're used to R the above seems 'wrong' because you're using mu in the data model before you've 'defined' it. But JAGS models are not a set of sequential instructions, rather they are the definition of a problem which JAGS will parse into a graph and then analyze to how to best sample from. Futhermore, even if the code were evaluated sequentially, MCMC is a cyclic algorithm and thus, after initial conditions are provided, it doesn't really matter what order thing are in.
-The other major "quirk" of JAGS is that what JAGS does with a model can depend a LOT on what's passed in as knowns! Understanding how this can be will help you considerably when writing and debug models. Key to this is to realize that _no variables are 'unknowns' that JAGS is trying to solve for in the algebraic sense_. Rather, some variables are constants or derived (calculated) quantities while others are **random variables**. Random variables _HAVE to have a distribution_. If we look at our simple model, mu0, S, and T don't have distributions so they have to be provided as inputs. If they are not, JAGS will throw an error. Next, mu is clearly a random variable as it shows up on the left-hand side of the prior and on the right-hand side of the likelihood. mu _cannot_ be specified as an input -- this likewise will throw an error. But the interesting part is that depending on context X could either be known or random and thus what JAGS does with this model depends a lot of whether X is in the list of inputs. If X is NOT specified, then the JAGS reads the above code as:
+
+The other major "quirk" of JAGS is that what JAGS does with a model can depend a LOT on what's passed in as knowns! Understanding how this works will help you considerably when writing and debug models. Key to this is to realize that _no variables are 'unknowns' that JAGS is trying to solve for in the algebraic sense_. Rather, some variables are constants or derived (calculated) quantities while others are **random variables**. Random variables _HAVE to have a distribution_. If we look at our simple model, mu0, S, and T don't have distributions so they have to be provided as inputs. If they are not, JAGS will throw an error. Next, mu is clearly a random variable as it shows up on the left-hand side of the prior and on the right-hand side of the likelihood. mu _cannot_ be specified as an input -- this likewise will throw an error. But the interesting part is that, depending on context, X could either be known or random and thus what JAGS does with this model depends a lot of whether X is in the list of inputs. If X is NOT specified, then the JAGS reads the above code as:
 
 1. Draw a random mu from the prior distribution
 2. Conditional on that value, draw a random X
 
-However, if X IS specified then JAGS will generate samples of $\mu | X$ -- in other it will estimate the posterior of mu. This polymorphic behavior leads to another quirk -- all distributions are in the "d" form even if you're using them to generate random numbers (i.e. there is no rnorm in JAGS).
+However, if X IS specified then JAGS will generate samples of $\mu | X$ -- in other words it will estimate the posterior of mu. This polymorphic behavior leads to another quirk -- all distributions are in the "d" form even if you're using them to generate random numbers (i.e. there is no rnorm in JAGS).
 
-Because of how JAGS views random variables, no variable can show up on the left-hand side more than once -- it's can't be both calculated and random, it can't be calculated more than once, and it can't have multiple priors or data models. Most of the time this is fine, but what catchs many people is that it means you can't reuse temporary variables, because JAGS will view this as an attempt to redefine them.
+Because of how JAGS views random variables, no variable can show up on the left-hand side more than once -- it's can't be both calculated and random, it can't be calculated more than once, and it can't have multiple priors or data models. Most of the time this is fine, but what catchs many people is that it means you **can't reuse temporary variables**, because JAGS will view this as an attempt to redefine them.
 
 # Evaluating a JAGS model
 
@@ -101,11 +99,11 @@ X ~ dnorm(mu,S) # data model
 "
 ```
 
-To pass this model to JAGS we'll use the function _jags.model_, which has required arguements of the model and the data and optional arguements for specifiying initial conditions and the number of chains (I encourage you to read the man page for this function!). So before running this function let's first set up these other inputs
+To pass this model to JAGS we'll use the `rjags` function `jags.model`, which has required arguements of the model and the data, and optional arguements for specifiying initial conditions and the number of chains (I encourage you to read the man page for this function!). So before running this function let's first set up these other inputs
 
 ### Data as lists
 
-In a nutshell, pass data to JAGS using R's _list_ data type. JAGS models don't have a function interface, and as noted before the code can be polymorphic, so the order that data is specified is meaningless. However, the NAMES of the variables in the list and in the code have to match EXACTLY (this is a common bug). The other thing to remember is that all constants in the code that are not defined inline (which is generally discouraged), need to be passed in with the data list. In the example above our data is X and our constants are mu0, S, and T. These can be defined in a list as follows
+In a nutshell, pass data to JAGS using R's _list_ data type. JAGS models don't have a function interface, and as noted before the code can be polymorphic, so the order that data is specified is meaningless. However, **the NAMES of the variables in the list and in the code have to match EXACTLY (this is a common bug)**. The other thing to remember is that all constants in the code that are not defined inline (which is generally discouraged), need to be passed in with the data list. In the example above our data is X and our constants are mu0, S, and T. These can be defined in a list as follows
 ```{r}
 sigma = 5  ## prior standard deviation
 data = list(X = 42, ## data
@@ -117,7 +115,7 @@ In this example I demonstrated converting from standard deviation to precision b
 
 ### Initial conditions: lists, lists of lists, functions
 
-The next step is to specify the initial conditions. In JAGS this is optional because if initial conditions are not specified then the code will draw them randomly from the priors. If you use informative priors this is not usually a problem. If you use uninformative priors, however, the initial parameter value can start far from the center of the distribution and take a very long time to converge, just like in maximum likelihood optimization. Initial conditions are also specified using a list, but in this case we want to name the parameter variable names instead of the data variable names. A nice feature in JAGS is that we only have to specify some of the variable names, and those that we don't specify will be initialized based on the priors. Therefore, we can often get away with only initializing a subset of variables. 
+The next step is to specify the initial conditions. In JAGS this is optional because if initial conditions are not specified then the code will draw them randomly from the priors. If you use informative priors this is not usually a problem. If you use uninformative priors, however, the initial parameter value can start far from the center of the distribution and take a long time to converge, just like in maximum likelihood optimization. Initial conditions are also specified using a list, but in this case we want to name the parameter variable names instead of the data variable names. A nice feature in JAGS is that we only have to specify some of the variable names, and those that we don't specify will be initialized based on the priors. Therefore, we can often get away with only initializing a subset of variables. 
 
 As an example, if we wanted to specify an initial condition for $\mu$ we would do this with a list, same as we did with the data.
 ```{r}
@@ -151,7 +149,7 @@ The _textConnection_ function is part of the normal R base and allows a text str
 
 If you have any bugs in your model, this is the step that will most likely throw an error.
 
-One the model is correctly compiled and initialized you can call _coda.samples_ to sample from the model. Besides the initialized model object, the other arguments to the function are _variable.names_, a vector of variables you want stored, and _n.init_ the number of iterations.
+Once the model is correctly compiled and initialized you can call _coda.samples_ to sample from the model. Besides the initialized model object, the other arguments to the function are _variable.names_, a vector of variables you want stored, and _n.init_ the number of iterations.
 
 ```{r}
 jags.out   <- coda.samples (model = j.model,
@@ -186,18 +184,12 @@ In addition to having checked for overall convergence, it is important to remove
 GBR <- gelman.plot(jags.out)
 ```
 
-The point up to where the GBR drops below 1.1 is termed the "burn in" period and should be discarded
+The point up to where the GBR drops below 1.05 is termed the "burn in" period and should be discarded. For example, if I determine the burn in to be 500 steps I could remove the first 500 as:
 
 ```{r}
-## determine the first iteration after convergence
-burnin <- GBR$last.iter[tail(which(GBR$shrink[,,2] > 1.1),1)+1]
-## check for no burn-in case
-if(length(burnin) == 0) burnin = 1
-## remove burn-in
-jags.burn <- window(jags.out,start=burnin)
-## check diagnostics post burn-in
-gelman.diag(jags.burn)
-plot(jags.burn)
+burnin = 500                                ## determine convergence
+jags.burn <- window(jags.out,start=burnin)  ## remove burn-in
+plot(jags.burn)                             ## check diagnostics post burn-in
 ```
 
 After discarding burn-in, you should work with the trimmed object for subsequent analyses
@@ -217,15 +209,17 @@ Note: the new samples are written to a new variable, not automatically added to 
 The previous section raises an obvious question, "How many samples is enough?" Unfortunately, there's no single right answer to this question because it depends on how well your model is mixing (i.e. how independent the samples are from one step to the next) and what output statistics you are interested in.
 
 To address the first question, the independence of samples is largely a question of autocorrelation. Coda provides a simple autocorrelation plot
+
 ```{r}
 acfplot(jags.burn)
 ```
-Autocorrelation is always 1 by definition at lag 0 and then typically decays toward 0 roughly exponentially. The faster the decay the greater the independence. One way of approximating the number of independent samples you have is to divide the actual number of samples by the lag distance at which samples are approximately independent. A slightly more analytically rigorous way of achieving the same thing is to perform an effective sample size calculation
+
+Autocorrelation is always 1 by definition at lag 0 and then typically decays toward 0 roughly exponentially. The faster the decay the greater the independence. One way of approximating the number of independent samples you have is to divide the actual number of samples by the lag distance at which samples are approximately independent. A slightly more analytically rigorous way of achieving the same thing is to perform an **effective sample size calculation**
 ```{r}
 effectiveSize(jags.burn)
 ```
 
-For the second question, the number of samples required increases with the tails of the posterior distribution. For example, if you only care about the posterior mean or median, then you can get a stable estimate with an effective sample size of only a few hundred points. The standard deviation and interquartile range are more extreme and thus require more samples to estimate, while the 95% CI requires even more -- a common rule of thumb would be an effective size of 5000 samples. Recall that the CI is determined by the most exteme values, so at n=5000 it is only the 125 largest and 125 smallest values that determine the value. If you need to work with even larger CI or even lower probability events you'll require more samples. This phenomena can be shown graphically (and diagnosed) by looking at plots of how different statistics change as a function of sample size:
+For the second question, the number of samples required increases with the tails of the posterior distribution. For example, if you only care about the posterior mean or median, then you can get a stable estimate with an effective sample size of only a few hundred points. The standard deviation and interquartile range are more extreme and thus require more samples to estimate, while the 95% CI requires even more -- **a common rule of thumb would be an effective size of 5000 samples**. Recall that the CI is determined by the most exteme values, so at n=5000 it is only the 125 largest and 125 smallest values that determine the value. If you need to work with even larger CI or even lower probability events you'll require more samples. This phenomena can be shown graphically (and diagnosed) by looking at plots of how different statistics change as a function of sample size:
 
 ```{r}
 cumuplot(jags.out,probs=c(0.025,0.25,0.5,0.75,0.975))
@@ -233,7 +227,7 @@ cumuplot(jags.out,probs=c(0.025,0.25,0.5,0.75,0.975))
 
 **Thinning**
 
-Older texts will advise that you thin your posterior samples to account for autocorrelation. Current thinking is that this is unnessisary unless you want to reduce the size of the output you save. Intuitively, setting “thin” to 10 retains only every 10th sample for further analysis, etc.
+Older texts will advise that you thin your posterior samples to account for autocorrelation. Current thinking is that this is unnessisary unless you need to reduce the size of the output you save. Intuitively, setting “thin” to 10 retains only every 10th sample for further analysis, etc.
 ```{r}
 jags.thin = window(jags.burn,thin=10)
 plot(jags.thin)
@@ -242,13 +236,13 @@ plot(jags.thin)
 
 ### MCMC Statistics
 
-Once your model has converged and has enough samples after burn-in you can calculate any summary statistics you want to describe your posterior output
+Once your model has converged, and has enough samples after burn-in, you can calculate any summary statistics you want to describe your posterior output
 
 ```{r}
 summary(jags.out)
 ```
 
-The first part of this table is the mean, standard deviation, and two different standard errors. Knowing how to interpret the last three of this is important. The first, SD, describes the spread of the posterior distribution -- in this case it is the uncertainty about the parameter mu. The SD doesn't decrease as you run the MCMC longer, it just converges on the value determined by the number and distribution of data points. By constrast, the SE declines asymptotically with MCMC length. In this context, this makes it an indicator of the numerical precision of your results -- the longer the MCMC the higher the numerical precision of the posterior statistics. Between the two alternative SE values you should always use the Time-series SE, which has been corrected for autocorrelation, rather than the Naive SE, which has not.
+The first part of this table is the mean, standard deviation, and two different standard errors. Knowing how to interpret the last three of this is important. The first, SD, describes the spread of the posterior distribution -- in this case it is the **uncertainty about the parameter** mu (which, in other contexts, we usually refer to as the standard error). The SD doesn't decrease as you run the MCMC longer, it just converges on the value determined by the number and distribution of data points. By constrast, the SE declines asymptotically with MCMC length. In this context, this makes it an **indicator of the numerical precision of your results** -- the longer the MCMC the higher the numerical precision of the posterior statistics. Between the two alternative SE values you should always use the Time-series SE, which has been corrected for autocorrelation, rather than the Naive SE, which has not.
 
 The second part of the summary table is the sample quantiles for the posterior -- the default is the 95% CI, interquartile range, and median.
 
@@ -256,7 +250,7 @@ In addition, there are a number of stats/diagnostics that you'll want to perform
 
 Finally, if you need to work with the MCMC output itself, either to perform additional analyses (e.g. uncertainty analysis, prediction) or generate additional statistics/diagnositcs, the coda mcmc.list format is a bit of a pain to work with. I find the most convinient format is a matrix:
 ```{r}
-out <- as.matrix(jags.out)
+out <- as.matrix(jags.burn)
 ```
 
 # Case Study: Forest Stand Characteristics
@@ -277,13 +271,17 @@ model {
 The data for fiting this model are
 
 ```{r}
-data = list(N = 297, mu0=20, T=0.01, S = 1/27, X = c(20.9, 13.6, 15.7, 6.3, 2.7, 25.6, 4, 20.9, 7.8, 27.1, 25.2, 19, 17.8, 22.8, 12.5, 21.1, 22, 22.4, 5.1, 16, 20.7, 15.7, 5.5, 18.9, 22.9, 15.5, 18.6, 19.3, 14.2, 12.3, 11.8, 26.8, 17, 5.7, 12, 19.8, 19, 23.6, 19.9, 8.4, 22, 18.1, 21.6, 17, 12.4, 2.9, 22.6, 20.8, 18.2, 14.2, 17.3, 14.5, 8.6, 9.1, 2.6, 19.8, 20, 22.2, 10.2, 12.9, 20.9, 21.1, 7.3, 5.8, 23.1, 17, 21.5, 10.1, 18.4, 22.6, 21.2, 21.5, 22.4, 17.3, 16, 25, 22.4, 23.9, 23, 21.9, 19, 28.6, 16, 22.5, 23.2, 8.7, 23.4, 15.3, 25.6, 19.2, 17.4, 23.8, 20.4, 19, 3.6, 23.4, 19.6, 17.5, 16.5, 22, 19.7, 7.35, 18, 17.8, 9.6, 15, 12, 17.7, 21.4, 17, 22.1, 18.9, 15.05, 12.9, 19.3, 15.3, 13.6, 15.4, 10.6, 11.3, 11.8, 22.2, 22.2, 13.1, 7.4, 4.5, 11.7, 19.5, 19.9, 11.6, 13.9, 15.5, 11, 18.6, 17.6, 12.7, 20.9, 18.8, 22.4, 21.2, 18.2, 15.3, 13.6, 7.3, 17.4, 17.4, 10.5, 22.9, 23.2, 13.8, 14.8, 22.2, 20.9, 13, 18.9, 19, 15.2, 16.8, 18, 24.6, 15.4, 17.2, 23.2, 22.8, 25.5, 7.8, 6, 6.4, 19, 13.5, 23.7, 18, 22.2, 22.4, 9.3, 13.7, 18.9, 20.5, 23.3, 20.8, 18.4, 4.5, 12.2, 16.9, 13.5, 17.8, 16.9, 20.4, 19.5, 22.2, 24.5, 21.2, 16.5, 18, 16.4, 3.9, 17.9, 22, 12.9, 21, 18, 9.2, 15.9, 8.1, 8.3, 10.7, 12, 19.9, 13.6, 17.3, 11.5, 12.4, 15.1, 22, 19.3, 17.5, 14.5, 14.7, 17.5, 19.6, 12.9, 20.3, 17.9, 20.2, 18.3, 9.5, 19, 21, 13.1, 20.4, 16.3, 18.3, 11.8, 23.3, 15.2, 20, 17.9, 12, 19.6, 18.5, 16.2, 10.9, 17.8, 13.8, 10, 17.9, 15.6, 20.3, 14.9, 18.6, 12.5, 18.2, 16, 18.7, 18, 15.3, 19, 17.9, 15.8, 17.7, 14.4, 19.6, 18.3, 18.7, 17.8, 18, 10.1, 18.8, 16.4, 21.2, 16.6, 16.7, 17.8, 16.5, 19.3, 16.3, 14.2, 13, 9.4, 19.7, 13.4, 2.6, 17.6, 16.7, 17.6, 5.8, 17.6, 20.1, 18.2, 16.7, 14, 13.9, 5.1, 16.6, 3.9, 17.5, 18))
+data = list(
+  N = 297, 
+  mu0=20, 
+  T=0.01, 
+  S = 1/27, 
+  X = c(20.9, 13.6, 15.7, 6.3, 2.7, 25.6, 4, 20.9, 7.8, 27.1, 25.2, 19, 17.8, 22.8, 12.5, 21.1, 22, 22.4, 5.1, 16, 20.7, 15.7, 5.5, 18.9, 22.9, 15.5, 18.6, 19.3, 14.2, 12.3, 11.8, 26.8, 17, 5.7, 12, 19.8, 19, 23.6, 19.9, 8.4, 22, 18.1, 21.6, 17, 12.4, 2.9, 22.6, 20.8, 18.2, 14.2, 17.3, 14.5, 8.6, 9.1, 2.6, 19.8, 20, 22.2, 10.2, 12.9, 20.9, 21.1, 7.3, 5.8, 23.1, 17, 21.5, 10.1, 18.4, 22.6, 21.2, 21.5, 22.4, 17.3, 16, 25, 22.4, 23.9, 23, 21.9, 19, 28.6, 16, 22.5, 23.2, 8.7, 23.4, 15.3, 25.6, 19.2, 17.4, 23.8, 20.4, 19, 3.6, 23.4, 19.6, 17.5, 16.5, 22, 19.7, 7.35, 18, 17.8, 9.6, 15, 12, 17.7, 21.4, 17, 22.1, 18.9, 15.05, 12.9, 19.3, 15.3, 13.6, 15.4, 10.6, 11.3, 11.8, 22.2, 22.2, 13.1, 7.4, 4.5, 11.7, 19.5, 19.9, 11.6, 13.9, 15.5, 11, 18.6, 17.6, 12.7, 20.9, 18.8, 22.4, 21.2, 18.2, 15.3, 13.6, 7.3, 17.4, 17.4, 10.5, 22.9, 23.2, 13.8, 14.8, 22.2, 20.9, 13, 18.9, 19, 15.2, 16.8, 18, 24.6, 15.4, 17.2, 23.2, 22.8, 25.5, 7.8, 6, 6.4, 19, 13.5, 23.7, 18, 22.2, 22.4, 9.3, 13.7, 18.9, 20.5, 23.3, 20.8, 18.4, 4.5, 12.2, 16.9, 13.5, 17.8, 16.9, 20.4, 19.5, 22.2, 24.5, 21.2, 16.5, 18, 16.4, 3.9, 17.9, 22, 12.9, 21, 18, 9.2, 15.9, 8.1, 8.3, 10.7, 12, 19.9, 13.6, 17.3, 11.5, 12.4, 15.1, 22, 19.3, 17.5, 14.5, 14.7, 17.5, 19.6, 12.9, 20.3, 17.9, 20.2, 18.3, 9.5, 19, 21, 13.1, 20.4, 16.3, 18.3, 11.8, 23.3, 15.2, 20, 17.9, 12, 19.6, 18.5, 16.2, 10.9, 17.8, 13.8, 10, 17.9, 15.6, 20.3, 14.9, 18.6, 12.5, 18.2, 16, 18.7, 18, 15.3, 19, 17.9, 15.8, 17.7, 14.4, 19.6, 18.3, 18.7, 17.8, 18, 10.1, 18.8, 16.4, 21.2, 16.6, 16.7, 17.8, 16.5, 19.3, 16.3, 14.2, 13, 9.4, 19.7, 13.4, 2.6, 17.6, 16.7, 17.6, 5.8, 17.6, 20.1, 18.2, 16.7, 14, 13.9, 5.1, 16.6, 3.9, 17.5, 18)
+  )
 ```
 
-Data for this analysis is presented in JAGS list format below. Copy and paste the text into your script:
-
 ### Activity Task 1
-Run the unknown mean/fixed variance model to estimate mean tree diameter. Include the following in your report:
+Run the unknown mean/fixed variance model to estimate mean tree diameter. Include the following in your results:
 
 * Table of summary statistics for the posterior estimate of the mean
 * Graph of parameter density
@@ -293,7 +291,7 @@ Run the unknown mean/fixed variance model to estimate mean tree diameter. Includ
 ### Activity Task 2
 Modify the model to account for the uncertainty in the variance. This only requires adding one line — a prior on S outside the loop.
 
-Run the unknown mean/unknown variance model to simultaneously estimate both the mean tree diameter and the standard deviation. Include in your report the following:
+Run the unknown mean/unknown variance model to simultaneously estimate both the mean tree diameter and the standard deviation. Include the following in your results:
 
 * Explaination of your choice of prior on the precision
 * Table of summary statistics for the posterior mean and standard deviation
