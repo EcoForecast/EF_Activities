@@ -17,6 +17,8 @@ The standard Bayesian regression model assumes a Normal likelihood, a Normal pri
 
 $$P(b,\sigma^2 \vert X, y) \propto N_n(y \vert Xb,\sigma^2 I) N_p(b \vert b_0, V_b) IG(\sigma^2 \vert s_1,s_2)$$
 
+As a reminder, a Normal prior is not used on the variance because variances must be non-negative. The inverse gamma prior on the variance (equivalent to a gamma prior on the precision) has the advantage of being conjugate and having relatively interpretable parameters (s_1 and s_2 are proportional to the prior sample size and sum of squares, respectively; see Box 5.1) 
+
 Within the Gibbs sampler we will be iteratively sampling from each of the conditional posterior distributions:
 
   The regression parameters given the variance
@@ -54,7 +56,7 @@ beta <- matrix(c(b0,b1),2,1)		## put “true” regression parameters in a matri
 sigma <- 4				## define the standard deviation
 ```
 
-In this first part we define the true parameters of our model that we're going to simulate from.  In the next block we will first simulate our covariate, x1, by assuming that it is uniformly distributed over the range that we're interested in (0,20) and then create our design matrix, x, which is a matrix with the first column of all 1's and the second column being our covariate pseudodata.  To combine these two columns we use the _cbind_ command, which creates a matrix assuming that the vectors passed to the function are the columns of the matrix.  When the design matrix, x, is multiplied by the parameter vector, beta, the first column is multiplied by the first element in the beta vector, b1, which is the intercept.  The second column in the design matrix, which is our covariate x, is multiplied by the second beta, b1, the slope.  Together this gives the calculation we desire, b0 + b1*x1, which is our linear regression model.  This calculation is also the expected value of the response variable, y, at that x1.
+In this first part we define the true parameters of our model that we're going to simulate from.  In the next block we will first simulate our covariate, x1, by assuming that it is uniformly distributed over the range that we're interested in (0,20) and then create our design matrix, x, which is a matrix with the first column of all 1's (which will multiplied by the intercept) and the second column being our covariate pseudodata (which will be multiplied by the slope).  To combine these two columns we use the _cbind_ command, which creates a matrix assuming that the vectors passed to the function are the columns of the matrix.  When we use matrix multiplication to multiply the design matrix, x, by the parameter vector, beta, the first column (all 1's) is multiplied by the first element in the beta vector, b1, which is the intercept.  The second column in the design matrix, which is our covariate x, is multiplied by the second beta, b1, the slope.  Together this gives the calculation we desire, b0 + b1*x1, which is our linear regression model.  This calculation is also the expected value of the response variable, y, at that x1.
 
 ```{r}
 x1 <- runif(n,0,20)
