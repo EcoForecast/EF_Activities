@@ -13,7 +13,7 @@ library(coda)
 
 Linear regression is a good place to continue our exploration of Bayesian numerical methods because it is the foundation for the large majority of the data analysis that occurs using classical methods (recall that ANOVA models are just a special case of regression) and because it gives us a foundation to build off of for exploring more complex models.
 
-The standard Bayesian regression model assumes a Normal likelihood, a Normal prior on the regression parameters, and an Inverse Gamma prior on the variance.
+The standard Bayesian regression model assumes a Normal likelihood, a multivariate Normal prior on the vector of regression parameters, and an Inverse Gamma prior on the variance.
 
 $$P(b,\sigma^2 \vert X, y) \propto N_n(y \vert Xb,\sigma^2 I) N_p(b \vert b_0, V_b) IG(\sigma^2 \vert s_1,s_2)$$
 
@@ -88,7 +88,7 @@ Our JAGS model for regression is very similar to our model from Exercise 5. Howe
 univariate_regression <- "
 model{
 
-  beta ~ dmnorm(b0,Vb)  	## prior regression params
+  beta ~ dmnorm(b0,Vb)  	## multivariate Normal prior on vector of regression params
   prec ~ dgamma(s1,s2)    ## prior precision
 
   for(i in 1:n){
@@ -169,6 +169,7 @@ cor(var.mat)    ## correlation matrix among model parameters
 ### Task 1
 * Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burnin e.g. ```var.burn <- window(var.out,start=burnin)```
 * Report parameter summary table and plot marginal distributions
+* Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.
 * Compare the summary statistics for the Bayesian regression model to those from the classical regression:  summary(lm( y ~ x1 )).  This should include a comparison of the means and uncertainties of **all 3 model parameters**
 * Compare the fit parameters to the “true” parameters we used to generate the pseudo-data.  How well does the statistical analysis recover the true model?
 
