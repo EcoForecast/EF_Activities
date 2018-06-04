@@ -1,0 +1,65 @@
+---
+title: "Chapter 6 - Hierarchical Bayes"
+output: html_document
+---
+
+The objective of this activity is to explore basic hierarchical models.  We will focus on the most common class of hierarchical models, which are linear mixed models.  Mixed models refer to models that include both hierarchical “random” effects and non-hierarchical “fixed” effects.  Everything that we apply below to linear models can also be applied to generalized linear models (e.g. logistic and poisson regression) and thus falls within the class of models referred to as GLMM (generalized linear mixed models) for which all of our traditional non-hierarchical linear and GLM exist as a special case.  While we have focused on random effects from the Bayesian perspective, special cases on GLMM can also be solved from the Maximum Likelihood perspective. However, it is much harder to generalize Maximum Likelihood random effects models if you need to relax additional assumptions or if you have a nonlinear model.
+
+# Case Study: Mosquito population size
+
+For this activity we will look at data on mosquito abundance.  The data file “Mosquito.csv” contains ten years worth of data for each of 5 replicate traps (Reminder: the function read.csv can be used to read comma-separated text files).   We will begin with the simplest possible model to explain this data and incrementally add complexity.
+
+### Task 1: 
+
+1.  Plot mosquito abundance as a function of time in a way that distinguishes the reps (e.g. with lines, colors, or symbols)
+
+2.	Fit the overall mean and standard deviation, reporting summary statistics for both. 
+Hint 1: You can use the JAGS code from activity 5, but remember that your “x” is a matrix of year-by-rep and thus you will need to **loop over both year and rep** rather than just looping 'i in 1:n'.
+Hint 2:  When converting the mosquito data to be 'x' in your `data` list, you need to shave off the “time” column for this to have the correct dimensions and indexing.
+
+3.	Add posterior CI and PI to the plot.
+
+
+# Random time effect
+
+From the graphs in Task 1 it should be apparent that there is systematic year-to-year variability that is unexplained by just a simple mean.  Since at this point we don't know the cause of this variability we can begin by adding a random effect for year.  
+
+To add the random year effect:
+
+1. Add the random year effect to the process model.
+```
+   Ex[t] <- mu + alpha.t[t]		## process model (does not vary with rep)
+```
+Note that the expected value of X, `Ex`, varies with time, t, but not replicate. Therefore you'll want to make sure that you JAGS code loops first over time, and then second over replicate, and that your process model is in the first loop but not the second (otherwise you will end up redefining Ex[t] for every rep, which JAGS will consider an error)
+
+2. Update the data model to reference `Ex[t]` instead of `mu`
+
+3. Add the random year effect parameter model (again, within the loop over time but not rep)
+```
+alpha.t[t] ~ dnorm(0,tau.t)		## random year effect
+```
+
+4. Add a prior on `tau.t`, the year-to-year variability
+
+### Task 2
+
+4.  Fit the random-time model and turn in a plot like in Task 1 with the posterior CI and PI plotted against the data.
+Hint: once you convert the JAGS coda object to a matrix, you can use `grep` to figure out which columns contain alphas: 
+```
+jags.mat <- as.matrix(jags.out)
+alpha <- jags.mat[,grep("alpha",colnames(jags.mat))]
+```
+5.	Based on the posterior mean estimates from this model, approximately what percentage of the variance in the mosquito densities is explained by the year effects? Which parameters (and from which models) do you need to look at to assess this?
+
+# Mixed Effects
+
+You are discussing your research with a colleague and mention that your random effects model showed that one year, 2002, had notably lower mosquito abundance.  He suggests that the driver may be exogenous and sends you a data file, met.csv, that contains the mean annual temperature (°C), precipitation (mm/year), and relative humidity (%) for 1995-2009 years.
+ 
+### Task 3:
+
+6.  As an exploratory analysis of this hypothesis, plot the posterior mean of your random year effect (alpha.t) versus each of the three met variables.  Turn in figures and note which variable(s) are worth exploring further.
+7.	Convert the random effects model to a mixed effects model by converting the mean, mu, to a linear model, `beta0 + beta1*y[i]` where y is the meteorological covariate you want to include, while keeping the random year effect.
+8.	Fit your mixed effects model and plot the model CI and PI vs the data
+9.	Create a summary table that provides the posterior parameter means and CI for all 3 models and their DIC scores.
+10.	Extra Credit: Use the best fitting model to predict the next 5 years (2005-2009) of mosquito abundance including an uncertainty estimate (predictive interval). Turn in a graph of your prediction.
+
