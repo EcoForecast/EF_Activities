@@ -1,0 +1,138 @@
+---
+title: "Chapter 6: Characterizing Uncertainty"
+output: html_document
+---
+
+The objective of this activity is to apply the techniques from Chapter 6 about ways to relax the assumptions of linear models to better address the complexity of real-world data.  Specifically, we will start from a **Generalized Linear Models** framework, and then additionally consider techniques for dealing with **'errors in variables'** and **missing data**.
+
+## Case Study:  Seedling Recruitment and Soil Moisture
+
+In this analysis we'll consider the relationship between soil moisture and seedling densities.  The response data (y) in this analysis consists of counts of seedlings in 1m x 1m plots.  Soil moisture was measured using Time Domain Reflectometry (TDR), a technique where two metal rods are inserted into the ground and an electrical pulse is sent down one rod and measured on the other.  The TDR technique actually measures soil impedance, not soil moisture, but soil moisture can be estimated based on empirical calibrations against gravimetric soil moisture measurements (difference between wet and dry weight of soil cores).  TDR has the advantage of being much less labor intensive and non-destructive than gravimetric measurement, which permits repeated measurements of the same plots.
+  The Poisson distribution is a natural choice for modeling the seedling count data because the data is both discrete and lacking a defined upper bound.  Since we are interested in the relationship between seedling density and a covariate, soil moisture, we'll make use of the Generalized Linear Models (GLM) framework for fitting a Poisson regression.  As a link function, lets start with the standard choice of a log link.
+ 
+$$log(\mu) = \beta_0 + \beta_1 TDR$$
+$$y \sim Pois(\mu)$$
+ 
+The data for this analysis are provided to you as a Rdata object that contains the following variables:
+
+	n – sample size
+	y – seedling counts (individuals/m2)
+	TDR – raw output from the TDR unit (arbitrary units) for each seedling plot
+	TDRc – raw TDR output for the calibration samples
+	SMc – Volumetric soil moisture measurements for the calibration samples (m3/m3)
+	SMseq – a sequence of soil moisture values used for prediction
+
+```{r, echo=FALSE}
+load("data/Ch06.RData")
+```
+
+For the first part of this analysis we will use the TDR measurements as our covariate.  We will deal with the calibration issue later in the lab.
+
+## Bayesian Poisson Regression
+
+Next we're going to fit the Poisson regression model from the Bayesian perspective using BUGS.  This will allow you to compare the Likelihood and Bayesian approaches and will serve as the foundation for building a more complex model.  
+
+To build the Poisson model:
+
+* Start from the 'univariate_regression' model from Exercise 05B
+
+* Drop the prior on _prec_ -- the Pois has no variance/precision parameter
+
+* Modify the process model to be:
+```
+    log(mu[i]) <- beta[1]+beta[2]*TDR[i]     ## process model
+```
+Normally JAGS doesn't let functions be on the left-hand side of an <- but the _log_ and _logit_ link functions are two important exceptions.
+
+* Modify the data model to be _dpois_
+ 
+### Task 1: 
+
+1.  Fit the Bayesian Poisson regression model. Provide the DIC, and summary table & posterior density plots for all model parameters.  Report the burn in and effective MCMC sample size (You should still be making diagnostic plots but you no longer need to include them).
+2.	Plot the model credible interval and predictive interval.  Be sure to include the scatterplot of the observed data.
+3.	How well does the Poisson model match the data?  Does 95% of the data fall within the 95% PI?
+
+## Missing Data
+
+It is not uncommon in the real world for a small percentage of data to be missing due to any of a multitude of real-world mistakes. In many cases it is simple enough to 'drop' these data, as is the norm in classical analyses. However there are cases where this is undesirable, such as when one has a large number of covariates and you are only missing one and don't want to drop the whole row, or when individual measurements are very expensive in time or money or are otherwise irreplaceable.  From the Bayesian perspective it is possible to formally accommodate missing data by [numerically] integrating over all possible states the data can take on.  This technique is sometime referred to as imputing the missing data, or more specifically as multiple imputation because we are proposing many values the data could have been.  Doing this (not surprisingly) requires that we specify a prior distribution on the missing data itself.  However, the inference will draw on the likelihood, the other covariates, and the response data in order to formally generate the posterior distribution of the missing data. Therefore, it is the posterior that we actually using 'fill in' the missing data, not the prior.  Finally, it bears mentioning that addressing missing data requires that we meet one very important assumtion – that the data is missing at random.  If the process that caused the data to be missing is systematic or in any way related to the process we're trying to understand then we cannot impute the missing data.
+
+To show how this works:
+
+* Make a copy of your full 'data' list and then randomly change one of the TDR values to NA to make it 'missing'. Make sure to record the value before removing it.
+
+* Make a copy of your JAGS script and add a prior on the missing value. For example, if you removed the 12th TDR measurement you could put a prior on TDR[12] (e.g. a uniform over the range of valid data).
+
+* Re-run the model using this data, but this time add the TDR value you removed to the variables that you track (e.g. TDR[12]) so that we can view the posterior distribution.
+
+### Task 2: 
+4.  Report the posterior distributions of the missing TDR data.  How does this compare to the prior your specified and to the true value? 
+
+### Poisson Regression with Errors in Variables
+
+Note: the first two models presented below are for explanation and you don't have to run them
+
+One obvious problem with the analyses conducted so far is that the covariate has been our proxy data, TDR, which has arbitrary units and is not biologically interesting -- there are no noteworthy theories in biology about the effect of soil impedance on plants.  What we are really interested in is the impact of soil moisture on our plants, but we never observe soil moisture directly – it is a latent variable.  However, we do have a calibration curve that can be used to relate TDR to soil moisture.  By far the most common approach in the literature to calibration problems such as this one is to use just only the deterministic process model for the relationship between the two variables in order to transform one variable to another.  However, the relationship is not perfect and therefore there is uncertainty in the soil moisture estimates.  A full treatment of uncertainty would account for the fact that there is both parameter uncertainty in the calibration curve and residual error in the data model – in other words we want to know the posterior predictive distribution of each soil moisture estimate given the observed TDR measurement.  If we knew this we could then use these posterior distributions as informative priors on our data model for the Errors in Variables model we talked about in lecture.  If we wanted to fit the calibration curve in JAGS it would just be the simple linear regression model we've seen a number of times already
+ 
+```
+model {
+  for(i in 1:2) { alpha[i] ~ dnorm(0,0.001)}        ## priors
+  sigma ~ dgamma(0.01,0.01)
+  for(i in 1:10){
+            ESMc[i] <- alpha[1]+alpha[2]*TDRc[i]    ## process model: Expected SMc
+            SMc[i] ~ dnorm(ESMc[i],sigma)           ## data model: Soil Moisture calibration
+   }
+}
+```
+
+The Poisson regression model would then be modified based on the errors in variable approach to account for the uncertainty in soil moisture due to the fact that TDR is an imperfect proxy.
+ 
+```
+model {
+  alpha ~ dmnorm(abar,aprec)}                            ## informative prior, calibration process
+  sigma ~ dgamma(s1,s2)                                  ## informative prior, calibration precision
+  for(i in 1:2) { beta[i] ~ dnorm(0,0.001)}              ## Poisson regression priors
+  for(i in 1:n){
+    ESM[i] <-  alpha[1] + alpha[2]*TDR[i]                ## Errors in variables - process model
+    SM[i] ~ dnorm(ESM[i],sigma)                          ## Errors in variables - data model
+    log(mu[i]) <- beta[1]+beta[2]*SM[i]                  ## Poisson regression - process model
+    y[i] ~ dpois(mu[i])  		                             ## Poisson Regression – data model
+  }
+}
+```
+
+Writing the combined model (below) involves little more than putting the code for each of these two models into one file
+
+```{r}
+PoisRegPlusCalib = "
+model {
+  ### TDR calibration curve
+  for(i in 1:2) { alpha[i] ~ dnorm(0,0.001)}   ## calibration priors
+  sigma ~ dgamma(0.1,0.1)
+  for(i in 1:10){
+    ESMc[i] <- alpha[1] + alpha[2]*TDRc[i]   ## expected soil moisture, calibration process model
+    SMc[i] ~ dnorm(ESMc[i],sigma)  	         ## calibration data model
+  }
+  
+  ## Seedling Density vs Soil Moisture
+  for(i in 1:2) { beta[i] ~ dnorm(0,0.001)}   ## Poisson regression priors
+  for(i in 1:n){
+    ESM[i] <-  alpha[1] + alpha[2]*TDR[i]     ## Errors in Variables – process model
+    SM[i] ~ dnorm(ESM[i],sigma)               ## Errors in Variables – data model
+    log(mu[i]) <- beta[1]+beta[2]*SM[i]       ## Poisson Regression – process model
+    y[i] ~ dpois(mu[i])                       ## Poisson Regression – data model
+  }
+}
+"
+```
+
+
+While this model looks larger and more complicated, it really just consists of a number of simple parts we've seen before.  The first part is the fitting of the calibration curve.  The second part involves using the calibration curve to estimate soil moisture and then fitting the Poisson regression of seedling density vs soil moisture.  Unlike the conventional approach of performing each step sequentially, this approach propagates the error in each step into the final model.
+	Reminder: you may want to specify initial conditions on the model parameters.  It is perfectly valid to use the previous estimates (e.g. Task 1) for the initial conditions.  For example, if I wanted to initialize alpha to all 0's and sigma to 5 I would specify list(alpha=c(0,0),sigma(5))
+ 
+### Lab Report Task 3: 
+
+5. Fit the final combined calibration/Poisson regression model and provide a summary table and posterior density plots for the model parameters.  Also report the burn in and the effective MCMC sample size.
+6. Plot the model credible interval and predictive interval. Don't forget that the X-axis is now soil moisture, not TDR.
+7.	How does this fit compare to the previous Poisson regression of seedlings vs TDR in terms of the overall uncertainty in the model (width of credible and predictive intervals)?  In qualitative terms, to what degree does ignoring the uncertainty in the TDR/Soil Moisture relationship affect the uncertainty in our parameter estimates and our confidence in our model?
+
+
