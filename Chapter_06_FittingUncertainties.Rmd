@@ -26,7 +26,7 @@ The data for this analysis are provided to you as a Rdata object that contains t
 load("data/Ch06.RData")
 ```
 
-For the first part of this analysis we will use the TDR measurements as our covariate.  We will deal with the calibration issue later in the lab.
+For the first part of this analysis we will use the TDR measurements as our covariate.  We will deal with the calibration issue later in the activity.
 
 ## Bayesian Poisson Regression
 
@@ -44,11 +44,11 @@ To build the Poisson model:
 ```
 Normally JAGS doesn't let functions be on the left-hand side of an <- but the _log_ and _logit_ link functions are two important exceptions.
 
-* Modify the data model to be _dpois_
+* Modify the data model to be _dpois_ instead of _dnorm_
  
 ### Task 1: 
 
-1.  Fit the Bayesian Poisson regression model. Provide the DIC, and summary table & posterior density plots for all model parameters.  Report the burn in and effective MCMC sample size (You should still be making diagnostic plots but you no longer need to include them).
+1.  Fit the Bayesian Poisson regression model. Provide the DIC, and summary table & posterior density plots for all model parameters.  Report the burn in and effective MCMC sample size.
 2.	Plot the model credible interval and predictive interval.  Be sure to include the scatterplot of the observed data.
 3.	How well does the Poisson model match the data?  Does 95% of the data fall within the 95% PI?
 
@@ -129,7 +129,7 @@ model {
 While this model looks larger and more complicated, it really just consists of a number of simple parts we've seen before.  The first part is the fitting of the calibration curve.  The second part involves using the calibration curve to estimate soil moisture and then fitting the Poisson regression of seedling density vs soil moisture.  Unlike the conventional approach of performing each step sequentially, this approach propagates the error in each step into the final model.
 	Reminder: you may want to specify initial conditions on the model parameters.  It is perfectly valid to use the previous estimates (e.g. Task 1) for the initial conditions.  For example, if I wanted to initialize alpha to all 0's and sigma to 5 I would specify list(alpha=c(0,0),sigma(5))
  
-### Lab Report Task 3: 
+### Task 3: 
 
 5. Fit the final combined calibration/Poisson regression model and provide a summary table and posterior density plots for the model parameters.  Also report the burn in and the effective MCMC sample size.
 6. Plot the model credible interval and predictive interval. Don't forget that the X-axis is now soil moisture, not TDR.
