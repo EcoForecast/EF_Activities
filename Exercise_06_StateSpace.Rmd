@@ -72,7 +72,7 @@ j.model   <- jags.model (file = textConnection(RandomWalk),
 ```
 
 Next, given the defined JAGS model, we'll want to take a few samples from the MCMC chain and assess when the model has converged. To take samples from the MCMC object we'll need to tell JAGS what variables to track and how many samples to take.
-```{r}
+```{r, fig.asp = 1.0}
 ## burn-in
 jags.out   <- coda.samples (model = j.model,
                             variable.names = c("tau_add","tau_obs"),
@@ -145,34 +145,37 @@ The random walk model can easily be generalized to more sophisiticated models de
 
 $$X_{t+1} \sim N(\beta_0 + \beta_1 z_t + \beta_{IC} X_{t}, \tau_{add})$$
 
-where $\beta_0$ is the intercept, $\beta_1$ is the slope of the covariate effect, and $\beta_{IC}$ is the slope of the initial condition effect. Rather than implement this model in JAGS directly, we're going to rely on the ecoforecastR package, which accepts a `lm` like syntax for specifying covariates.
+where $\beta_0$ is the intercept, $\beta_1$ is the slope of the covariate effect, and $\beta_{IC}$ is the slope of the initial condition effect. Rather than implement this model in JAGS directly, we're going to rely on the ecoforecastR package, which accepts a `lm` like syntax for specifying covariates (with the notable exception that the response variable, which is our latent X, is not specified explictly). Here we're going to use the Daymet product to get daily weather estimates, and then use daily minimum temperature (Tmin) as the covariate in our influenza model
 
 ```{r}
-if(file.exists("data/bostonMet.RData")){
-  load("data/bostonMet.RData")
-} else {
-## get weather data as covariate
-station_data <- rnoaa::ghcnd_stations()
-boston <- rnoaa::meteo_nearby_stations(data.frame(id="boston",latitude=42.36,longitude=-71.06),station_data = station_data,radius=20)
-Tair = rnoaa::meteo_pull_monitors(boston$boston$id,date_min = min(time),date_max = max(time),var = "TAVG")
-
-save(Tair,"data/bostonMet.RData")
-}
-
-#Tair = rnorm(length(data$y),data$y,0.5) ## pseudodata, replace with real
-data$Tair = Tair
+## grab weather data
+df <- daymetr::download_daymet(site = "Boston",
+                lat = 42.36,
+                lon = -71.06,
+                start = 2003,
+                end = 2016,
+                internal = TRUE)$data
+df$date <- as.Date(paste(df$year,df$yday,sep = "-"),"%Y-%j")
+data$Tmin = df$tmin..deg.c.[match(time,df$date)]
 
 ## fit the model
-ef.out <- ecoforecastR::fit_dlm(model=list(obs="y",fixed="~ Tair"),data)
+ef.out <- ecoforecastR::fit_dlm(model=list(obs="y",fixed="~ Tmin"),data)
+names(ef.out)
+```
 
+The package returns a list with four elements. `params` and `predict` are both the same mcmc.list objects we get back from JAGS, only split between the parameters and the latent state variables, respectively, to make it easier to perform diagnostics and visualizations:
+
+```{r, fig.asp = 1.0}
 ## parameter diagnostics
-plot(ef.out$params)
-summary(ef.out$params)
+params <- window(ef.out$params,start=1000) ## remove burn-in
+plot(params)
+summary(params)
+cor(as.matrix(params))
+pairs(as.matrix(params))
 
 ## confidence interval
 out <- as.matrix(ef.out$predict)
 ci <- apply(exp(out),2,quantile,c(0.025,0.5,0.975))
-
 plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
 ## adjust x-axis label to be monthly if zoomed
 if(diff(time.rng) < 100){ 
@@ -181,3 +184,23 @@ if(diff(time.rng) < 100){
 ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col="lightBlue")
 points(time,y,pch="+",cex=0.5)
 ```
+
+
+The JAGS model that was fit 'under the hood' is returned as `model` which we can view as:
+```{r, echo=FALSE}
+strsplit(ef.out$model,"\n",fixed = TRUE)[[1]]
+```
+This code illustrates a few things:
+* The "Priors" section is identical to our earlier random walk model
+* The "Random Effects" section, which is currently commented out, illustrates that the `ecoforcastR::fit_dlm` function supports random effects, which can be turned on via the `model$random` argument
+* The "Fixed Effects" section contains additional priors for our fixed effects as well as priors on the means (mu) and precisions (tau) of the covariates. 
+* The "Data Model" section is the same as in our random walk except for the addition of code for the means of the covariates. This code isn't here as a very simple missing data model -- any time the covariate is observed it is used to estimate the mean an precision, but any time the covariate is NA it is imputed.
+* The "Process Model" is very similar to the random walk, except now the expected value (mu) is calculated according to the linear model described earlier
+
+Finally, the returned object also includes the `data` that was used to fit the model.
+
+Assignment:
+-----------
+
+* Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
+* Explain and discuss the parameter estimates (betas) from the linear model
