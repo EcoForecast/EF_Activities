@@ -11,12 +11,11 @@ For this activity we will look at data on mosquito abundance.  The data file “
 
 ### Task 1: 
 
-1.  Plot mosquito abundance as a function of time in a way that distinguishes the replicates (e.g. with lines, colors, or symbols)
+1.  Plot mosquito abundance as a function of time in a way that distinguishes the replicates and connects them through time (e.g. with lines, colors, or symbols)
 
-2.	Fit the overall mean and standard deviation, reporting summary statistics for both. You can use the JAGS code you developed from activity 5 for this.
+2.	Write and run a JAGS model to fit the overall mean and standard deviation, reporting summary statistics for both. You can use the JAGS code you developed from activity 5 for this.
 
 3.	Add posterior CI and PI to the plot.
-
 
 # Random time effect
 
@@ -26,18 +25,24 @@ To add the random year effect:
 
 1. Add the random year effect to the process model.
 ```
-  for(t in 1:NT){
-     Ex[t] <- mu + alpha_t[t]		  ## process model (does not vary with rep)
-     alpha_t[t] ~ dnorm(0,tau_t)  ## random year effect
-  }
+for(t in 1:NT){
+ Ex[t] <- mu + alpha_t[t]		  ## process model (does not vary with rep)
+ alpha_t[t] ~ dnorm(0,tau_t)  ## random year effect
+}
 ```
-Note that the expected value of the data X, `Ex`, varies with time, t, but not replicate. Here `mu` is the overall 'global' mean and `alpha_t` is the deviation of a particular year from that overall mean (which is why the distribution of alphas has a mean 0). The random effect precision, `tau_t`, describes the year-to-year variability.
+In this chunk of code the expected value of the data X, `Ex`, varies with time, `t`, but not replicate, and thus NT is the number of years not the length of the overall dataset. In the process model `mu` is the overall 'global' mean and `alpha_t` is the deviation of a particular year from that overall mean (which is why the distribution of alphas has a mean 0). The random effect precision, `tau_t`, describes the year-to-year variability in the mean. 
 
-2. Add a prior on `tau_t`, the year-to-year variability
+2. Because we're fitting this model hierarchically, `tau_t` is an unknown that is estimated from the data. Therefore, you need to add a prior on `tau_t`, the unknown year-to-year variability that we're trying to estimate. Note: If `tau_t` were simply a prescibed constant this would correspond to setting a prior on the `alpha_t`s, which would then be **fixed** effects rather than random effects
 
-3. Update the data model to reference `Ex[time[i]]` instead of `mu`. Here we're assuming `i` is the counter in the loop over all the rows in the data and that `time` is an indexing variable used to look up the year for that particular row in the data. For example, if I loaded the raw data as `dat` this could be calculated as `time <- as.numeric(as.factor(dat$time))``
+3. Update the data model to reference the process model, `Ex[time[i]]`, instead of `mu`. Here we're assuming `i` is the counter in the loop over all the rows in the data and that `time` is an indexing variable used to look up the year for that particular row in the data. For example, if I loaded the raw data as `dat` this could be calculated as `time <- as.numeric(as.factor(dat$time))``
 
-4. When defining your `data` list to pass to JAGS, make sure to include the observed data, the indexing variable `time`, and any constants being used to define priors and the size of data sets (e.g. `N` and `NT`)
+4. When defining your `data` list to pass to JAGS, make sure to include the observed data, the indexing variable `time`, and any constants being used to define priors and the size of data sets (e.g. `N` and `NT`).
+
+5. When sampling from your posteriors, make sure to track all of your unknown parameters: 
+ + `mu` - global mean
+ + `alpha_t` - random year effect
+ + `S` - residual precision
+ + `tau_t` - year-to-year precision
 
 
 ### Task 2
@@ -64,3 +69,31 @@ You are discussing your research with a colleague and mention that your random e
 9.	Create a summary table that provides the posterior parameter means and CI for all 3 models and their DIC scores.
 10.	Extra Credit: Use the best fitting model to predict the next 5 years (2005-2009) of mosquito abundance including an uncertainty estimate (predictive interval). Turn in a graph of your prediction.
 
+## Beyond the Basics
+
+In this execise we fit a mixed effects model to account for variability in the mean. However, this approach can be used more generally to account for variability in any model parameters -- for example we could write down a simple logistic population model where `r` and `K` themselves are functions of multiple covariates (fixed effects) but also have unexplained variability across multiple scales (multiple random effects). These random effects don't just have to apply to different years, they could also apply to different locations (subpopulations, plots, watersheds, etc) that could have multiple heirchical levels (e.g. plots with sites). For some analyses it might make sense to have random effects on individuals, or even parts of individuals (e.g. leaves on a tree), so long as multiple measurements are made on the same observational unit. 
+
+The other thing we assumed in this example was that each random effect was drawn independently from the same distribution
+
+```
+for(t in 1:NT){
+ alpha_t[t] ~ dnorm(0,tau_t)  ## random year effect
+}
+```
+
+But it is conceptually straightforward to generalize the current assumption to one where random effects might be correlated in space, time, phylogeny, or in some other network (rivers, social, etc):
+
+```
+alpha_t ~ dmnorm(0,TAU_T)
+```
+
+where `TAU_T` is now a covariance matrix and `alpha_t` is the vector of all the alphas drawn from the multivariate normal `dmnorm`. The construction of `TAU_T` is typically broken down into two parts, one describing the overall variance and the other descibing how the correlation between any two alphas changes as a function of the distance between them (in time, space, network, etc). For example, since `alpha_t` is a year effect we might model it using a standard autoregressive (AR) timeseries approach
+
+```
+  TAU_T <- inverse((1/tau_t)/(1-rho^2)*rho^H) ## AR(1) covariance matrix
+  tau_t ~ dgamma(t1,t2) ## prior on overall precision
+  rho   ~ dunif(-1,1)   ## prior on autocorrelation parameter
+```
+where `H` is a matrix describing the pairwise distance (in time) between the `alpha_t`s. Similar covariance formulations exist for other forms of autocorrelation, and the approach is quite general so long as the correlation can be expressed as a function of some sort of distance or adjacency.  
+
+Finally, when moving beyond the basics I strongly recommend that you start simple, add complexity incrementally, and assess/test your assumptions before adding more. From personal experience I can tell you that I once spent months getting a complex space-time stage-structured model working only to discover that there was no spatial autocorrelation in the residuals and the model needed to be simplified considerably. Check for autocorrelation before assuming it. Likewise, as we did in Task 3, evaluate random effects to see if there is variability that needs explaining before developing complex fixed-effect models to explain that variability.
