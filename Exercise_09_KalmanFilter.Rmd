@@ -197,7 +197,7 @@ P0 = cov(t(Y),use="pairwise.complete.obs")
 KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
 ```
 
-Finally, we can visualize the outputs.
+After running the Kalman Filter, we can visualize the outputs. The first set of figures below shows the posterior analysis for each state through time. The second set shows the forecast and analysis standard deviations change through time, indicating when there is missing data in green on the bottom of the plot. As you can see the missing data is not synchronous across states, but the mean of the Analysis is influenced by the across-state covariances.
 
 ```{r, fig.asp=1.0}
 attach(KF00)
@@ -223,6 +223,32 @@ for(i in 1:6){
   legend("topright",legend=c("Analysis","Forecast","NAs"),col=1:3,lty=c(1,1,NA),pch=c(NA,NA,1),cex=1.4)
 }
 ```
+
+Finally, to get a better idea about the dynamics of how the Kalman Filter works we can zoom in to a subset of time for one state and show the Forecast, Analysis, and observed data altogether.
+
+```{r}
+## subset time
+time2 <- time[time>as.Date("2015-01-01")]
+tsel <- which(time %in% time2)
+n = length(time2)*2
+
+## interleave Forecast and Analysis
+mu = p = rep(NA,n)
+mu[seq(1,n,by=2)] = mu.f[1,tsel]
+mu[seq(2,n,by=2)] = mu.a[1,tsel]
+p[seq(1,n,by=2)]  = 1.96*sqrt(P.f[1,1,tsel])
+p[seq(2,n,by=2)]  = 1.96*sqrt(P.a[1,1,tsel])
+ci = cbind(mu-p,mu+p)
+time3 = sort(c(time2,time2+1))
+
+## plot Forecast, Analysis, and data
+plot(time3,mu,ylim=range(ci),type='l')
+ecoforecastR::ciEnvelope(time3,ci[,1],ci[,2],col="lightBlue")
+lines(time3,mu,lwd=2)
+points(time,Y[1,])
+```
+
+### Assignment
 
 The assignment is to run the KF under all four combinations of covariance in the process model versus process error and compare the results. In particular you'll want to pay attention to the missing data at the beginning of the timeseries for some states. You'll also want to comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. Finally, you'll want to note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
 
