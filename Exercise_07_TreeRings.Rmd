@@ -3,7 +3,7 @@ Fusing Times-Series Data: Tree Rings and Forest Inventory
 
 In this exercise we will extend the state-space framework to combine multiple data streams with different observation errors and to separate observation error from process error. We will also demonstrate how to add hierarchical random effects to partition the process error into multiple sources.
 
-Specifically, we will be building upto the model presented by Clark et al. 2007 Ecological Applications in order to combine tree ring data with forest inventory data. Unlike the original model, which was written all in R, we will rewrite this model into JAGS, which makes it easier to see what is going on and to modify the model. In this exercise we will utilize data from a collection of small plots at the Harvard Forest, Petersham, MA.
+Specifically, we will be building up to the model presented by Clark et al. 2007 Ecological Applications that combines tree ring data with forest inventory data. Unlike the original model, which was written all in R, we will rewrite this model into JAGS, which makes it easier to see what is going on and to modify the model. In this exercise we will utilize data from a collection of small plots at the Harvard Forest, Petersham, MA.
 
 We will divide this analysis into a number of steps, which we will encapsulate into functions to make them easier to understand and run. Thus we will begin by defining these functions. Specifically, the steps will be:
 
@@ -14,7 +14,7 @@ We will divide this analysis into a number of steps, which we will encapsulate i
 5. run the JAGS model
 6. visualize the output
 
-For steps 2-4 we will leverage functions already written to deal with these steps that are part of the PEcAn system we will explore next week. Specifically, they are within PEcAn's land data R package, which can be downloaded and installed off Github using devtools
+For steps 2-4 we will leverage functions already written to deal with these steps that are part of the [PEcAn system](https://pecanproject.org). Specifically, they are within PEcAn's land data R package, which can be downloaded and installed off Github using devtools
 
 
 ```{r}
@@ -25,15 +25,8 @@ if(!require(PEcAn.data.land)){
   devtools::install_github("PecanProject/pecan/modules/data.land")
   require(PEcAn.data.land)
 }
-require(rjags)
-```
-
-```{r, echo=FALSE}
-#plots a confidence interval around an x-y plot (e.g. a timeseries)
-ciEnvelope <- function(x,ylo,yhi,...){
-  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
-                                      ylo[1])), border = NA,...) 
-}
+library(rjags)
+library(ecoforecastR)
 ```
 
 
@@ -99,7 +92,7 @@ model{
   }
 
   #### Process Model
-  #### Dnew is the expected new diameter given the previous diameter and the mean growth rate
+  #### Dnew is the expected new diameter given the previous diameter, x[i-1], and the mean growth rate, mu
   for(i in 2:n){
     Dnew[i] <- x[i-1] + mu  
     x[i]~dnorm(Dnew[i],tau_add)
@@ -122,24 +115,24 @@ model{
   ### Loop over all individuals
   for(i in 1:ni){
   
-  #### Data Model: DBH
-  for(t in 1:nt){
-  z[i,t] ~ dnorm(x[i,t],tau_dbh)
-  }
+    #### Data Model: DBH
+    for(t in 1:nt){
+      z[i,t] ~ dnorm(x[i,t],tau_dbh)
+    }
   
-  #### Data Model: growth
-  for(t in 2:nt){
-  inc[i,t] <- x[i,t]-x[i,t-1]
-  y[i,t] ~ dnorm(inc[i,t],tau_inc)
-  }
+    #### Data Model: growth
+    for(t in 2:nt){
+      inc[i,t] <- x[i,t]-x[i,t-1]
+      y[i,t] ~ dnorm(inc[i,t],tau_inc)
+    }
   
-  #### Process Model
-  for(t in 2:nt){
-  Dnew[i,t] <- x[i,t-1] + mu
-  x[i,t]~dnorm(Dnew[i,t],tau_add)
-  }
+    #### Process Model
+    for(t in 2:nt){
+      Dnew[i,t] <- x[i,t-1] + mu
+      x[i,t]~dnorm(Dnew[i,t],tau_add)
+    }
   
-  x[i,1] ~ dnorm(x_ic,tau_ic)
+    x[i,1] ~ dnorm(x_ic,tau_ic)
   }  ## end loop over individuals
   
   #### Priors
@@ -152,15 +145,15 @@ model{
 
 Finally, since growth is indexed by both tree and year, lets add random effects for both individuals and years. In this case our process model now becomes
 
-Dnew[i,t] <- x[i,t-1] + mu + ind[i] + year[t]
+`Dnew[i,t] <- x[i,t-1] + mu + ind[i] + year[t]`
 
-where ind and year are the random effects for individual and year respectively. Next, we'll need to specify the distributions that these random effects are drawn from, as well as the priors on the random effect variances
+where `ind` and `year` are the random effects for individual and year respectively. Next, we'll need to specify the distributions that these random effects are drawn from, as well as the priors on the random effect variances
 
 ```
 model{
   
-  ### Loop over all individuals
-  for(i in 1:ni){
+### Loop over all individuals
+for(i in 1:ni){
   
   #### Data Model: DBH
   for(t in 1:nt){
@@ -184,7 +177,8 @@ model{
   
   ## initial condition
   x[i,1] ~ dnorm(x_ic,tau_ic)
-  }  ## end loop over individuals
+  
+}  ## end loop over individuals
   
   ## year effects
   for(t in 1:nt){
@@ -205,17 +199,17 @@ model{
 
 Putting this all together gives the following R code for the base case (no random effects) 
 
-```{r}
+```{r, fig.asp=0.8}
 
-n.iter = 500
+n.iter = 500                           ## INCREASE THIS NUMBER FOR ACTUAL ANALYSES **************************************
 
 ## this code fuses forest inventory data with tree growth data (tree ring or dendrometer band)
 ## for the same plots. Code is a rewrite of Clark et al 2007 Ecol Appl into JAGS
 TreeDataFusionMV = "
 model{
 
-  ### Loop over all individuals
-  for(i in 1:ni){
+### Loop over all individuals
+for(i in 1:ni){
   
   #### Data Model: DBH
   for(t in 1:nt){
@@ -235,7 +229,8 @@ model{
   }
   
   x[i,1] ~ dnorm(x_ic,tau_ic)
-  }  ## end loop over individuals
+
+}  ## end loop over individuals
   
   #### Priors
   tau_dbh ~ dgamma(a_dbh,r_dbh)
@@ -244,7 +239,7 @@ model{
   mu ~ dnorm(0.5,0.5)
 }"
 
-  ## state variable initial condition
+  ## state variable initial condition (subtract observed diameter increments off from the observed diameter)
   z0 = t(apply(data$y,1,function(y){-rev(cumsum(rev(y)))})) + data$z[,ncol(data$z)] 
   
   ## JAGS initial conditions
@@ -320,7 +315,6 @@ Second, let's look at the histogram of our fixed effect, mu, and the precisions.
   if(length(vars)>1) pairs(out[,vars])
 
   ## Standard Deviations
-  #layout(matrix(c(1,2,3,3),2,2,byrow=TRUE))
   par(mfrow=c(2,3))
   prec = out[,grep("tau",colnames(out))]
   for(i in 1:ncol(prec)){
