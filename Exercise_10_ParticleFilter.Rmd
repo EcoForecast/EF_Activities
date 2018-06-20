@@ -1,34 +1,45 @@
-Particle Filter
-========================================================
+---
+title: "Particle Filter"
+output: html_document
+---
 
-In today's exercise we're going to explore the use of the particle filter to constrain a simple ecosystem modelfor the Metolius Ameriflux sites in Oregon. Specifically, we'll be looking at the Metolius Intermediate Pine site (US-ME2) http://ameriflux.ornl.gov/fullsiteinfo.php?sid=88 and assimilating a derived MODIS data product, LAI. In the code below we will perform three analyses:
+```{r}
+library(iotools)
+library(ecoforecastR)
+```
+
+This exercise explores the use of the particle filter to constrain a simple ecosystem model for the Metolius Ameriflux sites in Oregon. Specifically, we'll be looking at the Metolius Intermediate Pine site (US-ME2) http://ameriflux.lbl.gov/sites/siteinfo/US-Me2 and assimilating a derived MODIS data product, LAI. In the code below we will perform three analyses:
 
 1) Run an ensemble forecast for one year
 2) Use a particle filter to analyse the existing ensemble based on MODIS LAI
 3) Rerun the LAI assimilation with a resampling PF
 
-The code below is longer than most assignments, but this is not due to the complexity of the PF itself. Rather, we will spend a decent amount of code on defining the model, defining the initial conditions, and defining the prior distributions for the model parameters. 
+The code below is longer than most activites, but this is not due to the complexity of the PF itself. Rather, we will spend a decent amount of code on defining the model, defining the initial conditions, and defining the prior distributions for the model parameters. 
 
-The initial code is set up to run with a small ensemble size (ne=10) and short time (nt=816) to allow you to be able to "Knit" this document. **The final run should be conducted with a decently large ensemble (500-5000 depending on what your computer can handle) and be for the full year (nt = length(time). Since this requires large simulation, turn in the final HTML, not the Rmd, and feel free to answer questions separately (e.g. in email or another doc) so you don't have to run a second time to include your answers.** Alternatively, you could run the analysis block-by-block and cut-and-paste the figures into a separate document.
+The initial code is set up to run with a small ensemble size (ne=10) and short time (nt=816) to allow you to be able to "Knit" this document. **The final run should be conducted with a decently large ensemble (500-5000 depending on what your computer can handle) and be for the full year (nt = length(time). Since this requires large simulation, if you are doing this activity for a class turn in the final HTML, not the Rmd, and feel free to answer questions separately (e.g. in email or another doc) so you don't have to run a second time to include your answers.** Alternatively, you could change the output type to `html_notebook` and run the analysis block-by-block.
 
-In addition to getting this code to run, your assignment is:
+### Assignment
+
+In addition to getting this code to run, the goals of this assignment are:
 
 1) Compare the results of the three projections in terms of their spread/accuracy around LAI.
-2) Compare the results of the three projections in terms of the constraint of model parameters. Which parameters were most constrained by LAI? Does this make sense?
-3) Rerun the resampling PF without parameter uncertainty -- in other words, fix every ensemble member to have the same parameters but different initial conditions. Compare results to the prior run that contained parameter uncertainty. Qualitatively, how important was parameter constraint vs state constraint in terms of both the initial spread and the constraint of LAI over time.
-4) Extra Credit: For the no-parameter-uncertainty run, convert the analysis step of the resampling PF to an EnKF, rerun and compare to the previous run.
+2) Compare the results of the three projections in terms of their ability to constrain the other fluxes and state variables that are output by the model (which should be updated in proportion to how much they covary with LAI)
+3) Which parameters were most constrained by LAI? Does this make sense?
+4) Rerun the resampling PF without parameter uncertainty -- in other words, fix every ensemble member to have the same parameters but different initial conditions. Compare results to the prior run that contained parameter uncertainty. Qualitatively, how important was parameter constraint vs state constraint in terms of both the initial spread and the constraint of LAI over time.
+5) Extra Credit: For the no-parameter-uncertainty run, convert the analysis step of the resampling PF to an EnKF, rerun and compare to the previous run.
 
-Super Simple Ecosystem Model
----------------------------------------
+# Super Simple Ecosystem Model
 
 Let's begin by definining our model itself, as well as a number of ancillary functions that will be useful in simulation and analysis. The model below is very simple but is complex enough to have some chance at capturing observed variability. In addition, unlike most ecosystem models, it explicitly contains process error. The model has three state variables (X) that are all expressed in terms of carbon (Mg/ha): Leaf Biomass, Non-leaf Plant Biomass (wood, roots, etc), and soil organic matter (SOM). The model also only has two drivers: photosynthetically active radiation (PAR), and air temperature. First, we estimate LAI from Leaf Biomass and SLA. Using LAI and light we estimate GPP using a simple light use efficiency approach. GPP is then allocated to autotrophic respiration (Ra), leaf NPP, and woody NPP. These leaf and wood biomass pools can then turns over into SOM as litter and Coarse Woody Debris. Heterotrophic respiration is assumed to follow a standard Q10 temperature sensitivity. Finally, Normal process error is added to X.
 
 ```{r}
 library(compiler)
 
-## Super Simple Ecosystem Model
-## X = [leaf,wood,som]
-## timestep is in seconds, defaults to 30 min
+##` Super Simple Ecosystem Model
+##` @param X        [leaf carbon, wood carbon, soil organic carbon] (units=Mg/ha)
+##` @param params   model parameters
+##` @param inputs   model drivers (air temperature, PAR)
+##` @param timestep seconds, defaults to 30 min
 SSEM.orig <- function(X,params,inputs,timestep=1800){ 
   
   ne = nrow(X)  ## ne = number of ensemble members
@@ -46,7 +57,7 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
   
   ## respiration & allocation
   alloc = GPP*params$falloc ## Ra, NPPwood, NPPleaf
-  Rh = pmin(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),X[,3]/k) ## pmin ensures SOM never goes negative
+  Rh = pmax(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),X[,3]/k) ## pmax ensures SOM never goes negative
   
   ## turnover
   litter = X[,1]*params$litter
@@ -57,30 +68,18 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
   X2 = pmax(rnorm(ne,X[,2]+alloc[,2]*k-CWD,params$tau.stem),0)
   X3 = pmax(rnorm(ne,X[,3]+litter+CWD-Rh*k,params$tau.soil),0)
   
-  return(cbind(X1,X2,X3=X3,LAI,NEP=GPP-alloc[,1]-Rh,GPP=GPP,
-                    Ra=alloc[,1],NPPw=alloc[,2],NPPl=alloc[,3],Rh=Rh,litter=litter,CWD=CWD))
+  return(cbind(X1=X1,X2=X2,X3=X3,
+               LAI=X1*params$SLA*0.1, 
+               GPP=GPP,
+               NEP=GPP-alloc[,1]-Rh,
+               Ra=alloc[,1],NPPw=alloc[,2],NPPl=alloc[,3],
+               Rh=Rh,litter=litter,CWD=CWD))
 
 }
 SSEM <- cmpfun(SSEM.orig)  ## byte compile the function to make it faster
-
-ciEnvelope <- function(x,ylo,yhi,...){
-  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
-                                      ylo[1])), border = NA,...) 
-}
-
-col.alpha <- function(col,alpha=1){
-  rgb = col2rgb(col)
-  rgb(rgb[1],rgb[2],rgb[3],alpha*255,maxColorValue=255)
-}
-
-## weighted quantile
-wtd.quantile <- function(x,wt,q){ 
-    ord <- order(x)
-    wstar <- cumsum(wt[ord])/sum(wt)
-    qi <- findInterval(q,wstar); qi[qi<1]=1;qi[qi>length(x)]=length(x)
-    return(x[ord[qi]])
-  }
 ```
+
+### Initial Conditions
 
 Having defined our model, the next step is to define the ensemble size and generate an ensemble estimate of the initial state variables. To do so we'll use the estimates that are reported in the Ameriflux BADM Meta-data files for the site. Since we're only relying on two different estimates of pool size to calculate our mean and standard deviation, and neither estimate has a reported error, these should be taken as "demonstration only" rather than as "Best practices". In a real application one would want to account for the sampling error associated with the number of vegetation plots or soil cores measured, the measurement error in the soil C and tree DBH, and the allometric uncertainty in converting from DBH to leaf and stem biomass. In other words, our pool sizes are likely a lot less certain than what we take them to be in this exercise.
 
@@ -100,9 +99,21 @@ if(ne > 1){
       rnorm(ne,X[3],sd(SOM))))
 }
 X.orig = X
+pool.lab = c("leaf","wood","SOC")
+for(i in 1:3){hist(X[,i],main=pool.lab[i])}
 ```
 
-Having defined the initial condition state vector, we'll next define the priors on the model parameters. For two parameters, SLA and litter fall, there are estimates reported in the Ameriflux BADM as well. For the allocation parameters we'll assume that on average that NPP is ~50% of GPP (e.g. Litton et al 2007), and that leaf NPP is 31.5% of total NPP (which is the default allocation fraction used by Quaife et al 2008 for DALEC for this site). To account for uncertainty we'll scale these fractions by an "effective sample size" (Neff) in order to specify how many observations these represent -- for example, if Neff was 10 then the variability in the allocation to NPP vs Ra would be the equivalent to the uncertainty associated with observing 5 coin flips come up "NPP" and 5 come up "Ra". To assign different ensemble members different levels of process error we draw Neff from a Poisson distribution. Again, this is an underestimate and a better practice would be to derive the priors for these fractions from data and to account for the fact that the mean proportions should vary from ensemble member to ensemble members as well as the certainty. Next, the prior on SLA was set from data, but the priors on light use efficiency (alpha), Q10, soil basal respiration, and the process uncertainties in GPP and Rh were set just based on my expert opinion -- all these could be informed better by literature data (e.g. PEcAn's meta-analysis).  For the process error we're setting Gamma priors on the *precisions* and then converting those to standard deviations. Finally, the prior for both litter and CWD are set based on moment matching -- deriving the parameters for the Beta that match a specified mean and variance. For litter, since this needs to be expressed as a proportion of leaves lost, this is based on comparing the variability in the observed annual litter fall rate to the observed leaf biomass. For CWD this is done based on the mean background tree mortality rate for temperate forests reported in Dietze et al 2011 (1/142) and assuming a CV of 50%. The latter could be much improved with species and system specific data. The approach for the litter rate could also be improved with additional data and accounting for the sampling uncertainty in both the numerator and denominator.
+## Parameter Priors
+
+Having defined the initial condition state vector, we'll next define the priors on the model parameters. Unlike in JAGS, where we define the priors in terms of named distributions, for a particle filter we want to actually **draw random samples from those prior distributions**. 
+
+For two parameters, SLA and litter fall, there are estimates reported in the Ameriflux BADM as well. Therefore, the prior on SLA was set from data, but the priors on light use efficiency (alpha), Q10, soil basal respiration, and the process uncertainties in GPP and Rh were set just based on my expert opinion -- all these could be informed better by literature data (e.g. PEcAn's meta-analysis).
+
+For the allocation parameters we'll assume that on average that NPP is ~50% of GPP (e.g. Litton et al 2007), and that leaf NPP is 31.5% of total NPP (which is the default allocation fraction used by Quaife et al 2008 for DALEC for this site). To account for uncertainty we'll scale these fractions by an "effective sample size" (Neff) in order to specify how many observations these represent -- for example, if Neff was 10 then the variability in the allocation to NPP vs Ra would be the equivalent to the uncertainty associated with observing 5 coin flips come up "NPP" and 5 come up "Ra". To assign different ensemble members different levels of process error we draw Neff from a Poisson distribution. Again, this is an underestimate and a better practice would be to derive the priors for these fractions from data and to account for the fact that the mean proportions should vary from ensemble member to ensemble members as well as the certainty. 
+
+For the process error we're setting Gamma priors on the *precisions* and then converting those to standard deviations. 
+
+Finally, the prior for both litter and CWD are set based on moment matching -- deriving the parameters for the Beta that match a specified mean and variance. For litter, since this needs to be expressed as a proportion of leaves lost, this is based on comparing the variability in the observed annual litter fall rate to the observed leaf biomass. For CWD this is done based on the mean background tree mortality rate for temperate forests reported in Dietze et al 2011 (1/142) and assuming a CV of 50%. The latter could be much improved with species and system specific data. The approach for the litter rate could also be improved with additional data and accounting for the sampling uncertainty in both the numerator and denominator.
 
 ```{r}
 ## reimplimentation of the rdirichlet function from MCMCpack
@@ -110,54 +121,57 @@ Having defined the initial condition state vector, we'll next define the priors 
 rdirichlet.orig = function (n, alpha) 
 {
     l <- length(alpha)
-    if(is.matrix(alpha)) l <- ncol(alpha) ## fix
-    x <- matrix(rgamma(l * n, alpha), ncol = l)#, byrow = TRUE)
+    if(is.matrix(alpha)) l <- ncol(alpha)
+    x <- matrix(rgamma(l * n, alpha), ncol = l)
     sm <- x %*% rep(1, l)
     return(x/as.vector(sm))
 }
-rdirichlet <- cmpfun(rdirichlet.orig)  ## byte compile to speed up
+rdirichlet <- cmpfun(rdirichlet.orig)         ## byte compile to speed up
 
-## ancillary data
-SLA = 1e3/c(114,120) ## m2/kg
-litter = c(71,94)*0.01*3 ##gC/m2/yr->Mg/ha/yr
+## ancillary data from Ameriflux BADM metadata
+SLA = 1e3/c(114,120)     ## m2/kg
+litter = c(71,94)*0.01*3 ## gC/m2/yr->Mg/ha/yr
 
 ### initial params
 timestep = 1800 #seconds
 params = list()
 
-Ra = 0.5
-alloc = matrix(c(Ra,(1-0.315)*(1-Ra),0.315*(1-Ra)),1) # prior mean on allocation
-Neff = matrix(rpois(ne,100),ne) 
-params$falloc = rdirichlet(ne,Neff%*%alloc)  ## Ra, wood, leaf
+## univariate priors: expert opinion
+params$SLA = rnorm(ne,mean(SLA),sd(SLA))     ## Specific leaf area
+params$alpha = rlnorm(ne,log(0.02),0.05)     ## light use efficiency
+params$Q10 = rnorm(ne,2.1,0.1)               ## soil respiration Q10
+params$Rbasal = rlnorm(ne,log(0.2),1)/(params$Q10^2.5) ## Soil basal respiration (umol/m2/sec per Mg/ha of SOM)
 
-params$SLA = rnorm(ne,mean(SLA),sd(SLA))
-params$alpha = rlnorm(ne,log(0.02),0.05) ## light use efficiency
-params$Q10 = rnorm(ne,2.1,0.1)  ## soil respiration Q10
-params$Rbasal = rlnorm(ne,log(0.2),1)/(params$Q10^2.5) #umol/m2/sec per Mg/ha of SOM
+## Process error: expert opinion
+params$tau.leaf = 1/sqrt(rgamma(ne,10,10*0.01^2)) ## prior process error in leaf biomass
+params$tau.stem = 1/sqrt(rgamma(ne,10,10*0.1^2))  ## prior process error in stem biomass
+params$tau.soil = 1/sqrt(rgamma(ne,10,10*0.1^2))  ## prior process error in soil carbon
 
-## use moment matching to convert litter and CWD turnover mean & SD to beta dist'n
-lit = rnorm(10000,mean(litter),sd(litter)/sqrt(2))/
-  rnorm(10000,mean(Bleaf),sd(Bleaf)/sqrt(2))
-lit.mu = rnorm(ne,mean(lit),sd(lit))*timestep/86400/365 # turnover per year -> turnover per timestep
-lit.sd = 1/sqrt(rgamma(ne,10,10*var(lit)))*timestep/86400/365
-CWD.mu = 1/rpois(ne,142)*timestep/86400/365
-CWD.sd = rbeta(ne,4,4)*CWD.mu*timestep/86400/365 ## assuming a 50% CV
-beta.match <- function(mu,var){
+## multivariate prior on allocation parameters
+Ra = 0.5                                     ## assume that NPP is ~50% of GPP on average (Litton et al 2007)
+alloc = matrix(c(Ra,(1-0.315)*(1-Ra),0.315*(1-Ra)),1) ## prior mean on allocation, assume leaf NPP is 31.5% of total (Quaife et al 2008)
+Neff = matrix(rpois(ne,100),ne)              ## draw effective sample size to add stochasticity to prior
+params$falloc = rdirichlet(ne,Neff%*%alloc)  ## prior on [Ra, wood, leaf]
+
+## moment matching beta prior on turnover times
+beta.match <- function(mu,var){   ## Beta distribution moment matching
   a = mu*((mu*(1-mu)/var)-1)
   b = a*(1-mu)/mu
   return(data.frame(a=a,b=b))
 }
+lit = rnorm(10000,mean(litter),sd(litter)/sqrt(2))/      ## simulate litter turnover based on observed litterfall rate and Bleaf prior (initial condition)
+  rnorm(10000,mean(Bleaf),sd(Bleaf)/sqrt(2))      
+lit.mu = rnorm(ne,mean(lit),sd(lit))*timestep/86400/365  ## draw prior mean and sd; convert turnover per year -> turnover per timestep
+lit.sd = 1/sqrt(rgamma(ne,10,10*var(lit)))*timestep/86400/365
+CWD.mu = 1/rpois(ne,142)*timestep/86400/365              ## draw prior mean based on background tree mortality rate of 1/142 per year (Dietze et al 2011)
+CWD.sd = rbeta(ne,4,4)*CWD.mu*timestep/86400/365         ## draw prior sd assuming a 50% CV
 litter.param = beta.match(lit.mu,lit.sd^2)
-params$litter = rbeta(ne,litter.param$a,litter.param$b)
+params$litter = rbeta(ne,litter.param$a,litter.param$b) ## match moments and draw litter prior
 CWD.param = beta.match(CWD.mu,CWD.sd^2)
-params$CWD = rbeta(ne,CWD.param$a,CWD.param$b)
-
-## Process error
-params$tau.leaf = 1/sqrt(rgamma(ne,10,10*0.01^2)) ## prior process error in leaf biomass
-params$tau.stem = 1/sqrt(rgamma(ne,10,10*0.1^2)) ## prior process error in stem biomass
-params$tau.soil = 1/sqrt(rgamma(ne,10,10*0.1^2)) ## prior process error in soil carbon
-
+params$CWD = rbeta(ne,CWD.param$a,CWD.param$b)          ## match moments and draw CWD prior
 ```
+
+### Driver
 
 Next, we need to load the observed meterology from the flux tower to provide our input drivers.
 
@@ -172,19 +186,19 @@ Now we're ready to produce our initial ensemble forecast for the system. To do t
 
 ```{r}
 X = X.orig
-## default simulation
-nt = 17*48 # production run should be length(time)
-output = array(0.0,c(nt,ne,12))
+nt = nrow(inputs) #17*48                              ## production run should be nrow(inputs)   ***********************
+output = array(0.0,c(nt,ne,12))         ## output storage 
+
+## foreward ensemble simulation
 for(t in 1:nt){
-  output[t,,]=SSEM(X,params,inputs[t,])
-  X=output[t,,1:3]
-  if((t %% 48) == 0) print(t/48) ## day counter
+  output[t,,] <- SSEM(X,params,inputs[t,])
+  X <- output[t,,1:3]
+  if((t %% 336) == 0) print(t/336)      ## counter: weeks elapsed
 }
 output[is.nan(output)] = 0
 output[is.infinite(output)] = 0
 
 ## average the output to daily
-library(iotools)
 bin = 86400/timestep
 out.daily = array(0.0,c(ceiling(nt/bin),ne,12))
 for(i in 1:12){
@@ -202,6 +216,8 @@ for(i in 1:12){
   lines(ci[2,])
 }
 ```
+
+### MODEL VALIDATION: MODIS LAI
 
 Next, let's load and clean the MODIS LAI data.
 
@@ -253,6 +269,8 @@ for(i in 1:length(LAIr)){
 }
 ```
 
+### Non-resampling Particle Filter
+
 Given this ensemble we can next apply a **non-resampling particle filter** to this existing ensemble forecast by calculating the cumulative likelihood of the observations for each ensemble member. Note that in the code below LAIm is the model (initial ensemble), LAIpf is the non-resampling particle filter, and LAIr is the remotely sensed observations.
 
 ```{r}
@@ -263,33 +281,38 @@ sel=1:ncol(LAIm.ci)
 for(i in 1:ne){
   LAIlike[i,] = dnorm(LAIm[i,],LAIr[sel],LAIr.sd[sel],log=TRUE)  ## calculate log likelihoods
   LAIlike[i,is.na(LAIlike[i,])] = 0       ## missing data as weight 1; log(1)=0
-  LAIlike[i,] = exp(cumsum(LAIlike[i,]))  ## convert to cumulative
+  LAIlike[i,] = exp(cumsum(LAIlike[i,]))  ## convert to cumulative likelihood
 }
-
+hist(LAIlike[,ncol(LAIlike)],main="Final Ensemble Weights")
 
 ## Non-resampling Particle Filter
 ## calculation of CI
-nobs = ncol(LAIlike)  ## number of observations
+nobs = ncol(LAIlike)                     ## number of observations
 LAIpf = matrix(NA,3,nobs)
-wbar = apply(LAIlike,2,mean)
+wbar = apply(LAIlike,2,mean)             ## mean weight at each time point
 for(i in 1:nobs){
-  LAIpf[,i] = wtd.quantile(LAIm[,i],LAIlike[,i]/wbar[i],c(0.025,0.5,0.975))
+  LAIpf[,i] = wtd.quantile(LAIm[,i],LAIlike[,i]/wbar[i],c(0.025,0.5,0.975))  ## calculate weighted median and CI
 }
 
 ## plot original ensemble and PF with data
+col.pf   = c(col.alpha("lightGrey",0.5),col.alpha("lightBlue",0.5),col.alpha("lightGreen",0.5)) ## color sequence
+names.pf = c("ensemble","non-resamp PF","resamp PF")                         ## legend names
 plot(Mtime[Msel],LAIm.ci[2,],ylim=range(c(range(LAIm.ci),range(LAIr,na.rm=TRUE))),
      type='n',ylab="LAI",xlab="Time")
-ciEnvelope(Mtime[Msel],LAIm.ci[1,],LAIm.ci[3,],col=col.alpha("lightGrey",0.5))
-ciEnvelope(Mtime[Msel],LAIpf[1,],LAIpf[3,],col=col.alpha("lightBlue",0.5))
-points(Mtime,LAIr)    
-for(i in 1:length(LAIr)){
+ciEnvelope(Mtime[Msel],LAIm.ci[1,],LAIm.ci[3,],col=col.pf[1])                ## original ensemble
+ciEnvelope(Mtime[Msel],LAIpf[1,],LAIpf[3,],col=col.pf[2])                    ## non-resampling Particle Filter
+points(Mtime,LAIr)                                                           ## observations
+for(i in 1:length(LAIr)){                                                    ## observation uncertainty
   if(!is.na(QC[i])){
     lines(rep(Mtime[i],2),LAIr[i]+c(-1,1)*LAIr.sd[i])
   }
 }
+legend("topleft",legend=names.pf[1:2],col=col.pf[1:2],lwd=5)
 ```
 
-Before we move on to the resampling particle filter, we need to define an ancillary function, update.params, that will help us re-assign the parmeter values to different ensemble members when we resample from the ensemble members.
+### Resampling Particle Filter
+
+Before we move on to the resampling particle filter, we need to define an ancillary function, `update.params`, that will help us re-assign the parmeter values to different ensemble members when we resample from the ensemble members.
 
 ```{r}
 update.params <- function(params,index){
@@ -307,15 +330,16 @@ update.params <- function(params,index){
 }
 ```
 
-Finally, let's implement the resampling particle filter. The code for this is organized in a way similar to the Kalman Filter assignment -- we loop over time and alternate between a forecast step and an analysis step. Since the observations only occur every 8 days, we only repeat the analysis step every 8 days (which for a 30 min timestep is every 48*8 timesteps).
+Finally, let's implement the resampling particle filter. The code for this is organized in a way similar to the Kalman Filter activity -- we loop over time and alternate between a forecast step and an analysis step. Since the observations only occur every 8 days, we only repeat the analysis step every 8 days (which for a 30 min timestep is every 48*8 timesteps).
 
 ```{r}
+hist.params=list()               ## since we resample parameters, create a record (history) of what values were used at each step
+hist.params[[1]] = params        ## initialize with original parameters
+X = X.orig                       ## reset state to the initial values, not the final values from the previous ensemble
+output.ensemble = output         ## save original projection
+
 ### resampling particle filter
-sample=0
-hist.params=list()  ## since we resample parameters, create a record (history) of what values were used each step
-hist.params[[1]] = params
-X = X.orig  ## reset state to the initial values, not the final values from the previous ensemble
-output.ensemble = output ## save original projection
+sample=0                         ## counter
 for(t in 1:nt){
 
   ## forward step
@@ -323,42 +347,54 @@ for(t in 1:nt){
   X=output[t,,1:3]
   
   ## analysis step
-  if(t%%(48*8) == 0){ ## if remainder == 0
-    sample = sample+1
+  if(t%%(48*8) == 0){            ## if at data frequence (remainder == 0)
+    sample = sample+1            ## increment counter
     print(sample)
-    if(!is.na(LAIr[sample])){  ## if observation is present
+    if(!is.na(LAIr[sample])){    ## if observation is present
       
       ## calulate Likelihood (weights)
-      Lm = apply(output[t+1-(48*8):1, ,4],2,mean) ## model LAI over obs period
-      wt = dnorm(LAIr[sample],Lm,LAIr.sd[sample])
+      Lm = apply(output[t+1-(48*8):1, ,4],2,mean)    ## average model LAI over obs period
+      wt = dnorm(LAIr[sample],Lm,LAIr.sd[sample])    ## calculate likelihood (weight)
       
       ## resample 
-      index = sample.int(ne,ne,replace=TRUE,prob=wt)
-      X = X[index,]
-      params = update.params(params,index)    
+      index = sample.int(ne,ne,replace=TRUE,prob=wt) ## resample ensemble members in proportion to their weight
+      X = X[index,]                                  ## update state
+      params = update.params(params,index)           ## update parameters
     }
-    hist.params[[sample+1]] = params
+    hist.params[[sample+1]] = params                 ## save parameters
   }
 
 }
-save(output,output.ensemble,LAIlike,hist.params,inputs,file="Ex10.output.RData") 
 
+## save all the output
+save(output,output.ensemble,LAIlike,hist.params,inputs,file="Ex10.output.RData") 
+```
+
+Next, let's compare the resampling particle filter to the ensemble and the non-resampling PF.
+
+```{r}
 ## Extract and summarize LAI (pr = PF, resampling)
-LAIpr = t(apply(output[,,4],2,tapply,window,mean))
-LAIpr.ci  = apply(LAIpr,2,quantile,c(0.025,0.5,0.975))
+LAIpr = t(apply(output[,,4],2,tapply,window,mean))         ## summarize PF LAI at measurment frequency
+LAIpr.ci  = apply(LAIpr,2,quantile,c(0.025,0.5,0.975))     ## calculate median and CI
  
+## plot time-series
 plot(Mtime[Msel],LAIm.ci[2,],ylim=range(c(range(LAIm.ci),range(LAIr,na.rm=TRUE))),
      type='n',ylab="LAI",xlab="Time")
-ciEnvelope(Mtime[Msel],LAIm.ci[1,],LAIm.ci[3,],col=col.alpha("lightGrey",0.5))
-ciEnvelope(Mtime[Msel],LAIpf[1,],LAIpf[3,],col=col.alpha("lightBlue",0.5))
-ciEnvelope(Mtime[Msel],LAIpr.ci[1,],LAIpr.ci[3,],col=col.alpha("lightGreen",0.5))
+ciEnvelope(Mtime[Msel],LAIm.ci[1,],LAIm.ci[3,],col=col.pf[1]) 
+ciEnvelope(Mtime[Msel],LAIpf[1,],LAIpf[3,],col=col.pf[2])
+ciEnvelope(Mtime[Msel],LAIpr.ci[1,],LAIpr.ci[3,],col=col.pf[3])
 points(Mtime,LAIr)    
 for(i in 1:length(LAIr)){
   if(!is.na(QC[i])){
     lines(rep(Mtime[i],2),LAIr[i]+c(-1,1)*LAIr.sd[i])
   }
 }
+legend("topleft",legend=names.pf,col=col.pf,lwd=5)
+```
 
+Finally, the resampling PF also updates the parameter distributions, so let's plot the posterior parameter distributions. In doing so it is important to remember that the technique we used does not introduce new parameter draws into the ensemble, so it is possible for the parameter distributions to become degenerate, placing too much weight on a small number of parameter combinations. More advanced methods exist for proposing new parameter values but they're beyond the scope of this primer.
+
+```{r, echo=FALSE, fig.asp=1}
 ### assess shifts in any parameter values
 par(mfrow=c(3,5))
 par(mar=c(2,2,4,0.7))
