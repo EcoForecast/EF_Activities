@@ -19,7 +19,10 @@ For steps 2-4 we will leverage functions already written to deal with these step
 
 ```{r}
 if(!require(PEcAn.data.land)){
-  install.packages(c("digest","dplR"))
+  library(devtools)
+  install.packages(c("digest","dplR","PeriodicTable"))
+  devtools::install_github("PecanProject/pecan/base/logger")
+  devtools::install_github("PecanProject/pecan/base/remote")
   devtools::install_github("PecanProject/pecan/base/utils")
   devtools::install_github("PecanProject/pecan/base/db")
   devtools::install_github("PecanProject/pecan/modules/data.land")
