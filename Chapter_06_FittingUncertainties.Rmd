@@ -30,7 +30,7 @@ For the first part of this analysis we will use the TDR measurements as our cova
 
 ## Bayesian Poisson Regression
 
-Next we're going to fit the Poisson regression model from the Bayesian perspective using BUGS.  This will allow you to compare the Likelihood and Bayesian approaches and will serve as the foundation for building a more complex model.  
+Next we're going to fit the Poisson regression model from the Bayesian perspective using BUGS.  This will serve as the foundation for building a more complex model.  
 
 To build the Poisson model:
 

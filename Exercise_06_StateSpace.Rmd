@@ -92,10 +92,6 @@ jags.out   <- coda.samples (model = j.model,
 Given the full joint posteror samples, we're next going to visualize the output by just looking at the 95% credible interval of the timeseries of X's and compare that to the observed Y's. To do so we'll convert the coda output into a matrix and then calculate the quantiles. Looking at colnames(out) will show you that the first two columns are `tau_add` and `tau_obs`, so we calculate the CI starting from the 3rd column. We also transform the samples back from the log domain to the linear domain.
 ```{r}
 time.rng = c(1,length(time)) ## adjust to zoom in and out
-ciEnvelope <- function(x,ylo,yhi,...){
-  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
-                                      ylo[1])), border = NA,...) 
-}
 out <- as.matrix(jags.out)
 x.cols <- grep("^x",colnames(out)) ## grab all columns that start with the letter x
 ci <- apply(exp(out[,x.cols]),2,quantile,c(0.025,0.5,0.975))
