@@ -139,7 +139,7 @@ Before we get started with prediction, let's focus in on a single site to make t
 ```{r}
 plot.run <- function(){
   sel = seq(s,ncol(ci),by=NS)
-  plot(time,time,type='n',ylim=ylim)
+  plot(time,time,type='n',ylim=ylim,ylab="N")
   ecoforecastR::ciEnvelope(time1,ci[1,sel],ci[3,sel],col=col.alpha("lightBlue",0.6))
   lines(time1,ci[2,sel],col="blue")
   points(time1,No[s,])
@@ -203,7 +203,7 @@ lines(time2,N.det,col="purple",lwd=3)
 
 # Monte Carlo Error Propagation
 
-For each source of uncertainty we'll be exploring the Monte Carlo approach to error propagation. As a starting point let's start with the initial condition uncertainty. For this set of runs we'll want to continue to hold all the parameters and drivers at their means, and keep the process error off, but we'll vary the initial conditions. Specifically, we'll run the model `r Nmc` times, and each time we run the model we'll start from a different initial condition. For this analysis the distribution of initial conditions that we want to sample from is just the posterior distribution of the population size at our focal site in the last year of the calibration period, `N[6,30]`. Because we know that posterior distributions often have covariances among parameters, rather than sample the posterior state directly we're going to sample the _row numbers_ in the MCMC output. We'll save these row numbers and use the same rows when we later sample the model parameters, process error, and random effects as well. While we had the benifit of the posterior state estimate here, in other contexts the initial condition uncertainty might be derived directly from field sampled data, or (for unmeasured sites) may require another statistical model to make a _spatial_ prediction of the state of the system to new locations. If we're particularly data limited we may have to rely on Bayesian priors to inform the initial conditions (e.g. through expert elicitation).
+For each source of uncertainty we'll be exploring the Monte Carlo approach to error propagation. As a starting point let's start with the initial condition uncertainty. For this set of runs we'll want to continue to hold all the parameters and drivers at their means, and keep the process error off, but we'll vary the initial conditions. Specifically, we'll run the model `r Nmc` times, and each time we run the model we'll start from a different initial condition. For this analysis the distribution of initial conditions that we want to sample from is just the posterior distribution of the population size at our focal site in the last year of the calibration period, `N[6,30]`. Because we know that posterior distributions often have covariances among parameters, rather than sample the posterior state directly we're going to sample the _row numbers_ in the MCMC output. We'll save these row numbers and use the same rows when we later sample the model parameters, process error, and random effects as well. While we had the benefit of the posterior state estimate here, in other contexts the initial condition uncertainty might be derived directly from field sampled data, or (for unmeasured sites) may require another statistical model to make a _spatial_ prediction of the state of the system to new locations. If we're particularly data limited we may have to rely on Bayesian priors to inform the initial conditions (e.g. through expert elicitation).
 
 ### Initial Condition uncertainty
 ```{r}
