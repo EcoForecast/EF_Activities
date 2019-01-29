@@ -8,7 +8,6 @@ Simulating the discrete-time logistic
 
 Define parameters
 ```{r}
-devtools::install_github("EcoForecast/ecoforecastR")
 r = 1         ## intrinsic growth rate
 K = 10        ## carrying capacity      
 n0 = .1       ## initial population size
@@ -203,6 +202,14 @@ Next we'll use *apply* to calculate the median and CI for each time point.
 n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
 ```
 
+Unfortunately, R doesn't have a built in function for plotting shaded CI on time-series plots, so we'll define one. Unlike plot, which just takes x and y as arguements, this function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+
+```{r}
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+  ylo[1])), border = NA,col=col,...) 
+}
+```
 
 ### Problems
 
@@ -212,7 +219,7 @@ n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
 
 6. Plot a histogram of your population forecast at time = 15.
 
-7. Plot the median trajectory through time. Use `ecoforecastR::ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+7. Plot the median trajectory through time. Use `ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
 
 Extra Credit: Initial conditions
 --------------------------------
