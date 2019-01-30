@@ -192,7 +192,7 @@ rE = rnorm(NE,r,r.sd)  # sample of r
 KE = rnorm(NE,K,K.sd)  # sample of K
 for(i in 1:NE){        # loop over samples
   for(t in 2:NT){      # for each sample, simulate throught time
-    n[i,t] = n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i])
+    n[i,t] = max(0,n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i]))
   }
 }
 ```
