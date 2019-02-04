@@ -26,9 +26,9 @@ get.pkg("RCurl")
 get.pkg("XML")
 get.pkg("ncdf4")
 get.pkg("devtools")
-library("MODISTools")
+get.pkg("MODISTools")
 ```
-Note: The MODISTools library is no longer on CRAN, but can be downloaded manually from the ORNL DAAC here: https://modis.ornl.gov/data/modis_webservice.html
+
 
 Pulling data directly off the web
 ---------------------------------
@@ -76,7 +76,7 @@ fia_html <- getURL("https://apps.fs.usda.gov/fia/datamart/CSV/datamart_csv.html"
 fia_table = readHTMLTable(fia_html)[[3]]    ## We're interested in the 3rd table on this webpage
 update = as.Date(fia_table[,"Last Modified Date"])
 hist(update,"months")                       ## Plot a histogram of update times
-recent <- fia_table[which(update > "2016/01/01"),]
+recent <- fia_table[which(update > "2018/01/01"),]
 ```
 
 
@@ -198,36 +198,51 @@ nc_close(wlef)
 Similar to how we can point read.csv to the URL of a text file, you can open and manipulate netCDF files on remote servers if those servers support THREDDS/OpenDAP. Furthermore, these utilities let you grab just the part of the file that you need rather than the file in it's entirety. Using this approach, download and plot the air temperature data for Boston for 2004 that's located on the ORNL DAAC server `http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4`.  The underlying file is quite large so make sure to grab just the subset you need. To do so you'll need to first grab the lat, lon, and time variables to find _which_ grid cell to grab for lat and lon and how many values to grab from time (i.e. _length_). 
 
 
-SOAP
-----
+Using APIs
+----------
 
-In addition to data that is directly downloadable, and that which is scraped, there are a number of places on the web where data is available though interactive webservices. One standard protocol for such data sharing is the Simple Object Acces Protocol (SOAP). In this example we will be using SOAP to access the NASA MODIS server, and rather than using the generic SOAP library we'll use a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
+In addition to data that is directly downloadable, and that which is scraped, there are a number of places on the web where data is available though interactive, code-based webservices called Application Programming Interfaces (APIs). In this example we will access the NASA MODIS API, using a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
 
-Next, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product (its definition, calculation, units, and missing data string) is available at https://lpdaac.usgs.gov/products/modis_products_table
+First, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product (its definition, calculation, units, and missing data string) is available at https://lpdaac.usgs.gov/products/modis_products_table
 
 ```{r}
-GetProducts()
-GetBands(Product="MOD13Q1")
+MODISTools::mt_products()
+MODISTools::mt_bands(product="MOD13Q1")
 ```
 
 Next, lets grab the data for a specific band (EVI) within a specific product (MOD13Q1). We'll focus on the location of the WLEF flux tower and look at the same year as we did with the flux data (2012). The argument Size defines the dimensions of the box grabbed in terms of distance (in kilometers) outward from the center. Note that in practice we would also want to query the QAQC data for this variable, `250m_16_days_VI_Quality`, as well and use it to screen the data.
 
 ```{r}
-MODISSubsets(data.frame(lat=46.0827,long=-89.9792,start.date=2012,end.date=2012),
-  Product="MOD13Q1",Bands="250m_16_days_EVI",Size=c(1,1),StartDate=TRUE)
+WC_file = "MODIS.WillowCreek.RData"
+if(file.exists(WC_file)){
+  load(WC_file)
+} else {
+  subset <- MODISTools::mt_subset(product = "MOD13Q1",
+                                band = "250m_16_days_EVI",
+                                lat=46.0827,
+                                lon=-89.9792,
+                                start="2012-01-01",
+                                end="2012-12-31",
+                                km_lr = 1,
+                                km_ab = 1,
+                                site_name = "WillowCreek")
+  save(subset,file=WC_file)
+}
+subset$header
+head(subset$data)
 ```
 
-This function doesn't load the data directly into R, but instead saves it to your computer, so next we need to load the data.
-
+Here we extracted a 250m data products and looked +/ 1km in both directions, which gives us a 9x9 area and thus 81 pixels.
 ```{r}
-MODIS = read.csv(list.files(pattern=".asc")[1],header=FALSE,as.is=TRUE,na.string="-3000")
+unique(subset$data$pixel)
 ```
 
-The data is arranged with the rows being the dates, the first 10 columns being the metadata, and the remaining columns being the observations. Here we extracted a 250m data products and looked +/ 1km in both directions, which gives us a 9x9 area and thus 81 data rows (and 86 rows total). For this example lets average over the spatial data and just generate a time-series of EVI. Also, lets extract the year (%Y) and day of year (%j) from column 3 and convert these to observation dates.
+For this example lets average over the spatial data and just generate a time-series of EVI. 
 
 ```{r}
-EVI = apply(MODIS[,11:ncol(MODIS)],1,mean,na.rm=TRUE)*0.0001
-time = as.Date(substr(MODIS[,10],1,7),format="%Y%j")
+## average EVI spatially & use 'scale' to set units
+EVI = tapply(subset$data$data, subset$data$calendar_date, mean,na.rm=TRUE) * as.numeric(subset$header$scale)
+time = as.Date(names(EVI))
 ```
 
 **Question 5:** Plot EVI versus time and compare to the CO2 flux observations.
