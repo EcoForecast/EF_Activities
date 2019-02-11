@@ -11,7 +11,7 @@ The primary goal of this exercise is to gain experience working collaboratively 
 
 ## Prairie Phenology
 
-The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv 
+The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv 
 
 The workflow for this analysis with have three components: 
 
@@ -277,7 +277,7 @@ if(file.exists("02_plot.phenocam.R"))     source("02_plot.phenocam.R")
 if(file.exists("03_logistic.R"))          source("03_logistic.R")
 
 ## Download phenology data
-URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day.csv"
+URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv"
 prairie.pheno <- download.phenocam(URL)
 
 ## Plot overall phenology data
