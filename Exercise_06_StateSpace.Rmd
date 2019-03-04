@@ -7,7 +7,8 @@ For this activity we will write all the code, process all the data, and visualiz
 
 ```{r}
 library(rjags)
-library(rnoaa)
+#library(rnoaa)
+library(daymetr)
 devtools::install_github("EcoForecast/ecoforecastR")
 ```
 
@@ -101,7 +102,7 @@ plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim
 if(diff(time.rng) < 100){ 
   axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
 }
-ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col="lightBlue")
+ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
 points(time,y,pch="+",cex=0.5)
 ```
 
@@ -128,8 +129,8 @@ To look at how observation frequency affects data assimilation, convert 3 out of
 * Comment on the accuracy and precision of the state estimates.
 * How does the reduction in data volume affect the parameter estimates (taus)
 
-Extra Credit:
--------------
+Extra Credit (Part 1):
+----------------------
 
 Return to the original data and instead of removing 3/4 of the data remove the last 40 observations (convert to NA) and refit the model to make a forecast for this period
 
@@ -178,7 +179,7 @@ plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim
 if(diff(time.rng) < 100){ 
   axis.Date(1, at=seq(time[time.rng[1]],time[time.rng[2]],by='month'), format = "%Y-%m")
 }
-ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col="lightBlue")
+ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col=ecoforecastR::col.alpha("lightBlue",0.75))
 points(time,y,pch="+",cex=0.5)
 ```
 
@@ -200,4 +201,13 @@ Assignment:
 -----------
 
 * Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
+* Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 * Explain and discuss the parameter estimates (betas) from the linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
+
+Extra Credit (Part 2):
+----------------------
+
+Repeat the process of forecasting the last 40 observations (convert to NA), this time using the DLM with temperature as a covariate
+
+* Generate a time-series plot for the CI that includes the observations and both the random walk and DLM models (Hint, think about the order you plot in so you can see both models, also consider including transpancy [alpha] in the CI color)
+* Comment on how well the DLM model performed (both accuracy and precision) relative to the random walk and the true observations. How could the model be further improved?
