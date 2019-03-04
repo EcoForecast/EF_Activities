@@ -154,7 +154,7 @@ Once the model is correctly compiled and initialized you can call _coda.samples_
 ```{r}
 jags.out   <- coda.samples (model = j.model,
                             variable.names = c("mu"),
-                                n.iter = 1000)
+                                n.iter = 5000)
 ```
 
 

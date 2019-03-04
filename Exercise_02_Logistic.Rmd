@@ -178,6 +178,7 @@ We next want to use the Monte Carlo approach to account for parameter uncertaint
 
 To begin, we need to specify the uncertainty in the model parameters and the size of the simulation
 ```{r}
+r    = 1.0     ## make sure to return r to it's original value
 r.sd = 0.2     ## standard deviation on r
 K.sd = 1.0     ## standard deviation on K
 NE = 1000      ## Ensemble size
@@ -233,7 +234,7 @@ n0s = rlnorm(NE,log(n0),n0.sd)
 n = matrix(n0s,NE,NT)
 for(i in 1:NE){
   for(t in 2:NT){
-    n[i,t] = n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K)
+    n[i,t] = max(0,n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K))
   }
 }
 ```
