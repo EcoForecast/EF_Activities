@@ -94,7 +94,7 @@ Given the full joint posteror samples, we're next going to visualize the output 
 time.rng = c(1,length(time)) ## adjust to zoom in and out
 out <- as.matrix(jags.out)
 x.cols <- grep("^x",colnames(out)) ## grab all columns that start with the letter x
-ci <- apply(exp(out[,x.cols]),2,quantile,c(0.025,0.5,0.975))
+ci <- apply(exp(out[,x.cols]),2,quantile,c(0.025,0.5,0.975)) ## model was fit on log scale
 
 plot(time,ci[2,],type='n',ylim=range(y,na.rm=TRUE),ylab="Flu Index",log='y',xlim=time[time.rng])
 ## adjust x-axis label to be monthly if zoomed
@@ -125,7 +125,8 @@ To look at how observation frequency affects data assimilation, convert 3 out of
 * Generate a time-series plot for the CI of x that includes the observations (as above). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
 * Compare the CI between the two runs.
 * Generate a predicted (median) vs observed plot for the data points that were removed
-* Comment on the accuracy and precision of the estimates.
+* Comment on the accuracy and precision of the state estimates.
+* How does the reduction in data volume affect the parameter estimates (taus)
 
 Extra Credit:
 -------------
@@ -190,7 +191,7 @@ This code illustrates a few things:
 * The "Priors" section is identical to our earlier random walk model
 * The "Random Effects" section, which is currently commented out, illustrates that the `ecoforcastR::fit_dlm` function supports random effects, which can be turned on via the `model$random` argument
 * The "Fixed Effects" section contains additional priors for our fixed effects as well as priors on the means (mu) and precisions (tau) of the covariates. 
-* The "Data Model" section is the same as in our random walk except for the addition of code for the means of the covariates. This code isn't here as a very simple missing data model -- any time the covariate is observed it is used to estimate the mean an precision, but any time the covariate is NA it is imputed.
+* The "Data Model" section is the same as in our random walk except for the addition of code for the means of the covariates. This code is here as a very simple missing data model -- any time the covariate is observed it is used to estimate the mean and precision, but any time the covariate is missing (NA) it is imputed.
 * The "Process Model" is very similar to the random walk, except now the expected value (mu) is calculated according to the linear model described earlier
 
 Finally, the returned object also includes the `data` that was used to fit the model.
@@ -199,4 +200,4 @@ Assignment:
 -----------
 
 * Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
-* Explain and discuss the parameter estimates (betas) from the linear model
+* Explain and discuss the parameter estimates (betas) from the linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
