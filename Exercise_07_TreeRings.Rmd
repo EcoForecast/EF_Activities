@@ -20,13 +20,13 @@ For steps 2-4 we will leverage functions already written to deal with these step
 ```{r}
 if(!require(PEcAn.data.land)){
   library(devtools)
-  install.packages(c("digest","dplR","PeriodicTable"))
+  install.packages(c("digest","dplR","PeriodicTable"),repos = "https://cloud.r-project.org")
   devtools::install_github("PecanProject/pecan/base/logger")
   devtools::install_github("PecanProject/pecan/base/remote")
   devtools::install_github("PecanProject/pecan/base/utils")
   devtools::install_github("PecanProject/pecan/base/db")
   devtools::install_github("PecanProject/pecan/modules/data.land")
-  require(PEcAn.data.land)
+  library(PEcAn.data.land)
 }
 library(rjags)
 library(ecoforecastR)
