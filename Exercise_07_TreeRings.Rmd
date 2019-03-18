@@ -375,6 +375,6 @@ Assignment:
 
 4. Explain any additional exploratory analyses you would perform (e.g. plotting your proposed covariate against one of the random effects). 
 
-5. Write the JAGS code that would fit the proposed model (note: you don't have to run this model, just propose the code)
+5. Write the JAGS code that would fit the proposed model (note: you don't have to track down additional covariate data or run this model, just propose the code)
 
 ** BECAUSE THE PRODUCTION VERSION OF THIS CODE TAKES A LONG TIME TO RUN, PLEASE SUBMIT THE KNIT HTML NOT THE Rmd **
