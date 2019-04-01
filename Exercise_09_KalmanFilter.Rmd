@@ -257,10 +257,12 @@ points(time,Y[1,])
 
 The assignment is to run the KF under all four combinations of covariance in the process model versus process error and compare the results. In particular you'll want to pay attention to the missing data at the beginning of the timeseries for some states. You'll also want to comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. Finally, you'll want to note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
 
-* KF01: Rerun with process error set to just the diagonal matrix of Q, compare the results with the original
+* KF01: Rerun with process error set to just the diagonal matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
 
-* KF11: Rerun with alpha = 0.05 and the diagonal Q matrix
+* KF11: Rerun with alpha = 0.05 and the diagonal Q matrix. Comparing KF11 to KF01, what impact does including a spatial flux in the process model have on the inference?
 
-* KF10: Rerun with alpha = 0.05 and the original Q matrix
+* KF10: Rerun with alpha = 0.05 and the original Q matrix. Compare KF10 to previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
+
+* If the process model included a strong environmental covariate that correlated with the seasonal oscillation of influenza, how would this impact the Forecast and Analysis? Comment on how this would affect mu.f, mu.a, P.f, P.a, Q, and  R specifically.
 
 * Explain conceptually what would have to change in the Kalman Filter function if we replaced the current linear model with a nonlinear process model, in order to turn it into an Extended Kalman Filter function.
