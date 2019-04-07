@@ -50,14 +50,14 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
   ## photosynthesis
   LAI = X[,1]*params$SLA*0.1  #0.1 is conversion from Mg/ha to kg/m2
   if(inputs$PAR>1e-20){
-      GPP = params$alpha*(1-exp(-0.5*LAI))*inputs$PAR
+      GPP = pmax(0,params$alpha*(1-exp(-0.5*LAI))*inputs$PAR)
   } else {
       GPP = rep(0,ne)
   }
   
   ## respiration & allocation
   alloc = GPP*params$falloc ## Ra, NPPwood, NPPleaf
-  Rh = pmax(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),X[,3]/k) ## pmax ensures SOM never goes negative
+  Rh = pmax(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),0) ## pmax ensures SOM never goes negative
   
   ## turnover
   litter = X[,1]*params$litter
@@ -74,7 +74,7 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
                NEP=GPP-alloc[,1]-Rh,
                Ra=alloc[,1],NPPw=alloc[,2],NPPl=alloc[,3],
                Rh=Rh,litter=litter,CWD=CWD))
-
+  
 }
 SSEM <- cmpfun(SSEM.orig)  ## byte compile the function to make it faster
 ```
@@ -186,7 +186,7 @@ Now we're ready to produce our initial ensemble forecast for the system. To do t
 
 ```{r}
 X = X.orig
-nt = nrow(inputs) #17*48                              ## production run should be nrow(inputs)   ***********************
+nt = 17*48                              ## production run should be nrow(inputs)   ***********************
 output = array(0.0,c(nt,ne,12))         ## output storage 
 
 ## foreward ensemble simulation
@@ -207,7 +207,7 @@ for(i in 1:12){
 }
 
 ## Basic time-series visualizations
-varnames <- c("Bleaf","Bwood","BSOM","LAI","NEP","GPP","Ra","NPPw","NPPl","Rh","litter","CWD")
+varnames <- c("Bleaf","Bwood","BSOM","LAI","GPP","NEP","Ra","NPPw","NPPl","Rh","litter","CWD")
 units <- c("Mg/ha","Mg/ha","Mg/ha","m2/m2","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","Mg/ha/timestep","Mg/ha/timestep")
 for(i in 1:12){
   ci = apply(out.daily[,,i],1,quantile,c(0.025,0.5,0.975))
