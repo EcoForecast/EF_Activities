@@ -7,7 +7,6 @@ Let's start by loading the ensemble output from the previous lab and the observe
 ```{r}
 ## load libraries
 library("plotrix")
-library(dplR)
 library(rpart)
 library(randomForest)
 
