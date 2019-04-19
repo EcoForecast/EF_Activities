@@ -232,6 +232,7 @@ The key thing to remember in all these plots is that we're modelling the RESIDUA
 
 ```{r}
 ## define error metric and dependent variables
+O = L4$NEE_st_fMDS[qaqc]
 err = (E-O)/beta
 x = cbind(inputs$PAR[qaqc],inputs$temp[qaqc])
 colnames(x) = c("PAR","temp")
