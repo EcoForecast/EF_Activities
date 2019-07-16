@@ -14,10 +14,14 @@ We will divide this analysis into a number of steps, which we will encapsulate i
 5. run the JAGS model
 6. visualize the output
 
-For steps 2-4 we will leverage functions already written to deal with these steps that are part of the [PEcAn system](https://pecanproject.org). Specifically, they are within PEcAn's land data R package, which can be downloaded and installed off Github using devtools
-
-
 ```{r}
+library(rjags)
+library(ecoforecastR)
+```
+
+Steps 1-4 have already been done for you and leverages functions that are part of the [PEcAn system](https://pecanproject.org). Specifically, they are within PEcAn's land data R package, which can be downloaded and installed off Github using devtools
+
+```
 if(!require(PEcAn.data.land)){
   library(devtools)
   install.packages(c("digest","dplR","PeriodicTable"),repos = "https://cloud.r-project.org")
@@ -28,12 +32,7 @@ if(!require(PEcAn.data.land)){
   devtools::install_github("PecanProject/pecan/modules/data.land")
   library(PEcAn.data.land)
 }
-library(rjags)
-library(ecoforecastR)
-```
 
-
-```{r}
 ## 1. Read tree data
 trees <- read.csv("data/H2012AdultFieldData.csv")
 
@@ -49,12 +48,17 @@ knitr::kable(combined[1:5,])
 ## 4. organize data into a list
 data <- buildJAGSdata_InventoryRings(combined)
 
+```
+Instead we'll just load and investigate the final, prepared data object
+
+```{r}
+load("data/Activity07.RData")
 # y = increment (tree x year)
 # z = dbh (tree x year)
 # make sure to take a look at all the priors!
 str(data)
-
 ```
+
 
 Now that we have the data prepped we need to fit the model itself. The bulk of this code is just the same JAGS syntax we've used before, so lets focus on the JAGS code itself. To begin with, lets look back at the JAGS code for the random walk
 
@@ -275,6 +279,22 @@ for(i in 1:ni){
 Next, lets generate some diagnostic plots to look at the model. First, lets plot the posterior CI for growth and DBH and compare these to observations. Since we have scores of cores and trees, we'll pick a random subset of trees to check. One thing that's critical to note is that for the confidence intervals on growth that these are calculated pathwise -- we're looking at the growth from a whole MCMC iteration -- rather than pairwise (i.e. subtracting the posterior distribution for DBH at one point from the posterior distribution of DBH at the next). Because there's high correlations between successive time points, the pathwise uncertainty estimates are considerably lower in uncertainty -- essentially saying that we know can know the growth rate of the tree better than we can know the actual size of the tree
 
 ```{r, fig.height=8}
+#### Helper function
+##' @param w mcmc object containing matrix outputs
+##' @param pre prefix (variable name) for the matrix variable to be extracted
+##' @param numeric boolean, whether to coerce class to numeric
+parse.MatrixNames <- function(w, pre = "x", numeric = FALSE) {
+  w <- sub(pre, "", w)
+  w <- sub("[", "", w, fixed = TRUE)
+  w <- sub("]", "", w, fixed = TRUE)
+  w <- matrix(unlist(strsplit(w, ",")), nrow = length(w), byrow = TRUE)
+  if (numeric) {
+    class(w) <- "numeric"
+  }
+  colnames(w) <- c("row", "col")
+  return(as.data.frame(w))
+} # parse.MatrixNames
+
   #### Diagnostic plots
   
   ### DBH

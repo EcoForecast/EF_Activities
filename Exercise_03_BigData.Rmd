@@ -83,6 +83,8 @@ recent <- fia_table[which(update > "2018/01/01"),]
 **Question 2:**
 Create a sorted table of how many FLUXNET eddy-covariance towers are in each country according to the website at http://fluxnet.fluxdata.org/sites/site-list-and-pages/. Hint: use substring to extract the country code from the overall FLUXNET ID code.
 
+### NEED TO UPDATE, TABLE COMING BACK EMPTY
+
 grep, system, RegExp
 --------------------
 
@@ -121,6 +123,9 @@ There are often times when working in R that one needs to run another command, s
 ```{r}
 system('grep -ir "fia" *.Rmd')
 ```
+
+### On windows:
+### system("cmd.exe",input='findstr "fia" *.Rmd')
 
 Furthermore, often we want to capture the output of that command directly into R, which we can do using the `intern` flag:
 
