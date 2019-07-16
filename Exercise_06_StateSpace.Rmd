@@ -121,6 +121,14 @@ cor(out[,1:2])
 Assignment:
 -----------
 
+To explore the ability of state space models to generate forecasts (or in this case, a hindcast) remove the last 40 observations (convert to NA) and refit the model.
+
+* Generate a time-series plot for the CI of x that includes the observations (as above but zoom the plot on the last ~80 observations). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
+* Comment on how well the random walk model performed (both accuracy and precision) and how it might be modified to improve both these criteria.
+
+
+Extra Credit (Part 1):
+----------------------
 To look at how observation frequency affects data assimilation, convert 3 out of every 4 observations to NA (i.e. treat the data as approximately monthly) and refit the model. 
 
 * Generate a time-series plot for the CI of x that includes the observations (as above). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
@@ -129,21 +137,13 @@ To look at how observation frequency affects data assimilation, convert 3 out of
 * Comment on the accuracy and precision of the state estimates.
 * How does the reduction in data volume affect the parameter estimates (taus)
 
-Extra Credit (Part 1):
-----------------------
-
-Return to the original data and instead of removing 3/4 of the data remove the last 40 observations (convert to NA) and refit the model to make a forecast for this period
-
-* Generate a time-series plot for the CI of x that includes the observations (as above but zoom the plot on the last ~80 observations). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
-* Comment on how well the random walk model performed (both accuracy and precision) and how it might be modified to improve both these criteria.
-
 # Dynamic Linear Models
 
 The random walk model can easily be generalized to more sophisiticated models describing the dynamics of the system. One simple but useful extension is the class of dynamic linear models (DLMs) -- linear models where the future state depends on the current state and other covariates, $z_t$
 
-$$X_{t+1} \sim N(\beta_0 + \beta_1 z_t + \beta_{IC} X_{t}, \tau_{add})$$
+$$X_{t+1} \sim N(X_t + \beta_0 + \beta_1 z_t + \beta_{X} X_{t}, \tau_{add})$$
 
-where $\beta_0$ is the intercept, $\beta_1$ is the slope of the covariate effect, and $\beta_{IC}$ is the slope of the initial condition effect. Rather than implement this model in JAGS directly, we're going to rely on the ecoforecastR package, which accepts a `lm` like syntax for specifying covariates (with the notable exception that the response variable, which is our latent X, is not specified explictly). Here we're going to use the Daymet product to get daily weather estimates, and then use daily minimum temperature (Tmin) as the covariate in our influenza model
+where $\beta_0$ is the intercept, $\beta_1$ is the slope of the covariate effect, and $\beta_{X}$ is the slope of the initial condition effect, expressed as a deviation from the random walk default (i.e. the actual slope is $1 + \beta_X$). Rather than implement this model in JAGS directly, we're going to rely on the ecoforecastR package, which accepts a `lm` like syntax for specifying covariates (with the notable exception that the response variable, which is our latent X, is not specified explictly). Here we're going to use the Daymet product to get daily weather estimates, and then use daily minimum temperature (Tmin) as the covariate in our influenza model
 
 ```{r}
 ## grab weather data
@@ -157,7 +157,7 @@ df$date <- as.Date(paste(df$year,df$yday,sep = "-"),"%Y-%j")
 data$Tmin = df$tmin..deg.c.[match(time,df$date)]
 
 ## fit the model
-ef.out <- ecoforecastR::fit_dlm(model=list(obs="y",fixed="~ Tmin"),data)
+ef.out <- ecoforecastR::fit_dlm(model=list(obs="y",fixed="~ 1 + X + Tmin"),data)
 names(ef.out)
 ```
 
@@ -197,17 +197,26 @@ This code illustrates a few things:
 
 Finally, the returned object also includes the `data` that was used to fit the model.
 
-Assignment:
+Part 2:
 -----------
 
 * Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
 * Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 * Explain and discuss the parameter estimates (betas) from the linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
 
-Extra Credit (Part 2):
-----------------------
+Part 3:
+-----------
 
 Repeat the process of forecasting the last 40 observations (convert to NA), this time using the DLM with temperature as a covariate
 
 * Generate a time-series plot for the CI that includes the observations and both the random walk and DLM models (Hint, think about the order you plot in so you can see both models, also consider including transpancy [alpha] in the CI color)
 * Comment on how well the DLM model performed (both accuracy and precision) relative to the random walk and the true observations. How could the model be further improved?
+
+# Next steps 
+
+Apply these modeling approaches to you own time-series data! As a simple place to start note that you can fit the basic Random Walk model using `fit_dlm` just by setting `fixed = ""`. Also, as with standard `lm` syntax, you can suppress the intercept by including -1 in fixed, specify interaction terms using multiplication (e.g. X * Tmin), and express polynomials both on X and on covariates (e.g. X^2 or Tmin^2). The latter allows you to construct models with stabalizing feedbacks, for example:
+
+$$ N_{t+1} = N_t + rN_t \left( 1 + {{N_t}\over{K}} \right) = (1+r)N_t + {{r}\over{K}}N_t^2$$
+can be expressed as fixed = "-1 + X + X^2" where $\beta_X = r$ and $\beta_{X^2} = r/K$.
+
+Within the ecoforecastR package, the ParseFixed function (which is used by fit_dlm) can also construct text strings for process models, priors, and missing data models that can be inserted into other JAGS models, which allows you to easily construct non-Gaussian dynamic generalized linear mixed models (DGLMMs), data fusion models, or more complex nonlinear models.
