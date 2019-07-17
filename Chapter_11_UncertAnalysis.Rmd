@@ -353,6 +353,8 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
+**Question 5:** The last step added random effects, but this uncertainty could be further partitioned into two parts: the ecological site-to-site variability in the population processes, and the parameter uncertainty about the site-to-site variance. To partition these out repeat this analysis setting `tau.mc` to its posterior mean. How does this change your results? How much of the random effect uncertainty is due to ecological variability versus uncertainty about `tau.mc`?
+
 # Uncertainty Analysis
 
 Our final analysis is focused on quantifying the relative contributions of each of the 5 uncertainty terms to the overall predictive variance, and how that partitioning changes with time. To do this we will calculate the variances, because unlike predictive intervals or standard errors variances combine additively.
@@ -387,7 +389,7 @@ legend("topleft",legend=c("Process","Driver","Parameter","InitCond"),col=rev(N.c
 ```
 
 
-**Question 5:**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about in-sample predictions?
+**Question 6:**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about in-sample predictions?
 
 ## Next steps:
 
@@ -417,3 +419,12 @@ For even more computationally demanding problems, or problems where an analytica
 
 **3) Interactions between uncertainties:**
 The approach used above is based on sequentially adding different sources of uncertainty to the full model. This raises two questions: (1) How sensitive are the results to the order the variables are introduced and (2) to what extent do variables interact with each other.  Use the analytical rules for combining variances (Chapter 11 appendices) to address these questions, and estimate the interaction terms between the uncertainties, for the "in sample" site-level run. Do this either numerically (Monte Carlo or Ensemble approach) or Analytically. If approaching numerically, I'd give the hint that Var(A+B) = Var(A) + Var(B) + Cov(A,B). For example, if A = IC and B = parameters, then Var(A) comes from runs with just IC, Var(B) comes from runs with just parameter error, Var(A+B) comes from runs with both, and the covariance Cov(A,B), which provides a measure of the interaction between A and B, is found by difference. Also recall from chapter 2 (Box 2.1) that covariances can be decomposed into correlations, which are often easier to interpret.
+
+## Applying this to your own forecast
+
+To apply this to your own model and data you'll need to:
+
+1. Implementing a function like `forecastN` that lets you forward simulate your model.
+2. Load up the output from your state space model calibration (Exercise 06) so that you have access to your parameter and initial condition uncertainties (the latter being the last latent state in your model fit).
+3. Load up any other driver/covariate data (or scenarios) that you need to be able to run your model into the future. Hopefully these inputs already have uncertainties reported, or ensemble members you can sample from, similar to the ppt_ensemble above. For meteorology, ensemble products are available on both the weather (e.g. NOAA GEFS) and climate (e.g. CMIP) time scales, but you can always get the ball rolling with an analysis that just resamples historical data (e.g. your calibration data).
+4. Run through the analyses above, passing in the inputs, parameters, and initial conditions that are relevant to your own model!
