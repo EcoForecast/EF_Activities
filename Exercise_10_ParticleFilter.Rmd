@@ -23,10 +23,12 @@ The initial code is set up to run with a small ensemble size (ne=10) and short t
 In addition to getting this code to run, the goals of this assignment are:
 
 1) Compare the results of the three projections in terms of their spread/accuracy around LAI.
+
 2) Compare the results of the three projections in terms of their ability to constrain the other fluxes and state variables that are output by the model (which should be updated in proportion to how much they covary with LAI)
+
 3) Which parameters were most constrained by LAI? Does this make sense?
-4) Rerun the resampling PF without parameter uncertainty -- in other words, fix every ensemble member to have the same parameters but different initial conditions. Compare results to the prior run that contained parameter uncertainty. Qualitatively, how important was parameter constraint vs state constraint in terms of both the initial spread and the constraint of LAI over time.
-5) Extra Credit: For the no-parameter-uncertainty run, convert the analysis step of the resampling PF to an EnKF, rerun and compare to the previous run.
+
+4) Convert the Analysis step of the resampling PF to an EnKF, rerun and compare to the previous runs. For the sake of keeping this activity simple, don't worry about updating parameters. Hints: (a) The ensemble Forecast step stays the same. (b) Exercise 09 contains the `KalmanAnalysis` function that you need to be able to perform the Analysis step (instead of calculating Likelihoods and weights). (c) you can calculate mu.f and P.f from the ensemble forecast sample mean and cov. (d) Once you have an update mu.a and P.a, you either need to sample new ensemble members from that (e.g. rmvnorm), or use ensemble adjustment to nudge your current ensemble members to the correct mean and covariance.
 
 # Super Simple Ecosystem Model
 
