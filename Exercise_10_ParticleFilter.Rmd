@@ -28,7 +28,7 @@ In addition to getting this code to run, the goals of this assignment are:
 
 3) Which parameters were most constrained by LAI? Does this make sense?
 
-4) Convert the Analysis step of the resampling PF to an EnKF, rerun and compare to the previous runs. For the sake of keeping this activity simple, don't worry about updating parameters. Hints: (a) The ensemble Forecast step stays the same. (b) Exercise 09 contains the `KalmanAnalysis` function that you need to be able to perform the Analysis step (instead of calculating Likelihoods and weights). (c) you can calculate mu.f and P.f from the ensemble forecast sample mean and cov. (d) Once you have an update mu.a and P.a, you either need to sample new ensemble members from that (e.g. rmvnorm), or use ensemble adjustment to nudge your current ensemble members to the correct mean and covariance.
+4) Convert the Analysis step of the resampling PF to an EnKF, rerun and compare to the previous runs. For the sake of keeping this activity simple, don't worry about updating parameters. Hints: (a) The ensemble Forecast step stays the same; (b) Exercise 09 contains the `KalmanAnalysis` function that you need to be able to perform the Analysis step (instead of calculating Likelihoods and weights); (c) you can calculate mu.f and P.f from the ensemble forecast sample mean and cov; (d) The observation operator, H, should be a 1x12 matrix that's all zeros except for a 1 in the column that matches the observed data (LAI) in the model output; (e) Once you have an update mu.a and P.a, you either need to sample new ensemble members from that (e.g. rmvnorm), or use ensemble adjustment to nudge your current ensemble members to the correct mean and covariance.
 
 # Super Simple Ecosystem Model
 
@@ -438,3 +438,15 @@ for(i in 1:length(params)){
 }
 ```
 Note, the digits on the posterior and prior plots are the mean and std for the prior (top row, black line), and the posterior (second row, red line)
+
+## Applying this to your own forecast
+
+To extend the particle filter and Ensemble Kalman Filter approaches to develop iterative forecasts for you own models, you would need to apply the following steps:
+
+1) Develop an ensemble forecast for your own model that propagates uncertainties. See the "Applying this to your own forecast" section in the Chapter 11 activity. If your model exists outside of R (e.g. compiled computer code), you'll want to make sure that this model has the capacity to restart from new initial conditions.
+
+2) Load and organize the data you'll be using to constrain you model, and understanding the mapping between your model's state variables and your observations (in EnKF this means constructing the matrix H).
+
+3A) If you are using an EnKF, the Analysis code you developed above should work out-of-the-box for many problems. For very large data problems you may need to address challenges such as inverting large matrices and localization.
+
+3B) If you are using PF, you will need to construct the Likelihood (i.e. data model) appropriate for your data constraints.

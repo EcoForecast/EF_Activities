@@ -398,3 +398,15 @@ Assignment:
 5. Write the JAGS code that would fit the proposed model (note: you don't have to track down additional covariate data or run this model, just propose the code)
 
 ** BECAUSE THE PRODUCTION VERSION OF THIS CODE TAKES A LONG TIME TO RUN, PLEASE SUBMIT THE KNIT HTML NOT THE Rmd **
+
+## Applying this to your own forecast
+
+* If you already have a state-space model running for your own model (Exercise 06) you can add additional data constraints by adding additional likelihoods to the JAGS code. For simple cases this is relatively straightforward, but you'll want to think very carefully about many of the issues raised in Chapters 6 and 9 when constructing your likelihood (model and data biases, autocorrelation, spatial and temporal aggregation, proxy data, non-Gaussian error, etc.)
+
+* If you are forecasting multiple variables (e.g. different sites, individuals, species, etc.), the code above provides a useful template for how to organize loops over multiple timeseries.
+
+* The code above also provides a useful template for adding different random effects 
+
+* While the `fit_dlm` function discussed in Exercise 06 doesn't yet support data fusion models or multivariate models, the `ParseFixed` function can be used to help expand a basic random walk model to a more complex model.
+
+* When developing your own more sophisticated analyses, make sure to start simple and add complexity incrementally. By only adding one new thing at a time it becomes much easier to debug when something goes wrong and to stop when you push the model beyond the constraints the data are able to provide.
