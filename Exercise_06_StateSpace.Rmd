@@ -1,4 +1,5 @@
 Activity 6 - State-space models
+July 24 2019
 ========================================================
 
 This activity will explore the state-space framework for modeling time-series and spatial data sets. Chapter 8 provides a more in-depth description of the state-space model, but in a nutshell it is based on separating the process model, which describes how the system evolves in time or space, from the observation error model. Furthermore, the state-space model gets its name because the model estimates that true value of the underlying **latent** state variables.
