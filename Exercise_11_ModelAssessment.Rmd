@@ -7,7 +7,6 @@ Let's start by loading the ensemble output from the previous lab and the observe
 ```{r}
 ## load libraries
 library("plotrix")
-library(dplR)
 library(rpart)
 library(randomForest)
 
@@ -55,7 +54,7 @@ for(i in 1:12){
 }
 ```
 
-Question 1: What pools and fluxes were most affected by assimilating MODIS LAI and which were least affected?  Does this make sense?
+Question 1: Do the predicted pools and fluxes make sense? Are the signs correct? Are the seasonal patterns reasonable? Is the magnitude of the pools & fluxes reasonable? 
 
 Model vs. Data
 --------------
@@ -202,24 +201,21 @@ legend("bottomright",legend=c("obs","ens","PF","clim"),col=1:4,pch=20,cex=0.75)
 
 Question 7: What time of day has the largest uncertainty? What does this suggest about what parameter(s) needs to be modified in the model, in what direction, and by approximately how much? In providing this answer, recall the structure of the model as well as the fact that the particle filter has assimilated LAI so we can assume that that term is unbiased for that case.
 
-The diurnal cycle isn't the only, or nessisarily the largest, time scale that the data or the model varies over. Next, let's use a wavelet transform to look at the times and timescales responsible for the most variability in the data, in the model, and in the residuals. Specifically we'll look at the observations, the ensemble mean, the ensemble residuals, and the "climatology" residuals. In all cases we're using a Morlet wavelet, which is a fairly standard choice of wavelet to characterize sine-like oscillations. In these wavelet plots color intensity indicated power (red = largest) and the periodicity in the y-axis is in terms of 30 min observations, so 48 = 1 day and 17520 = 1 year.
+Bayesian p-values
+-----------------
 
+Next, let's look at the patterns in the Bayesian 'p-values', which is essentially a plot of the quantiles of the observed values relative to the predictive distributions. The ideal distribution of quantiles if flat (values show up as frequently as predicted), overcalibrated models tend to have too many observations near 50%, while poorly calibrated models will tend to produce a lot of 0's and 1's (consistently under- or over-predicting). 
 
 ```{r}
-## wavelet
-obs = L4$NEE_st_fMDS; obs[qaqc] = 0; obs[is.na(obs)] = 0
-sel = 2:2^floor(log2(length(obs))) - 1
-wt.o = morlet(obs[sel])
-#wt.e = morlet(NEE.ens[sel])
-wt.er = morlet(obs[sel]-NEE.ens[sel])
-#wt.cr = morlet(obs[sel]-NEE.clim[sel])
-wavelet.plot(wt.o,add.sig=FALSE,crn.lab="NEE obs")
-#wavelet.plot(wt.e,add.sig=FALSE,crn.lab="NEE ensemble")
-wavelet.plot(wt.er,add.sig=FALSE,crn.lab="NEE model error")
-#wavelet.plot(wt.cr,add.sig=FALSE,crn.lab="NEE clim error")
+O = L4$NEE_st_fMDS  ## observed
+pval.pf = 0
+for(i in 1:nrow(output)){
+  pval.pf[i] = sum(O[i] > -output[i,,5])/ncol(output)  ## quantiles of the particle filter
+}
+plot(pval.pf)   ## quantile 'residuals'
+hist(pval.pf,probability=TRUE) ## quantile distribution (should be flat)
 ```
-
-Question 8: What time scales dominate the data? What time scales dominate the model residuals? 
+Question 8: How do the ensemble and particle filter perform in terms of the predicted quantiles?
 
 Mining the Residuals
 --------------------
@@ -236,6 +232,7 @@ The key thing to remember in all these plots is that we're modelling the RESIDUA
 
 ```{r}
 ## define error metric and dependent variables
+O = L4$NEE_st_fMDS[qaqc]
 err = (E-O)/beta
 x = cbind(inputs$PAR[qaqc],inputs$temp[qaqc])
 colnames(x) = c("PAR","temp")

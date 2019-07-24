@@ -11,7 +11,7 @@ The primary goal of this exercise is to gain experience working collaboratively 
 
 ## Prairie Phenology
 
-The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day_v4.csv 
+The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. We will be using green chromatic coordinate (GCC), which is a color index. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv 
 
 The workflow for this analysis with have three components: 
 
@@ -83,7 +83,7 @@ At this point we've spent a good bit of time up front on organization -- we have
 
 Because we're going to employ version control in our project, our first step is to create the repository that our project will be stored in.  **To ensure that both you and your partner get to see every step of how to work with version control, in the for the rest of this exercise you are going to complete every step twice, once from the perspective of the OWNER of the repository and once as the COLLABORATOR**.
 
-###OWNER
+### OWNER
 
 1. Go to your account on github.com and under the Repositories tab click on the "New" button with a picture of a book on it
 2. Choose a name for your repository (make sure it's different from your partner's)
@@ -277,7 +277,7 @@ if(file.exists("02_plot.phenocam.R"))     source("02_plot.phenocam.R")
 if(file.exists("03_logistic.R"))          source("03_logistic.R")
 
 ## Download phenology data
-URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_0001_1day.csv"
+URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv"
 prairie.pheno <- download.phenocam(URL)
 
 ## Plot overall phenology data
@@ -302,7 +302,7 @@ lines(dat$date,pred.logistic(fit$par,dat$doy),col=2)
 5. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
 6. On Github.com, submit a pull request
 
-###OWNER
+### OWNER
 1. Evaluate and accept pull request.
 
 At this point your workflow should be complete and you should be able to run the analysis.

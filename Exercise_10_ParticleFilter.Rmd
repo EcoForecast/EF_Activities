@@ -23,10 +23,12 @@ The initial code is set up to run with a small ensemble size (ne=10) and short t
 In addition to getting this code to run, the goals of this assignment are:
 
 1) Compare the results of the three projections in terms of their spread/accuracy around LAI.
+
 2) Compare the results of the three projections in terms of their ability to constrain the other fluxes and state variables that are output by the model (which should be updated in proportion to how much they covary with LAI)
+
 3) Which parameters were most constrained by LAI? Does this make sense?
-4) Rerun the resampling PF without parameter uncertainty -- in other words, fix every ensemble member to have the same parameters but different initial conditions. Compare results to the prior run that contained parameter uncertainty. Qualitatively, how important was parameter constraint vs state constraint in terms of both the initial spread and the constraint of LAI over time.
-5) Extra Credit: For the no-parameter-uncertainty run, convert the analysis step of the resampling PF to an EnKF, rerun and compare to the previous run.
+
+4) Convert the Analysis step of the resampling PF to an EnKF, rerun and compare to the previous runs. For the sake of keeping this activity simple, don't worry about updating parameters. Hints: (a) The ensemble Forecast step stays the same. (b) Exercise 09 contains the `KalmanAnalysis` function that you need to be able to perform the Analysis step (instead of calculating Likelihoods and weights). (c) you can calculate mu.f and P.f from the ensemble forecast sample mean and cov. (d) Once you have an update mu.a and P.a, you either need to sample new ensemble members from that (e.g. rmvnorm), or use ensemble adjustment to nudge your current ensemble members to the correct mean and covariance.
 
 # Super Simple Ecosystem Model
 
@@ -50,14 +52,14 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
   ## photosynthesis
   LAI = X[,1]*params$SLA*0.1  #0.1 is conversion from Mg/ha to kg/m2
   if(inputs$PAR>1e-20){
-      GPP = params$alpha*(1-exp(-0.5*LAI))*inputs$PAR
+      GPP = pmax(0,params$alpha*(1-exp(-0.5*LAI))*inputs$PAR)
   } else {
       GPP = rep(0,ne)
   }
   
   ## respiration & allocation
   alloc = GPP*params$falloc ## Ra, NPPwood, NPPleaf
-  Rh = pmax(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),X[,3]/k) ## pmax ensures SOM never goes negative
+  Rh = pmax(params$Rbasal*X[,3]*params$Q10^(inputs$temp/10),0) ## pmax ensures SOM never goes negative
   
   ## turnover
   litter = X[,1]*params$litter
@@ -74,7 +76,7 @@ SSEM.orig <- function(X,params,inputs,timestep=1800){
                NEP=GPP-alloc[,1]-Rh,
                Ra=alloc[,1],NPPw=alloc[,2],NPPl=alloc[,3],
                Rh=Rh,litter=litter,CWD=CWD))
-
+  
 }
 SSEM <- cmpfun(SSEM.orig)  ## byte compile the function to make it faster
 ```
@@ -186,7 +188,7 @@ Now we're ready to produce our initial ensemble forecast for the system. To do t
 
 ```{r}
 X = X.orig
-nt = nrow(inputs) #17*48                              ## production run should be nrow(inputs)   ***********************
+nt = 17*48                              ## production run should be nrow(inputs)   ***********************
 output = array(0.0,c(nt,ne,12))         ## output storage 
 
 ## foreward ensemble simulation
@@ -207,7 +209,7 @@ for(i in 1:12){
 }
 
 ## Basic time-series visualizations
-varnames <- c("Bleaf","Bwood","BSOM","LAI","NEP","GPP","Ra","NPPw","NPPl","Rh","litter","CWD")
+varnames <- c("Bleaf","Bwood","BSOM","LAI","GPP","NEP","Ra","NPPw","NPPl","Rh","litter","CWD")
 units <- c("Mg/ha","Mg/ha","Mg/ha","m2/m2","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","Mg/ha/timestep","Mg/ha/timestep")
 for(i in 1:12){
   ci = apply(out.daily[,,i],1,quantile,c(0.025,0.5,0.975))

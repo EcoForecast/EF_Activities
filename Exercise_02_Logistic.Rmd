@@ -26,8 +26,8 @@ for(t in 2:NT){
 Plot results
 ```{r}
 plot(time,n,ylim=c(0,12),lwd=3,type='l',
-     ,bty='l',cex.lab=1.5,
-      xlab="Time",ylab="Population Size")
+     bty='l',cex.lab=1.5,
+     xlab="Time",ylab="Population Size")
 ```
 
 ### Problems
@@ -78,10 +78,10 @@ All of this will make more sense once we consider a concrete example.  Let's tak
 ```{r}
 x = seq(-5,5,by=0.1)
 plot(x,dnorm(x),type='l')  		## that’s a lowercase “L” for “line”
-abline(v=0)					## add a line to indicate the mean (“v” is for “vertical”)
+abline(v=0)				          	## add a line to indicate the mean (“v” is for “vertical”)
 lines(x,dnorm(x,2),col=2)			## try changing the mean (“col” sets the color)
 abline(v=2,col=2)
-lines(x,dnorm(x,-1,2),col=3)			## try changing the mean and standard dev
+lines(x,dnorm(x,-1,2),col=3)	## try changing the mean and standard dev
 abline(v=-1,col=3)
 ```
 
@@ -112,7 +112,7 @@ abline(h=-1,col=3)
 As you can see, the quantile function is the inverse of the CDF.  This function can be used to find the median of the distribution (p = 0.5) or to estimate confidence intervals at any level desired.
 
 ```{r}
-qnorm(c(0.025,0.975),0,1)		# what width CI is specified by these values?
+qnorm(c(0.025,0.975),0,1)		    # what width CI is specified by these values?
 plot(p,qnorm(p,0,1),type='l',ylim=range(x))
 abline(v=c(0.025,0.975),lty=2)	# add vertical lines at the CI
 abline(h=qnorm(c(0.025,0.975)),lty=2)	#add horizontal lines at the threshold vals
@@ -178,12 +178,13 @@ We next want to use the Monte Carlo approach to account for parameter uncertaint
 
 To begin, we need to specify the uncertainty in the model parameters and the size of the simulation
 ```{r}
+r    = 1.0     ## make sure to return r to it's original value
 r.sd = 0.2     ## standard deviation on r
 K.sd = 1.0     ## standard deviation on K
 NE = 1000      ## Ensemble size
 ```
 
-Next, we need to run the Monte Carlo simulation for the logistic. In this case we'll be running the logistic growth model 1000 times, each time with slightly different parameters. We'll then store all 1000 trajectories in a matrix. In effect, we'll be estimating our probability distributions and all of our summary statistics from a sample of lines, rather than a sample of points as we did in the previous example.
+Next, we need to run the Monte Carlo simulation for the logistic. In this case we'll be running the logistic growth model 1000 times, each time with slightly different parameters. We'll then store all 1000 trajectories in a matrix. In effect, we'll be estimating our probability distributions and all of our summary statistics from a sample of time-series, rather than a sample of points as we did in the previous example.
 
 
 ```{r}
@@ -192,7 +193,7 @@ rE = rnorm(NE,r,r.sd)  # sample of r
 KE = rnorm(NE,K,K.sd)  # sample of K
 for(i in 1:NE){        # loop over samples
   for(t in 2:NT){      # for each sample, simulate throught time
-    n[i,t] = n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i])
+    n[i,t] = max(0,n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i]))
   }
 }
 ```
@@ -203,6 +204,7 @@ n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
 ```
 
 Unfortunately, R doesn't have a built in function for plotting shaded CI on time-series plots, so we'll define one. Unlike plot, which just takes x and y as arguements, this function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+
 ```{r}
 ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
   polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
@@ -214,13 +216,11 @@ ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
 
 4. Plot histograms of the samples of r and K used for the simulation.
 
-5. Plot a sample of 10 different trajectories from your ensemble (on one graph).
+5. Plot a sample of 10 different trajectories (through time) from your ensemble (on one graph).
 
 6. Plot a histogram of your population forecast at time = 15.
 
-7. Plot the median trajectory and 95% CI.
-
-8. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
+7. Plot the median trajectory through time. Use `ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
 
 Extra Credit: Initial conditions
 --------------------------------
@@ -234,16 +234,16 @@ n0s = rlnorm(NE,log(n0),n0.sd)
 n = matrix(n0s,NE,NT)
 for(i in 1:NE){
   for(t in 2:NT){
-    n[i,t] = n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K)
+    n[i,t] = max(0,n[i,t-1] + r*n[i,t-1]*(1-n[i,t-1]/K))
   }
 }
 ```
 
 ### Problems
 
-9. Plot the median & 95% interval.
+8. Plot the median & 95% interval.
 
-10. Repeat with r equal to 1.95, 2.05, and 2.8
+9. Repeat with r equal to 1.95, 2.05, and 2.8
 
 
 

@@ -247,7 +247,9 @@ plot(x1,y)
 plot(x2,y)
 ```
 
-Extend your univariate regression model to a multivariate regression.
+Extend your univariate regression model to a multiple regression.
+
+Hints: Make sure the length/dimensions of your priors and initial conditions match the number of parameters in your new process model
 
 ###  Task 2
 
