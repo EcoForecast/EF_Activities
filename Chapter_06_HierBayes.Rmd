@@ -3,7 +3,7 @@ title: "Chapter 6 - Hierarchical Bayes"
 output: html_document
 ---
 
-The objective of this activity is to explore basic hierarchical models.  We will focus on the most common class of hierarchical models, which are linear mixed models.  Mixed models refer to models that include both hierarchical “random” effects and non-hierarchical “fixed” effects.  Everything that we apply below to linear models can also be applied to generalized linear models (e.g. logistic and poisson regression) and thus falls within the class of models referred to as GLMM (generalized linear mixed models) for which all of our traditional non-hierarchical linear and GLM exist as a special case. Hierarchical approached can also be applied to non-linear and process-based models to capture unexplained variability in any model parameters. In more advanced applications parameters can be described as varying according to some temporal or spatial autocorrelation, as opposed to the assumption of independence we assume in this simple case.
+The objective of this activity is to explore basic hierarchical models.  We will focus on the most common class of hierarchical models, which are hierarchical linear models. These models are similar in structure to frequentist "mixed models", which are modelsthat include both hierarchical “random” effects and non-hierarchical “fixed” effects.  Everything that we apply below to linear models can also be applied to generalized linear models (e.g. logistic and poisson regression) and thus falls within the class of Bayesian hierarchical GLMs, which are analogous to frequentist GLMM (generalized linear mixed models), and for which all of our traditional non-hierarchical linear and GLM exist as a special case. Hierarchical approaches can also be applied to non-linear and process-based models to capture unexplained variability in any model parameters. In more advanced applications parameters can be described as varying according to some temporal or spatial autocorrelation, as opposed to the assumption of independence we assume in this simple case.
 
 # Case Study: Mosquito population size
 
@@ -57,21 +57,21 @@ alpha <- jags.mat[,grep("alpha",colnames(jags.mat))]
 
 6. Describe how you would modify your code to add a random `replicate` effect.
 
-# Mixed Effects
+# Combining Linear and Random Effects
 
 You are discussing your research with a colleague and mention that your random effects model showed that one year, 2002, had notably lower mosquito abundance.  He suggests that the driver may be exogenous and sends you a data file, met.csv, that contains the mean annual temperature (°C), precipitation (mm/year), and relative humidity (%) for 1995-2009 years.
  
 ### Task 3:
 
 6.  As an exploratory analysis of this hypothesis, plot the posterior mean of your random year effect (alpha_t) versus each of the three met variables.  Which variable(s) are worth exploring further?
-7.	Convert the random effects model to a mixed effects model by converting the mean, mu, to a linear model, `beta0 + beta1*y[t]` where y is the meteorological covariate you want to include, while keeping the random year effect.
-8.	Fit your mixed effects model and plot the model CI and PI vs the data
+7.	Convert the random effects model to a hierarchical linear model by converting the mean, mu, to a linear model, `beta0 + beta1*y[t]` where y is the meteorological covariate you want to include, while keeping the random year effect.
+8.	Fit your hierarchical linear model and plot the model CI and PI vs the data
 9.	Create a summary table that provides the posterior parameter means and CI for all 3 models and their DIC scores.
 10.	Extra Credit: Use the best fitting model to predict the next 5 years (2005-2009) of mosquito abundance including an uncertainty estimate (predictive interval). Turn in a graph of your prediction.
 
 ## Beyond the Basics
 
-In this execise we fit a mixed effects model to account for variability in the mean. However, this approach can be used more generally to account for variability in any model parameters -- for example we could write down a simple logistic population model where `r` and `K` themselves are functions of multiple covariates (fixed effects) but also have unexplained variability across multiple scales (multiple random effects). These random effects don't just have to apply to different years, they could also apply to different locations (subpopulations, plots, watersheds, etc) that could have multiple heirchical levels (e.g. plots with sites). For some analyses it might make sense to have random effects on individuals, or even parts of individuals (e.g. leaves on a tree), so long as multiple measurements are made on the same observational unit. 
+In this execise we fit a hierarchical linear model to account for variability in the mean. However, this approach can be used more generally to account for variability in any model parameters -- for example we could write down a simple logistic population model where `r` and `K` themselves are functions of multiple covariates (fixed effects) but also have unexplained variability across multiple scales (multiple random effects). These random effects don't just have to apply to different years, they could also apply to different locations (subpopulations, plots, watersheds, etc) that could have multiple heirchical levels (e.g. plots with sites). For some analyses it might make sense to have random effects on individuals, or even parts of individuals (e.g. leaves on a tree), so long as multiple measurements are made on the same observational unit. 
 
 The other thing we assumed in this example was that each random effect was drawn independently from the same distribution
 
