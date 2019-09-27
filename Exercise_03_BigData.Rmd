@@ -231,20 +231,20 @@ if(file.exists(WC_file)){
                                 site_name = "WillowCreek")
   save(subset,file=WC_file)
 }
-subset$header
-head(subset$data)
+## let's look at the first few rows to get a feel for the structure
+subset[1:5,]
 ```
 
 Here we extracted a 250m data products and looked +/ 1km in both directions, which gives us a 9x9 area and thus 81 pixels.
 ```{r}
-unique(subset$data$pixel)
+unique(subset$pixel)
 ```
 
 For this example lets average over the spatial data and just generate a time-series of EVI. 
 
 ```{r}
 ## average EVI spatially & use 'scale' to set units
-EVI = tapply(subset$data$data, subset$data$calendar_date, mean,na.rm=TRUE) * as.numeric(subset$header$scale)
+EVI = tapply(subset$value*as.numeric(subset$scale), subset$calendar_date, mean,na.rm=TRUE)
 time = as.Date(names(EVI))
 ```
 
