@@ -365,59 +365,8 @@ summary(SD)
 * Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.
 * Compare the summary statistics for the Bayesian regression model to those from the classical regression:  summary(lm( y ~ x1 )).  This should include a comparison of the means and uncertainties of **all 3 model parameters**
 
-# Regression Credible Intervals
 
-When fitting the mean of a distribution, the density plot of that distribution, and its moments/quantiles, provides all the information we need to evaluate the performance of the model.  By contrast, when fitting a process model that has covariates, whether it be a simple regression or a complex nonlinear model, we are also often interested in the error estimate on the overall model.  This error estimate comes in two forms, the credible interval and the prediction interval.  The credible interval, which is the Bayesian analog to the frequentist confidence interval, provides an uncertainty estimate based on the uncertainty in the model parameters.  We have already seen Bayesian credible intervals frequently as the quantiles of the posterior distribution of individual parameters.  We can extend this to an estimate of model uncertainty by looking at the uncertainty in the distribution of the model itself by calculating a credible interval around the regression line.  Numerically we do this by evaluating the model over a sequence of covariate values for every pair of parameter values in the MCMC sequence.  Lets begin by looking at a subset of the MCMC 
-
-```{r}
-xpred <- 0:20
-plot(x1,y)
-for(i in 1:10){
-  lines(xpred, out[i,"b[1]"] + out[i,"b[2]"]*xpred)
-}
-```
-
-
-You can see within the loop that we're plotting our process model – b1 + b2*x – for pairs of regression parameters from the MCMC which created a distribution of models.  The reason that we use pairs of values from the posterior (i.e. rows in bgibbs) rather than simulating values from the posterior of each parameter independently is to account for the covariance structure of the parameters.  As we saw in the pairs plot above, the covariance of the slope and intercept is considerable, and thus independent sapling of their marginal posterior distributions would lead to credible intervals that are substantially too large.
-	This distribution of models is by itself not easy to interpret, especially if we added lines for EVERY pair of points in our posterior, so instead we'll calculate the quantiles of the posterior distribution of all of these lines.  To do this we'll need to first make the predictions for all of these lines and then look at the posterior distribution of predicted y values given our sequence of x values.
-	Before we dive into that, lets also consider the other quantity we're interested in calculating, the predictive interval, since it is easiest to calculate both at the same time.  While the credible interval was solely concerned about the uncertainty in the model parameters, the predictive interval is also concerned about the residual error between the model and the data.  When we make a prediction with a model and want to evaluate how well the model matches data we obviously need to consider our data model.  How we do this numerically is to generate pseudodata from our model, conditioned on the current value of not only the regression parameters but also the variance parameters, and then look at the distribution of predictions.
-	In R we'll begin the calculation of our credible and predictive intervals by setting up data structures to store all the calculations
-
-```{r}
-## credible and prediction intervals
-nsamp <- 5000
-samp <- sample.int(nrow(out),nsamp)
-xpred <- 0:20  					## sequence of x values we're going to
-npred <- length(xpred)				##      make predictions for
-ypred <- matrix(0.0,nrow=nsamp,ncol=npred)	## storage for predictive interval
-ycred <- matrix(0.0,nrow=nsamp,ncol=npred)	## storage for credible interval
-```
-
-Next we'll set up a loop where we'll calculate the expected value of y at each x for each pair of regression parameters and then add additional random error from the data model.  When looping through the posterior MCMC we'll obviously want to account for any burn-in period and thinning 
-
-```{r}
-for(g in seq_len(nsamp)){
-  theta = out[samp[g],]
-  ycred[g,] <- theta["b[1]"] + theta["b[2]"]*xpred
-  ypred[g,] <- rnorm(npred,ycred[g,],1/sqrt(theta["S"]))
-}
-```
-
-Once we have the full matrix of predicted values we'll calculate the quantiles by column (ie for each x value) and then plot them vs. the data.  By selecting the 2.5% and 97.5% quantiles we are generating a 95% interval, because 95% of the calculated values fall in the middle and 2.5% fall in each of the upper and lower tails.  We could construct alternative interval estimates by just calculating different quantiles, for example the 5% and 95% quantiles would provide a 90% interval estimate. 
-
-```{r}
-ci <- apply(ycred,2,quantile,c(0.025,0.5,0.975))  ## credible interval and median
-pi <- apply(ypred,2,quantile,c(0.025,0.975))		## prediction interval
-
-plot(x1,y,cex=0.5,xlim=c(0,20),ylim=c(0,50))
-lines(xpred,ci[1,],col=3,lty=2)	## lower CI
-lines(xpred,ci[2,],col=3,lwd=3)	## median
-lines(xpred,ci[3,],col=3,lty=2)	## upper CI
-lines(xpred,pi[1,],col=4,lty=2)	## lower PI
-lines(xpred,pi[2,],col=4,lty=2)	## upper PI
-```
-
-# Extra Credit: Multiple Regression
+# Multiple Regression
 
 Using the dataset "data/Ex05.Part2.RData", extend your univariate regression to a multiple regression model with two covariates (x1, x2) and an interaction term (x1*x2). In doing so, not only do you need to update your process model, but you also need to make sure to update the dimension of your prior and initial conditions on $b$ from 2 to 4.
 
