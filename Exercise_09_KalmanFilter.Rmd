@@ -171,7 +171,7 @@ KalmanAnalysis <- function(mu.f,P.f,Y,R,H){
 ##' @param  Q   = process error covariance (matrix)
 KalmanForecast <- function(mu.a,P.a,M,Q){
   mu.f = M%*%mu.a
-  P.f  = Q + M*P.a*t(M)
+  P.f  = Q + M%*%P.a%*%t(M)
   return(list(mu.f=mu.f,P.f=P.f))
 }
 ```
