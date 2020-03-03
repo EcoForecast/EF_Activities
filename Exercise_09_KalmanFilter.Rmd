@@ -2,7 +2,8 @@ Kalman Filter
 ========================================================
 
 ```{r, echo=FALSE}
-#devtools::install_github("EcoForecast/ecoforecastR")
+# Install the ecoforecastR package off github by running this command:
+# devtools::install_github("EcoForecast/ecoforecastR")
 library(ecoforecastR)
 ```
 

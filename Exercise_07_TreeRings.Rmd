@@ -16,6 +16,8 @@ We will divide this analysis into a number of steps, which we will encapsulate i
 
 ```{r}
 library(rjags)
+# Install the ecoforecastR package off github by running this command:
+# devtools::install_github("EcoForecast/ecoforecastR")
 library(ecoforecastR)
 ```
 
