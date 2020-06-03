@@ -7,13 +7,17 @@ The objective of this activity is to explore basic hierarchical models.  We will
 
 # Case Study: Mosquito population size
 
-For this activity we will look at data on mosquito abundance.  The data file “Mosquito.csv” contains ten years worth of data for each of 5 replicate traps (Reminder: the function read.csv can be used to read comma-separated text files).   We will begin with the simplest possible model to explain this data and incrementally add complexity.
+For this activity we will look at data on mosquito abundance.  The data file “Mosquito.csv” contains ten years worth of data for each of 5 replicate traps.   We will begin with the simplest possible model to explain this data and incrementally add complexity.
+
+```{r}
+dat <- read.csv("data/Mosquito.csv",header=TRUE,as.is = TRUE)
+```
 
 ### Task 1: 
 
 1.  Plot mosquito abundance as a function of time in a way that distinguishes the replicates and connects them through time (e.g. with lines, colors, or symbols)
 
-2.	Write and run a JAGS model to fit the overall mean and standard deviation, reporting summary statistics for both. You can use the JAGS code you developed from activity 5 for this.
+2.	Write and run a JAGS model to fit the overall "global" mean `mu` and standard deviation `sigma`, reporting summary statistics for both. You can use the JAGS code you developed from activity 5 for this.
 
 3.	Add posterior CI and PI to the plot.
 
@@ -25,25 +29,33 @@ To add the random year effect:
 
 1. Add the random year effect to the process model.
 ```
-for(t in 1:NT){
- Ex[t] <- mu + alpha_t[t]		  ## process model (does not vary with rep)
- alpha_t[t] ~ dnorm(0,tau_t)  ## random year effect
+Ex[i] <- mu + alpha.t[time[i]]		## process model (varies with time but not rep)
+```
+Note that the version above is formatted slightly differently from the version covered in the lecture slides. In the lecture, the data were in a wide format, `x[t,b,i]`, where time, block, and individual were different dimensions in an array. Alternatively, one can format data in a long format, like we see in this file, with time and replicate as columns
+```{r}
+head(dat)
+```
+The variable `time` used in the code above is a vector of indices (length = nrow(dat)) matching a specific row of data to a specific `alpha.t`. Therefore, when building the `data` list that you pass into `jags.model` you'll want to add `time` and have that vector contain values in the range from 1 to 10 instead of 1995-2004. When working with long data, the easiest way to do this is to convert a column to a factor, then from a factor to an integrer
+```{r}
+as.integer(as.factor(dat$time))
+```
+
+2. Update the data model to reference `Ex[t]` instead of `mu`
+
+3. Add the random year effect parameter model (within a loop over time)
+```
+for(t in 1:nt){
+  alpha.t[t] ~ dnorm(0,tau.t)		## random year effect
 }
 ```
-In this chunk of code the expected value of the data X, `Ex`, varies with time, `t`, but not replicate, and thus NT is the number of years not the length of the overall dataset. In the process model `mu` is the overall 'global' mean and `alpha_t` is the deviation of a particular year from that overall mean (which is why the distribution of alphas has a mean 0). The random effect precision, `tau_t`, describes the year-to-year variability in the mean. 
 
-2. Because we're fitting this model hierarchically, `tau_t` is an unknown that is estimated from the data. Therefore, you need to add a prior on `tau_t`, the unknown year-to-year variability that we're trying to estimate. Note: If `tau_t` were simply a prescibed constant this would correspond to setting a prior on the `alpha_t`s, which would then be **fixed** effects rather than random effects
-
-3. Update the data model to reference the process model, `Ex[time[i]]`, instead of `mu`. Here we're assuming `i` is the counter in the loop over all the rows in the data and that `time` is an indexing variable used to look up the year for that particular row in the data. For example, if I loaded the raw data as `dat` this could be calculated as `time <- as.numeric(as.factor(dat$time))``
-
-4. When defining your `data` list to pass to JAGS, make sure to include the observed data, the indexing variable `time`, and any constants being used to define priors and the size of data sets (e.g. `N` and `NT`).
+4. Add a prior on `tau.t`, the year-to-year variability
 
 5. When sampling from your posteriors, make sure to track all of your unknown parameters: 
  + `mu` - global mean
+ + `sigma` - residual error
  + `alpha_t` - random year effect
- + `S` - residual precision
  + `tau_t` - year-to-year precision
-
 
 ### Task 2
 
@@ -51,9 +63,13 @@ In this chunk of code the expected value of the data X, `Ex`, varies with time, 
 Hint: once you convert the JAGS coda object to a matrix, you can use `grep` to figure out which columns contain alphas: 
 ```
 jags.mat <- as.matrix(jags.out)
-alpha <- jags.mat[,grep("alpha",colnames(jags.mat))]
+sel.a <- grep("alpha",colnames(jags.mat))
+plot(jags.out[,sel.a])
+summary(jags.out[,sel.a])
+alpha <- jags.mat[,sel.a]
+apply(alpha,2,mean)
 ```
-5.	Based on the posterior mean estimates from this model, how much of the variance in the mosquito densities is explained by the year effects? Which parameters (and from which models) do you need to look at to assess this?
+5.	Looking at the posterior estimates for tau and sigma, how much of the variance in the mosquito densities is explained by the year effects? 
 
 6. Describe how you would modify your code to add a random `replicate` effect.
 
