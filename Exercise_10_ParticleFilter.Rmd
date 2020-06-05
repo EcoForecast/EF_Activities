@@ -126,7 +126,7 @@ There are a few assumptions in developing the initial conditions
 
 ```{r}
 #### SET THE ENSEMBLE SIZE
-ne = 100 ## production run should be 200 - 5000, depending on what your computer can handle
+ne = 10 ## production run should be 200 - 5000, depending on what your computer can handle
 
 ### Initial State (Mg/ha)
 Bwood = (c(11983, 12097)+c(3668, 3799)+c(161, 192)) * 1e-6 * 10000 
