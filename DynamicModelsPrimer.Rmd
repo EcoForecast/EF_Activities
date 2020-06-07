@@ -1,0 +1,181 @@
+---
+title: "Dynamic Models Primer"
+output: html_notebook
+---
+
+## Random walk
+```{r}
+NT = 30
+x = rep(NA,NT)
+
+x[1] = 5
+for(t in 1:(NT-1)){
+  x[t+1] = x[t]
+}
+plot(x,type="b")
+```
+
+## rho*X
+```{r}
+NT = 30
+x = rep(NA,NT)
+
+rho = 0.9
+x[1] = 5
+for(t in 1:(NT-1)){
+  x[t+1] = rho*x[t]
+}
+plot(x,type='b',ylim=c(0,x[1]))
+abline(h=0,col="orange")
+```
+
+## b0 + rho*X
+```{r}
+NT = 30
+x = rep(NA,NT)
+
+b0 = 1
+rho = 0.9
+x[1] = 5
+for(t in 1:(NT-1)){
+  x[t+1] = b0 + rho*x[t]
+}
+equlib = b0/(1-rho)
+plot(x,type='b',ylim=c(x[1],equlib))
+abline(h=equlib,col="orange")
+```
+
+## rho*X + B2*X^2
+```{r}
+NT = 30
+x = rep(NA,NT)
+
+r = 0.5
+K = 10
+rho = 1+r
+b2 = -r/K
+x[1] = 5
+for(t in 1:(NT-1)){
+  x[t+1] = rho*x[t] + b2*x[t]^2
+}
+plot(x,type='b',ylim=c(x[1],K))
+abline(h=K,col="orange")
+```
+This model is equivalent to logistic growth
+
+## X + B1*Z
+```{r}
+NT = 30
+x = rep(NA,NT)
+Z = sin(1/12*(2*pi)*(0:(NT-1)))
+#plot(Z,type="b")
+
+b1 = 0.5
+x[1] = 0
+for(t in 1:(NT-1)){
+  x[t+1] = x[t] + b1*Z[t]
+}
+#equlib = b2/rho # = K
+plot(x,type='b',ylim=range(c(x,Z)))
+lines(Z,type='l',col="blue")
+abline(h=0,col="orange")
+abline(v=seq(1,30,by=6),col="orange")
+```
+
+## rho*X + B1*Z
+```{r}
+NT = 30
+x = rep(NA,NT)
+Z = sin(1/12*(2*pi)*(0:(NT-1)))
+plot(Z,type="b")
+
+rho = 0.9
+b1 = 0.5
+x[1] = 5
+for(t in 1:(NT-1)){
+  x[t+1] = rho*x[t] + b1*Z[t]
+}
+#equlib = b2/rho # = K
+plot(x,type='b')#,ylim=c(x[1],equlib))
+#abline(h=equlib,col="orange")
+```
+
+## K = a0 + a1*Z
+```{r}
+NT = 30
+Z = sin(1/12*(2*pi)*(0:(NT-1)))
+plot(Z,type="b")
+
+rho = c(0.25,0.9,1.9)
+x = K = matrix(NA,length(rho),NT)
+a0 = 5
+a1 = 3
+for(r in seq_along(rho)){
+  x[r,1] = 5
+  for(t in 1:(NT-1)){
+    K[r,t] = a0 + a1*Z[t+1]
+    x[r,t+1] = x[r,t] + rho[r]*x[r,t]*(1-x[r,t]/K[r,t])
+  }
+}
+plot(x[1,],type='l',ylim=range(c(x,Z)))
+lines(x[2,],col=2)
+lines(x[3,],col=3)
+lines(Z,col="blue")
+#lines(K[1,],col="purple")
+abline(h=0,col="orange")
+abline(v=seq(1,30,by=6),col="orange")
+legend("topright",legend=c(rho,"Z"),lwd=2,col=c(1:3,"blue"))
+
+for(i in seq_along(rho)){
+  plot(Z,x[i,],col=i,asp=1)
+  abline(lm(x[i,]~Z),lty=2)
+}
+```
+
+## delta Z
+```{r}
+NT = 30
+Z = sin(1/12*(2*pi)*(0:(NT-1)))
+
+rho = c(0.25,0.6,0.95)
+x = matrix(NA,length(rho),NT)
+b1 = 0.5
+for(r in seq_along(rho)){
+  x[r,1] = 0
+  for(t in 1:(NT-1)){
+    x[r,t+1] = rho[r]*x[r,t] + b1*(Z[t+1]-Z[t])
+  }
+}
+plot(x[1,],type='l',ylim=range(c(x,Z)))
+lines(x[2,],col=2)
+lines(x[3,],col=3)
+lines(Z,col="blue")
+#lines(K[1,],col="purple")
+abline(h=0,col="orange")
+abline(v=seq(1,30,by=6),col="orange")
+legend("topright",legend=c(rho,"Z"),lwd=2,col=c(1:3,"blue"))
+
+for(i in seq_along(rho)){
+  plot(Z,x[i,],col=i,asp=1)
+  abline(lm(x[i,]~Z),lty=2)
+}
+```
+
+## b0 + rho*X + rho2*X[t-1]  AR(2)
+```{r}
+NT = 30
+b0 = 1
+rho = 0.7
+rho2 = c(0.2,-0.2)
+x = matrix(NA,length(rho2),NT)
+for(r in seq_along(rho2)){
+  x[r,1] = 5
+  for(t in 1:(NT-1)){
+    if(t>1){lag = rho2[r]*x[r,t-1]} else {lag=0}
+    x[r,t+1] = b0 + rho*x[r,t] + lag
+  }
+}
+plot(x[1,],type='l',ylim=range(x))
+lines(x[2,],col=2)
+legend("topright",legend=c(rho2),lwd=2,col=c(1:2))
+```
