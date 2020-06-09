@@ -1,0 +1,250 @@
+---
+title: "NP&ML Forecasting - Worked Example"
+output: html_notebook
+---
+
+
+```{r}
+sessionInfo()
+```
+
+If you have an existing installation of rEDM other than version 0.7.1, use the following chunk to install 0.7.1 in an alternative library location. This will require having the package `withr` and `devtools`.
+
+```{r,eval=FALSE}
+withr::with_libpaths(
+  new = "/Library/Frameworks/R.framework/Versions/3.6/Resources/lib-dev/",
+code = devtools::install_github("SugiharaLab/rEDM@v0.7.1")
+)
+```
+
+Otherwise install without the call to with_libpaths(). This does not require `withr` but does require `devtools`.
+
+```{r,eval=FALSE}
+devtools::install_github("SugiharaLab/rEDM@v0.7.1")
+```
+
+Load `rEDM` as well as `tidyverse`. If you did not use an alternative library path, you can use the commented out line instead.
+
+```{r}
+library("rEDM",lib.loc = "/Library/Frameworks/R.framework/Versions/3.6/Resources/lib-dev/")
+# library("rEDM")
+
+library("tidyverse")
+```
+
+Load the data. The database file has several different variables included, so we load into an environment first to keep our workspace tidy, then select out the recruitment matrix R, spawning stock biomass matrix SSB, and taxonomic group vector taxGroup.
+
+The ".Rdata" database was originally downloaded from https://zenodo.org/:
+
+RAM Legacy Stock Assessment Database. (2020). RAM Legacy Stock Assessment Database v4.491 (Version v4.491) [Data set]. Zenodo. http://doi.org/10.5281/zenodo.3676088
+
+```{r}
+RAMCore <- new.env()
+load("./RAMCore[asmt][v4.491].rdata",envir=RAMCore)
+
+df_R <- as.data.frame(RAMCore$R)
+df_SSB <- as.data.frame(RAMCore$SSB)
+
+taxGroup <- as.vector(RAMCore$taxGroup)
+```
+
+For this example, we work on a subset of the data with at least 50 years of stock and recruitment data, and further restrict to "forage fish" stocks.
+
+```{r}
+n_R <- summarise_all(df_R,~sum(is.finite(.)))
+n_R <- as.vector(n_R)
+
+n_SSB <- summarise_all(df_SSB,~sum(is.finite(.)))
+n_SSB <- as.vector(n_SSB)
+
+
+
+I_forage <- which( (n_R >= 50) & (n_SSB >= 50) & (taxGroup == "forage fish") )
+stockID_forage <- names(df_SSB)[I_forage]
+```
+
+This selects out several herring stocks from around the world, Atlantic menhaden, and Japanese pilchard.
+
+Finally we want to put the data into a "long" data format, where there is a single column for SSB and R, and the different stocks are designated by a categorical column variable, "stockID". This lets our analysis play nicely with `purrr`, `ggplot2`, and other `tidyverse` utilities.
+
+```{r}
+df_RAMcore_forage <- full_join(
+ df_R[,I_forage] %>%
+  rownames_to_column(var = "year") %>%
+  pivot_longer(cols= -year,names_to="stockID",values_to="R"),
+  df_SSB[,I_forage]%>%
+  rownames_to_column(var = "year") %>%
+  pivot_longer(cols= -year,names_to="stockID",values_to="SSB"),
+ by=c("year","stockID")
+) %>%
+  mutate(year=as.numeric(year)) %>%
+  arrange(stockID)
+```
+
+Looking across the stocks, we can take a first look at the data.
+
+```{r}
+ggplot(df_RAMcore_forage,aes(x=SSB,y=R)) +
+  geom_point() + facet_wrap(~stockID,scales = "free")
+
+ggplot(df_RAMcore_forage,aes(x=year,y=SSB)) +
+  geom_line() + facet_wrap(~stockID,scales = "free")
+
+ggplot(df_RAMcore_forage,aes(x=year,y=R)) +
+  geom_line() + facet_wrap(~stockID,scales = "free")
+```
+
+Initially, we focus on a single stock, "HERRSOG". Filtering down the data.frame for this single stock is easily accomplished with `dplyr::filter()`.
+
+```{r}
+df_HERR <- df_RAMcore_forage %>%
+  filter(stockID == "HERRSOG") %>%
+  filter(complete.cases(.)) %>%
+  select(-stockID)
+```
+
+We first run simplex projection from the rEDM package and examine forecast skill as a function of embedding dimension.
+
+```{r}
+out_simplex_HERR_R <- simplex(df_HERR$R)
+
+ggplot(out_simplex_HERR_R,aes(x=E)) +
+  geom_line(aes(y=rho,color="simplex")) +
+  geom_line(aes(y=const_pred_rho,color="naive"))
+
+ggplot(out_simplex_HERR_R,aes(x=E)) +
+  geom_line(aes(y=mae,color="simplex")) +
+  geom_line(aes(y=const_pred_mae,color="naive"))
+```
+
+We can do the same computation with SSB.
+
+```{r}
+out_simplex_HERR_SSB <- simplex(df_HERR$SSB)
+
+ggplot(out_simplex_HERR_SSB,aes(x=E)) +
+  geom_line(aes(y=rho,color="simplex")) +
+  geom_line(aes(y=const_pred_rho,color="naive"))
+```
+
+However, the simplex predictability of SSB is not distinguishable from the predictability due solely to the serial autocorrelation of the time series. For time series with strong autocorrelation, it can be useful to look at larger time lags than a single time step, so we change the "tau" and "tp" arguments from the default values of "1" to "2".
+
+```{r}
+out_simplex_HERR_SSB_try2 <- simplex(df_HERR$SSB,tau=2,tp=2)
+
+ggplot(out_simplex_HERR_SSB_try2,aes(x=E)) +
+  geom_line(aes(y=rho,color="simplex")) +
+  geom_line(aes(y=const_pred_rho,color="naive"))
+```
+
+Now we see greater simplex predictability with a 2-year time step than the lag-2 autocorrelation. However, we are only using leave-one-out cross-validation, and that means that the library vectors corresponding to (t-1) and (t+1) are allowed to be used for prediction. To be more conservative, we set "exclusion_radius" to be tau-1.
+
+```{r}
+out_simplex_HERR_SSB_try2 <- simplex(df_HERR$SSB,tau=2,tp=2,exclusion_radius = 1)
+
+ggplot(out_simplex_HERR_SSB_try2,aes(x=E)) +
+  geom_line(aes(y=rho,color="simplex")) +
+  geom_line(aes(y=const_pred_rho,color="naive"))
+```
+
+The predictability beyond the intertia in the system disappears when we make this change.
+
+Next we apply convergent cross-mapping, `ccm()`.
+
+```{r}
+out_ccm_HERR_R_to_SSB <- ccm(df_HERR,
+                             target_column = "SSB",
+                             lib_column = "R",
+                             E=9,
+                             random_libs = T,
+                             replace= F)
+
+summary_ccm_HERR_R_to_SSB <- ccm_means(out_ccm_HERR_R_to_SSB)
+
+ggplot(summary_ccm_HERR_R_to_SSB,aes(x=lib_size,y=rho)) +
+  geom_line()
+```
+
+CCM indicates that HERRSOG recruitment can predict SSB, and thus that there is a causal signature of SSB embedded in the R time series. However, these time series both have serial autocorrelation, and thus to assess significance it is best to use a surrogate approach. First we generate a single surrogate time series using the `rEDM` function `make_surrogate_ebisuzaki`.
+
+```{r}
+set.seed(54321)
+
+v_HERR_surr_R <- make_surrogate_ebisuzaki(df_HERR$R,num_surr = 1)
+
+df_HERR_add_surr_R <- cbind(df_HERR,
+                            data.frame(R_surr = v_HERR_surr_R)
+)
+
+ggplot(df_HERR_add_surr_R,aes(x=year)) + geom_line(aes(y=R,color="true")) + geom_line(aes(y=R_surr,color="surr"))
+```
+
+We run the same CCM calculation but on the surrogate R time series now, and compare to the CCM measured with true R.
+
+```{r}
+out_ccm_HERR_surr_to_SSB <- ccm(df_HERR_add_surr_R,
+                             target_column = "SSB",
+                             lib_column = "R_surr",
+                             E=9,
+                             random_libs = T,
+                             replace= F)
+
+summary_ccm_HERR_surr_to_SSB <- ccm_means(out_ccm_HERR_surr_to_SSB)
+
+ggplot(summary_ccm_HERR_R_to_SSB,aes(x=lib_size,y=rho)) +
+  geom_line(aes(color="true")) +
+  geom_line(data=summary_ccm_HERR_surr_to_SSB,aes(color="surr"))
+```
+
+To generate an estimation of significance we must repeat this for many randomly generated surrogates, so we write a simple function that does the analysis a single time, then use `map_df()` to repeat it. `map()` is the `purrr` variation on the base R `apply()`, and `map_df()` automatically concatenates results into a single data.frame.
+
+```{r}
+set.seed(54321)
+
+do_one_surrogate_R <- function() {
+  
+  v_HERR_surr_R <- make_surrogate_ebisuzaki(df_HERR$R,num_surr = 1)
+  
+  df_HERR_add_surr_R <- cbind(df_HERR,
+                              data.frame(R_surr = v_HERR_surr_R)
+  )
+  
+  out_ccm <- ccm(df_HERR_add_surr_R,
+                 target_column = "SSB",
+                 lib_column = "R_surr",
+                 E=6,
+                 random_libs = T,
+                 replace= F,
+                 silent=T)
+  
+  summary_ccm <- ccm_means(out_ccm)
+  return(summary_ccm)
+  
+}
+
+summary_ccm_HERR_surr_to_SSB <- map_df(1:100,~do_one_surrogate_R())
+
+ggplot(summary_ccm_HERR_R_to_SSB,aes(x=lib_size,y=rho)) +
+  geom_line(aes(color="true")) +
+  geom_boxplot(data=summary_ccm_HERR_surr_to_SSB,aes(group=lib_size,color="surr"))
+```
+
+Returning to the larger set of forage fish we identified, we can use `map()` in a similar way, but now repeating the univariate simplex analysis on each of the forage fish stocks.
+
+```{r}
+out_simplex_forage <- map_df(
+  unique(df_RAMcore_forage$stockID), 
+  function(stockID_i){
+    x <- df_RAMcore_forage %>% filter(stockID==stockID_i) %>% pull(R)
+    out <- simplex(x) %>%
+      mutate(stockID = stockID_i)
+  }
+)
+
+out_simplex_forage %>% ggplot(aes(x=E,y=rho)) + 
+  geom_line(aes(color="simplex")) + 
+  geom_line(aes(y=const_pred_rho,color="naive")) +
+  facet_wrap(~stockID)
+```
+
+The same approach can be used to replicate CCM calculations, and is left as an exercise.
