@@ -130,7 +130,7 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
   for(t in 1:nt){
 
     ## Analysis step: combine previous forecast with observed data
-    KA <- KalmanAnalysis(mu.f[,t],P.f[,,t],Y[,t],R,I)
+    KA <- KalmanAnalysis(mu.f[,t],P.f[,,t],Y[,t],R,I,I)
     mu.a[,t] <- KA$mu.a
     P.a[,,t] <- KA$P.a
     
@@ -149,13 +149,13 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
 ##' @param  Y    = observations, with missing values as NAs) (vector)
 ##' @param  R    = observation error covariance (matrix)
 ##' @param  H    = observation matrix (maps observations to states)
-KalmanAnalysis <- function(mu.f,P.f,Y,R,H){
+KalmanAnalysis <- function(mu.f,P.f,Y,R,H,I){
   obs = !is.na(Y) ## which Y's were observed?
   if(any(obs)){
     H <- H[obs,]                                              ## observation matrix
     K <- P.f %*% t(H) %*% solve(H%*%P.f%*%t(H) + R[obs,obs])  ## Kalman gain
     mu.a <- mu.f + K%*%(Y[obs] - H %*% mu.f)                  ## update mean
-    P.a <- (1-K %*% H)*P.f                                    ## update covariance
+    P.a <- (I - K %*% H)%*%P.f                                    ## update covariance
   } else {
     ##if there's no data, the posterior is the prior
     mu.a = mu.f
@@ -197,6 +197,8 @@ R = diag(tau_obs,nstates)
 ## prior on first step, initialize with long-term mean and covariance
 mu0 = apply(Y,1,mean,na.rm=TRUE)
 P0 = cov(t(Y),use="pairwise.complete.obs")
+#w <- P0*0+0.25 + diag(0.75,dim(P0)) ## iptional: downweight covariances in IC
+#P0 = P0*w 
 
 ## Run Kalman Filter
 KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
