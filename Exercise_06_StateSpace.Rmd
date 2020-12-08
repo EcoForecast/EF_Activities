@@ -9,13 +9,13 @@ For this activity we will write all the code, process all the data, and visualiz
 library(rjags)
 #library(rnoaa)
 library(daymetr)
-devtools::install_github("EcoForecast/ecoforecastR")
+devtools::install_github("EcoForecast/ecoforecastR",force=TRUE)
 ```
 
 Next we'll want to grab the data we want to analyze. For this example we'll use the Google Flu Trends data for the state of Massachusetts, which we saw how to pull directly off the web in Activity 3.
 
 ```{r}
-gflu = read.csv("http://www.google.org/flutrends/about/data/flu/us/data.txt",skip=11)
+gflu = read.csv("data/gflu_data.txt",skip=11)
 time = as.Date(gflu$Date)
 y = gflu$Massachusetts
 plot(time,y,type='l',ylab="Flu Index",lwd=2,log='y')

@@ -15,7 +15,7 @@ To begin, let's load and plot the flu data for New England.
 
 ```{r}
 ## load the Google flu data & select states
-gflu = read.csv("http://www.google.org/flutrends/about/data/flu/us/data.txt",skip=11)
+gflu = read.csv("data/gflu_data.txt",skip=11)
 time = as.Date(gflu$Date)
 states = c("Massachusetts","Connecticut","Rhode.Island","New.Hampshire","Vermont","Maine")
 nstates = length(states)
@@ -130,7 +130,7 @@ KalmanFilter <- function(M,mu0,P0,Q,R,Y){
   for(t in 1:nt){
 
     ## Analysis step: combine previous forecast with observed data
-    KA <- KalmanAnalysis(mu.f[,t],P.f[,,t],Y[,t],R,I,I)
+    KA <- KalmanAnalysis(mu.f[,t],P.f[,,t],Y[,t],R,H=I,I)
     mu.a[,t] <- KA$mu.a
     P.a[,,t] <- KA$P.a
     
