@@ -1,7 +1,6 @@
 ---
 title: 'Activity 1 - R Primer'
 author: "Michael Dietze"
-date: "August 25, 2014"
 output: html_document
 ---
 
@@ -11,11 +10,9 @@ The objective of today's hands-on activity is to provide a basic overview of R. 
 
 ## Assignment
 
-For this activity you will turn in a Rmd file (prefered) or R Script file that shows your work. If you turn in a Rmd file, you should check that the code "knits" before submitting!
+For this activity you will turn in a Rmd file that contains both code and written answers. 
 
-## About R
-
-The R software we are using this semester is open-source statistical software that has gained rapid popularity because of its power and flexibility.  In addition, there are a large number of “packages” for R that have been written by users and are freely downloadable from [CRAN](http://cran.us.r-project.org/) (Comprehensive R Archive Network).  Individual packages do everything from allowing R to interface with supercomputers to solving sudoku puzzles.  They contain most every classical statistical test you're likely to come across as well as interfaces that allow R to interact with a large number of other programs and software libraries.  Unlike many pieces of software you may be familiar with, R is a scripting language.  Usually you will be using R “interactively” which means that the basic mode of operation is to type commands at a command prompt and have it spit back a result, which you'll often want to cut-and-paste elsewhere.  R can also be run in “batch” mode, whereby a file containing a list of R commands is run all at once.  This mode is particularly useful for large analyses that take a long time to run because batch jobs can be submitted to computer clusters.
+**Always check that the Rmd file "knits" before submitting!**
 
 ## Getting this exercise
 
@@ -58,6 +55,93 @@ Next, to be able to compile this document into HTML or any other format you will
 
 Finally, go to File > Open File and open this file, "Exercise_01_Rprimer.Rmd" and then click "Knit HTML" in top left window's menu bar.
 
+## Knitting Rmarkdown documents
+
+To be able to compile Rmd into HTML or any other format you will need to install the "knitr" library. 
+
+If you do not already see a button at the top of the editor window that says "Knit" with an icon of a blue ball of yarn next to it, you will need to install this package. 
+
+![](http://test-pecan.bu.edu/shiny/GE375/Knit_button.png){width=100px}
+
+- From the "Packages" tab in the bottom right pane click on "Install"
+- Enter knitr as the package name, and then click Install
+- From the main menu bar, select Session > Restart R
+- The Knit button should now be visible
+
+If you do have the Knit button, now you should click it. This will create a new file, that has the same name as the Rmd file, except it ends in `.html`. Rstudio should automatically preview this file for you. 
+You will see that it contains exactly the same content as the Rmd file, but formatted nicely in to an east to read document. You are free to keep reading the assignment in either the Rmd file or the html file, but **you can only edit the Rmd file**. When you edit the Rmd file, your changes will not show up in the html file until you select Knit. **Kitting is the best way to check that all your code runs.**
+
+## Formatting your assignments
+
+For this activity you will turn in an Rmd file that shows your work.
+All Rmd documents should start with a section that looks something like this:
+
+```
+---
+title: "My Lab"
+author: "My Name"
+output: html_document
+---
+```
+Make sure to give your file a title and put ***your name*** in the author field. Notice that the title and author need to be in quotes. 
+
+In this document the `output` section is more complicated because it also contains the code for the table of contents. You don't need to edit it. 
+
+
+### Code Answers
+
+All your code should be placed into what we call "R chunks."
+
+In the editor pane you can recognize them because: 
+
+They start with: ` ```{r} ` (the `{r}` is very important because it's what makes it specifically an R chunk, as opposed to a different type of code chunk)
+
+They end with ` ``` `
+
+R code chunks also have in the top right hand corner three important icons (from left to right)
+![](http://test-pecan.bu.edu/shiny/GE375/R_chunk.png){width=100px}
+
+1. Optional Settings. Once you get more comfortable using R, they can be useful.
+2. Run the code in all chunks up to this one.
+3. Run the code in this chunk.
+
+Below is an R chunk. Try hitting the play button. 
+You will see that the output appears below the code chunk. 
+```{r}
+1 + 2
+```
+
+### Written Answers 
+
+Any verbal answers should be written in the space between code chunks. You can also include some of your written responses as commented code within the R chunk. Comments start with `#` and are not evaluated by R. Putting comments in code is very useful for remembering what you did when you come back to a file later.
+
+There are multiple ways to format written answers and Rmarkdown is very versatile. What you do comes down to personal preference. 
+
+**Always check that the Rmd file "knits" before submitting!**
+
+### Example of a properly answered question 
+
+1. **If there are 7 cats and 5 dogs, how many animals are there in total?**
+
+```{r}
+cats = 7 # there are 7 cats
+dogs = 5 # there are 5 dogs
+animals = cats + dogs # the sum of cats and dogs gives us the total animals
+
+animals # this will print out the number of animals
+```
+From the calculations above, we can see that there are 12 animals in total. 
+
+You can also use `` `r `` to reference calculations within your text , which has the advantage that you don't need to update your text if specific numbers change. For example:
+
+We can see that there are `r animals` animals in total.
+
+# R basics
+
+## About R
+
+The R software we are using this semester is open-source statistical software that has gained rapid popularity because of its power and flexibility.  In addition, there are a large number of “packages” for R that have been written by users and are freely downloadable from [CRAN](http://cran.us.r-project.org/) (Comprehensive R Archive Network).  Individual packages do everything from allowing R to interface with supercomputers to solving sudoku puzzles.  They contain most every classical statistical test you're likely to come across as well as interfaces that allow R to interact with a large number of other programs and software libraries.  Unlike many pieces of software you may be familiar with, R is a scripting language.  Usually you will be using R “interactively” which means that the basic mode of operation is to type commands at a command prompt and have it spit back a result, which you'll often want to cut-and-paste elsewhere.  R can also be run in “batch” mode, whereby a file containing a list of R commands is run all at once.  This mode is particularly useful for large analyses that take a long time to run because batch jobs can be submitted to computer clusters.
+
 ## What R has to offer
 
 Through your web-browser go to http://www.r-project.org.  
@@ -75,90 +159,240 @@ Through your web-browser go to http://www.r-project.org.
 Lets see how R does some basic arithmetic. Note that in the examples below that a pound sign (#) indicates a comment in the code. Everything after a # is not read by R and is just there for the benefit of the person reading the code (so you don’t have to type it all in). Within the Console window (bottom left) type the following at the command prompt symbol '>':
 
 ```
-3+12  		    ## addition
+3 + 12  		  ## addition
 5 - pi			  ## subtraction
-2*8			      ## multiplication
-14/5			    ## division
+2 * 8			    ## multiplication
+14 / 5			  ## division
 14 %/% 5		  ## integer division
 14 %% 5		    ## modulus (a.k.a. remainder)
-sqrt(25)		  ## square root
-z = 5			    ## assignment to a variable
-z			        ## value of a variable
-y = sqrt(36)	## square root
-y
 ```
  
 The window should show
 
 ```{r, echo=TRUE}
-3+12    	    ## addition
+3 + 12    	  ## addition
 5 - pi			  ## subtraction
-2*8			      ## multiplication
-14/5			    ## division
+2 * 8			    ## multiplication
+14 / 5			  ## division
 14 %/% 5		  ## integer division
 14 %% 5		    ## modulus (a.k.a. remainder)
-sqrt(25)		  ## square root
-z = 5			    ## assignment to a variable
-z			        ## value of a variable
-y = sqrt(36)	## square root
-y
 ```
+
+Note: A pound sign (#) indicates a comment in the code. Everything after a # is not read by R and is just there for the benefit of the person reading the code (so you don't have to type it all in). 
   
-The number [1] before the answers just means that this item is the first element of a vector (vectors can be thought of as a collection of related values, such as a column in a data table). From these examples we can see a few things about R. First is that it knows the value of common constants (e.g. π) and can use them like numbers. Second, that we can assign both constants and the results of functions to variables and we can see the value of a variable by entering it at the command prompt. This also demonstrates “sqrt”, the square root function, and that values are passed to functions within parenthesis.  Typically, values passed to function are referred to as the arguments of the functions. Make sure you understand what each operator (+, -, *, /, %%, %/%) does before you proceed.  Some of the other common mathematical operators in R that you should try running are:
+The number [1] before the answers just means that this item is the first element of a vector (vectors can be thought of as a collection of related values, such as a column in a data table). We can also see that R knows the value of common constants (e.g. π) and can use them like numbers. 
+
+Make sure you understand what each operator (+, -, *, /, %%, %/%) does before you proceed. See this link https://www.tutorialspoint.com/r/r_operators.htm for more details. 
+
+## Functions
+
+R functions can be thought of as small programs that take in input values, referred to as the function "arguments," and perform certain tasks. These tasks may be to calculate a statistical value or to create a plot. 
+
+You will recognize R functions because they have a name that is followed by a set of parentheses that contain their arguments.  In R there are many functions that can take more than one argument, and these arguments are always separated by commas.
+
+For example there is a function in R for taking a square root: `sqrt()` 
+
+```{r}
+sqrt(25)  ## square root
+```
+
+There is a function for taking the factorial of a number: `factorial()`
+```{r}
+factorial(10) ## factorial
+
+# This is much easier than:
+10*9*8*7*6*5*4*3*2*1
+```
+
+Some of the other common mathematical operators in R that you should try running are:
+
+### Exponentials and Logarithms 
 
 ```
-10^2  			        ## power
-exp(1)				      ## exponential
-log(10)			        ## natural logarithm (i.e. ln)
-log10(10)			      ## log base 10
-log2(10)            ## log base 2
-sin(pi/2)			      ## sine
-cos(pi)			        ## cosine
-tan(pi/4)			      ## tangent
-asin(0.5)			      ## arc-sine
-acos(0.5)			      ## arc-cosine
-atan(1)*180/pi			## arc-tangent
-atan2(-1,-1)*180/pi	## arc-tangent (alternate version)
-factorial(10)			  ## factorial
-``` 
-Note that the atan2 function takes TWO arguments. In R there are many functions that can take more than one argument, and these arguments are always separated by commas. To get information on a function in R you can precede the function name with a ?.  So if we wanted to look up what the two arguments of the atan2 function are, we could type
+exp(10)   ## exponential function exp(1) == 2.718282... (Euler's number, e)
+log(10)   ## natural logarithm (i.e. ln)
+log10(10) ## log base 10
+log2(10)  ## log base 2
+```
+
+### Trigonometry 
+
+```
+sin(pi/2)           ## sine
+cos(pi)             ## cosine
+tan(pi/4)           ## tangent
+asin(0.5)           ## arc-sine
+acos(0.5)           ## arc-cosine
+atan(1)*180/pi      ## arc-tangent
+atan2(-1,-1)*180/pi ## arc-tangent (alternate version)
+```
+Note that the atan2 function takes TWO arguments. 
+
+### Function Arguments
+
+In later labs we will learn about writing functions. 
+
+For now, it is important that you understand the concept of **function arguments**. 
+
+If we specifically wanted to look up the arguments for `atan2()`, we can type
+
+```{r}
+args(atan2)
+```
+
+You may notice that the arguments have names: "x" and "y", but we ran the function `atan2(1,2)` without ever using these letters! 
+
+```{r}
+atan2(1,2)
+```
+
+This is because R is smart enough to do **"argument matching"** by **position** and automatically knows that since the documentation says `atan2(y,x)`, `y = 1` and `x = 2`.
+
+Argument matching by position is convenient, but sometimes is unclear. It requires that you always remember the order of all the arguments. This can become very difficult! It is good practice to be **explicit** and always name your arguments. Added bonus: when you name your arguments, order no longer matters! 
+
+```{r}
+atan2(y = 1, x = 2) 
+# Here I change the ORDER of the arguments but they are named!
+# So the result stays the same 
+atan2(x = 2, y = 1)  
+```
+
+## Function Help
+
+To get even more information about a function in R you can precede the function name with a ?.  So if we wanted to learn more about `atan2`, we could type
 
 ```
 ?atan2
 ```
  
 The rest of this activity will often list the names of functions you might find useful, and ? can be used to find out about the syntax of these functions.
+
 If on the other hand you are looking for a command (e.g. because you've forgotten its name) you can use help.search. For example:
 
 ```
-help.search("mantel")
+help.search("arctan")
 ```
  
 This will return a list of relevant functions with the parenthesis after the name indicating what package it is in.  help.search will only search packages you have already installed, not all the ones that exist -- you'll want to use CRAN to find new packages.  
 
 Within RStudio you can also search for help with commands in the **Help** tab in the bottom-right window. This search window combines the functionality of both ? and help.search.
 
-Packages are installed using the ‘Install Packages’ button under the “Packages” tab or by using 'install.packages' function on the command line. Packages are loaded by clicking the check box next to a packages name or by using the 'library' function at the command line.  Packages only need to be installed once but need to be loaded every time you start R (hint: you'll probably want to list library commands near the top of your script files [described below])
+To get new functions in packages that you do not currently have installed, you will have to look up the package you want to use and then install it. Packages are installed using the ‘Install Packages’ button under the “Packages” tab or by using 'install.packages' function on the command line. Packages are loaded by clicking the check box next to a packages name or by using the 'library' function at the command line.  Packages only need to be installed once but need to be loaded every time you start R (hint: you'll probably want to list library commands near the top of your script files [described below])
 
-### Questions:
+### Auto-complete is your friend!
 
+RStudio has the capacity to auto-complete function names, function arguments, and file names. 
+
+For example, if you type ‘read.t’ and then hit TAB, RStudio will finish typing read.table and it will also show what information you can specify for the read.table function.  
+
+![](http://test-pecan.bu.edu/shiny/GE375/auto_complete_1.png){width=500px}
+
+If you type read.table( and then hit TAB, RStudio will allow you to select the function argument that you want to fill in. 
+
+![](http://test-pecan.bu.edu/shiny/GE375/auto_complete_2.png){width=500px}
+
+If you type read.table(“ and then hit TAB, RStudio will show you the files in your current working directory and allow you to select one. 
+
+![](http://test-pecan.bu.edu/shiny/GE375/auto_complete_3.png){width=300px}
+
+If there are a lot of files in the directory, you can start typing the file name you want and then hit TAB again and RStudio will limit what it shows to just those files that match what you’ve typed so far.  
+
+![](http://test-pecan.bu.edu/shiny/GE375/auto_complete_4.png){width=300px}
+
+## ★ Questions (1-3)
+
+1. **Evaluate the following:**
+   - a.	ln(1)
+   - b.	ln(0)
+   - c.	ln(e)
+   - d.	ln(-5)
+   - e.	-ln(5)
+   - f.	ln(1/5)
+   - g.	How does R represent when the output of a function is not a number?
+
+2.	**What is the difference between log and log10?**  (Hint: use help!)
+
+3.	**Pythagorean theorem**
+  - a.	Given a right triangle with sides `a` and `b`, write a few lines of code that will calculate the length of the hypotenuse. 
+  - b.	Try out your code with `a=5` and `b=13`.
+
+
+## Sequences
+
+One of the most common tasks in programming is generating a sequence of numbers. 
+
+There are two different ways to make sequences in R and it is important not to get them confused:
+
+```{r}
+# The first way generates a vector of ten integer values from 1 to 10 using a :
+x1 = 1:10
+x1
+
+# The second way generates a vector of ten values from 1 to 10 using the seq() function
+x2 = seq(from = 1, to = 10, by = 1)
+x2
 ```
-1.	Evaluate the following:
-   a.	ln(1)
-   b.	ln(0)
-   c.	ln(e)
-   d.	ln(-5)
-   e.	-ln(5)
-   f.	ln(1/5)
-g.	How does R represent when the output of a function is not a number?
-2.	Why are we multiplying the results of the atan and atan2 functions by 180/pi? 
-3.	How is the atan2 function different from the atan function? 
-4.	What is the difference between log and log10?
-5.	Given a right triangle with sides x = 5 and y = 13, calculate the length of the hypotenuse (show code)
-6.	If a population starts with a density of 5 individuals/hectare and grows exponentially at a growth rate r=0.04/year, what is the size of the population in π years? (show code)
-7.	Subtract the month you were born from the remainder left after you divide the year you were born by the day you were born (show code)
+
+Why have two different ways to do the same thing?
+
+Because the `seq()` function is much more powerful than `:`. 
+
+`:` can only do steps of 1 (i.e. integers), but with `seq()`, you can have steps of any size:
+
+```{r}
+# Here we set the step size of .5
+seq(from = 1, to = 10, by = 0.5) 
+# Instead of specifying step size, we specify the length of the sequence 
+# and get the same thing!
+seq(from = 1, to = 10, length.out = 19) 
+```
+ 
+In all cases you need to provide the first value in a sequence, and after that you need to provide some combination of step size (by), length (length.out), and finishing value. This is a good example of why using argument names is important! 
+
+```{r}
+# The function rep() repeats a value a specified number of times
+rep(1,10)
 ```
 
+## Vector math
+
+Imagine we had a vector x = 1:10 and we wanted to add 5 to every value. We could do this manually, one element at a time, but R also allows us to do this more simply as
+ 
+```{r}
+x = 1:10
+x + 5
+```
+
+which adds 5 to each element. We can also multiply, divide, and subtract with vectors, and the operations are applied to each element
+
+```{r}
+5*x
+x/5
+x-5
+```
+
+Furthermore, if we have two or more vectors, and we perform mathematical operations on them, the operations are performed element by element
+
+```{r}
+y = 10:1
+x*y
+x-y
+x/y
+```
+
+Most functions in R can also be applied to vectors of data, not just individual data points.  Indeed, many only make sense when applied to vectors, such as the following that calculate sums, first differences, and cumulative sums.
+ 
+```{r}
+sum(1:10)  	## sum up all values in a vector
+diff(1:10)		## calculate the differences between adjacent values in a vector 
+cumsum(1:10)		## cumulative sum of values in a vector
+prod(1:10)		## product of values in a vector
+```
+ 
+## ★ Questions (4-5)
+
+4.	**Generate a sequence of even numbers from -6 to 6**
+5.	**Generate a sequence of values from -4.8 to -3.43 that is length 8** (show code)
 
 ## R Scripts
 
@@ -178,42 +412,130 @@ x
 #y
 ```
  
-Here the result, a vector of ten values from 1 to 10, demonstrates the basic R syntax for creating a sequence of numbers.  This example also demonstrates that the comment character '#' also works in scripts.  Putting comments in scripts is very useful for remembering what you did when you come back to a file later.  For the rest of this activity I'll use boxes to indicate text to be typed in and run, and will use > to indicate that it should be typed on the command prompt and no prompt to indicate that you probably want to type it in a script instead.
-	There are a number of other ways of generating useful sequences besides the ':' syntax
+This example also demonstrates that the comment character '#' also works in scripts.  Putting comments in scripts is very useful for remembering what you did when you come back to a file later.  For the rest of this activity we'll use boxes to indicate text to be typed in and run, and will use > to indicate that it should be typed on the command prompt and no prompt to indicate that you probably want to type it in a script instead.
+
+Finally, it is useful to understand the difference between R scripts (.R files) and R Markdown (.Rmd files). Scripts are older and just contain code and '#' comments. They are very useful for defining functions and running automated analyses. R Markdown is a newer technology that combines code with text and rendered figures, tables, etc. R Markdown is particularly useful for reproducible research (e.g. analyses contained within a paper or report), for labs and tutorials -- basically any time you want to combine text with code to produce some sort of report or webpage.
+
+# Data!
+
+## R Data Types
+
+There are many different types of data, and it is important that you not only understand the type data you are using, but that you clearly define the data type in R so that R can properly process it. 
+
+Below are all the basic data types in R:
+
+- **Numeric** (numbers with decimals): `12.3, 5, 999`
+
+- **Integers** (whole numbers): `0, 2, 100`
+
+- **Character** (sometimes called strings, always surrounded in quotes - either single or double): `"hello", 'a', "23.4"` Notice that once numbers are inside quotation marks, they become characters and cannot be used for computation.
+
+- **Logical** (represents true and false, yes and no, 1 and 0, also called boolean): `TRUE, FALSE` Notice that these are NOT in quotes. 
+
+- **Factors** (a more complex data type that helps categorize data and store it as levels)
+
+## R Data Objects 
+
+![](http://test-pecan.bu.edu/shiny/GE375/Data_Objects.png){width=600px}
+
+We have already seen how to create scalars, as well as vectors that contain simple sequences. More generally you can create vectors using the `c( )` function that “combines” scalars of the same data type into a vector. You use it like this:
  
 ```{r}
-seq(1,10,by=0.5)
-seq(1,by=0.5,length=10)
-rep(1,10)
-x=seq(0,3,by=0.01)
+x=c(1,7)
+x
+y=c(10:15,3,9)
+y
+z = c(TRUE,FALSE,TRUE)
+z
 ```
- 
-In all cases you need to provide the first value in a sequence (the first argument to seq and rep), and after that you need to provide some combination of step size (by), length, and finishing value. 
-Most functions in R can be applied to vectors of data, not just individual data points.  Indeed, many only make sense when applied to vectors, such as the following that calculate sums, first differences, and cumulative sums.
- 
+
+You can also use `c` to combine vectors
 ```{r}
-sum(1:10)  	## sum up all values in a vector
-diff(1:10)		## calculate the differences between adjacent values in a vector 
-cumsum(1:10)		## cumulative sum of values in a vector
-prod(1:10)		## product of values in a vector
+c(x,y)
+```
+
+But if you try to combine data of different types, R will try to convert them all to a single type (which isn't always what you want to happen)
+```{r}
+c(x,y,z)
 ```
  
+We can also combine vectors to build up matrices and data frames by “binding” them together either are rows or as columns
+
+```{r}
+p = 1:10
+q = 10:1
+cols = cbind(p,q)  	# bind as columns
+cols
+rows = rbind(q,p)		# bind as rows
+rows
 ```
-Questions:
-8.	Describe the difference in output between sum and cumsum.
-9.	Generate a sequence of even numbers from -6 to 6
-10.	Generate a sequence of values from -4.8 to -3.43 that is length 8 (show code)
-a.	What is the difference between values in this sequence?
-b.	What is the sum of the exponential of this sequence?
-11.	Calculate a second difference [a difference of differences] for the sequence 1:10 (show code)
+
+`cbind` and `rbind` can also be applied to existing data frames, for example to add another column to an existing data frame or to take two data sets with the same columns and bind them together by row to make a larger data set.
+
+You can also build matrices and data frames using the `matrix` and `data.frame` functions
+```{r}
+x = matrix(1:25,nrow=5,ncol=5)
+x
+y = data.frame(a = 1:3, b = seq(5,by=2.5,length=3), z=z )
+y
 ```
+You can see that in a matrix R fills in the table by rows by default and all the data is the same type. By contrast, with a data frame the component vectors can be different types but they need to be the same length. The `data.frame` function also lets you name the function arguments (almost) anything you want, and then uses those names as the column names in the table. Indeed, the syntax `z=z` meant "create a column named z and fill it with the contents of the variable z". The `list` function operates very similar to the `data.frame` but allows different elements to be different data objects and different sizes
+
+```{r}
+mylist <- list(a = 1,
+               b = c(TRUE,FALSE,TRUE),
+               c = matrix(1:9,nrow = 3,ncol = 3),
+               d = "Australia"
+               )
+
+mylist
+```
+   
+## ★ Questions (6)
+
+6.	**Create a character vector that contains the names of 4 people you admire.**
+
 
 ## Loading and Saving Data
 
-There are a number of ways to get information into and out of R, but the most simple is in ASCII text formats, such as tab-delimited (.txt) or comma-separated (.csv).  It’s usually straightforward to export data in one of these formats from most any program (e.g. Excel).
-Lets begin by opening the “Lab1_frogs.txt” file in the "data" folder. This data and some of the examples below come from Ben Bolker's handy book "Ecological Models and Data in R". 
+In practice, most of the time that we create vectors, matrices, data.frames, and lists we don't do it by hand, but rather we do it by loading in data that we want to manipulate, visualize, and analyze. This section focuses on how to get data into R.
 
-Note that if you just click on the file from within the **Files** tab, or try to open the file from File > "Open File..."" that this opens the file as a text file, but it it doesn't load the data into R in any way we can use it. Instead, we'll want to run the following command
+### Environment 
+
+When you assign a value to a variable you are saving that data in to the **Environment.**
+
+```{r}
+new_v = 3
+```
+
+If you run the code in the R chunk above, you should see the `new_v` variable appear in the upper right window under the Environment tab. 
+
+You can always see what variables you currently have defined in the Environment window or by using the command
+  
+```{r}
+ls()
+```
+ 
+Within the Environment window, clicking on a variable will show you the contents in a spreadsheet-like format in the Scripts window. Or if the variable has an arrow by it, you can click on it to expand it and see a preview of what it looks like.
+
+![](http://test-pecan.bu.edu/shiny/GE375/Environment.png){width=300px}
+
+When we perform data analysis in R, **we do not open and edit the data files themselves.** This is may seem counter intuitive if you are used to using programs like Excel where you start by opening your data.  
+
+Instead, we **load the data** in to R, i.e. we assign the data to a variable in the environment and then we do our analysis with that variable. This is good scientific practice because it means that we can never accidentally change our raw data. 
+
+Note that if you just click on the file from within the **Files** tab, or try to open the file from File > "Open File..." that it may automatically open the file in a new editor tab or give you the option to "View File", but it it **doesn't load the data into R in any way we can use it.** You will know that you did not successfully load anything because the Environment will not change!
+
+![](http://test-pecan.bu.edu/shiny/GE375/View_Import_Data.png){width=300px}
+
+
+### Loading ASCII Text Files
+
+To properly load data, you need to know what format file you have. There are a number of ways to get information into and out of R, but the most simple is in ASCII text formats, such as tab-delimited (.txt) or comma-separated (.csv).  It's usually straightforward to export data in one of these formats from most any program (e.g. Excel).
+
+Lets begin by opening the "Lab1_frogs.txt" file in the "data" folder. This data and some of the examples below come from Ben Bolker's handy book "Ecological Models and Data in R". 
+
+Run the code below and then check for the dat variable in the Environment! Has it appeared?
 
 ```{r}
 dat = read.table("data/Lab1_frogs.txt",header=TRUE)
@@ -221,11 +543,14 @@ dat = read.table("data/Lab1_frogs.txt",header=TRUE)
  
 The second variable “header=TRUE” informs R that your data file has column headers that should be read rather than treated as just another line of data.  For the above command to work **R has to be looking at the correct folder**.  You can find out what folder R is currently looking at (its “working directory”) using “getwd” and you can change that directory using “setwd” or within the “Files” window tab under **More > Set As Working Directory**.  
  
-<table border="1" bgcolor="yellow"><tr><td>
-<h3>AUTO-COMPLETE</h3>
-<p>Be aware that RStudio has the capacity to auto-complete function names, function arguments, and file names. So, for example, if you type ‘read.t’ and then hit TAB, RStudio will finish typing read.table and it would also show what information you can specify for the read.table function.  If you type read.table( and then hit TAB, RStudio will allow you to select the function argument that you want to fill in. If you type read.table(“ and then hit TAB, RStudio will show you the files in your current working directory and allow you to select one. If there are a lot of files in the directory, you can start typing the file name you want and then hit TAB again and RStudio will limit what it shows to just those files that match what you’ve typed so far.  The same ‘search’ functionality applies to file names as well. So, if you type just ‘re’ and then hit TAB, then RStudio will show you all function that begin with re. </p>
-</td></tr></table>
+CODING TIP: Programmers often use the word **directory** instead of **folder**. The idea of "folders" didn't come around until computers actually had user interfaces and Windows made pictures to visualize where files were. 
 
+```
+getwd() # print out my current directory (or folder)
+dir()   # what files are in my current directory?
+```
+
+### Saving to ASCII Text Files
       
 For saving ASCII data there is an equivalent command “write.table”. Type ?read.table and ?write.table to learn more about these functions. While read.table and write.table can read and write CSV (comma separated value) files by just specifying the ‘sep’ argument as sep = “,” (i.e. a comma in quotes), there are also predefined functions read.csv and write.csv.
  
@@ -233,13 +558,17 @@ For saving ASCII data there is an equivalent command “write.table”. Type ?re
 write.table(dat,"my_frogs.csv",row.names=FALSE,sep=",")   	## save as CSV
 ```
  
-	R also has a built-in binary data format that is good for saving results for later use in R and can store any number of data types of different shapes and sizes (note just single tables).  The function “save” is used to save data
+### The .RData File Format
+
+R also has a built-in binary data format that is good for saving results for later use in R and can store any number of data types of different shapes and sizes (note just single tables). Thus, for example, the .RData format could be used to save multiple data sets associated with a particular project. 
+
+The function `save` is used to make .RData files. This command saves any number of data objects, separated by commas, that come before the `file =` argument, which tells the function the name of the file you want to write to. Here we will save many of the variables we have created so far in this lab in one .RData object!
 
 ```{r}
 save(dat,x,y,z,file="Lab1.RData")
 ```
  
-This command saves any number of data objects, separated by commas, that come before the ‘file=’ argument, which tells the function the name of the file you want to write to. This data can then be reloaded at a later time, or on a different computer, using “load”
+This data can then be reloaded at a later time, or on a different computer, using “load”
  
 ```{r}
 load("Lab1.RData")
@@ -251,22 +580,20 @@ There is also a “save.image” function that saves every variable you have def
 save.image("Lab1_all.RData")
 ```
 
-These commands will be very helpful if you don’t finish a activity by the end of the period and want to take your whole R desktop home, for saving work in progress, or archiving results of analyses. When you quit R you will be asked if you want to save your desktop and if you answer ‘y’, then save.image is called by default and will save to a file simply named “.Rdata” which is automatically loaded the next time you start R.  While this is convenient, I actually recommend against it and suggest using save or save.image explicitly instead because otherwise it is very easy to accidentally use variables and data sets defined in previous analyses, or to be unsure which version of an analysis you’re working with.
-	You can always see what variables you currently have defined in the **Environment** window or by using the command
-  
-```{r}
-ls()
-```
- 
-Within the Environment window, clicking on a variable will show you the contents in a spreadsheet-like format in the script window.
+These commands will be very helpful if you don’t finish a activity by the end of the period and want to take your whole R desktop home, for saving work in progress, or archiving results of analyses. When you quit R you will be asked if you want to save your desktop and if you answer ‘y’, then save.image is called by default and will save to a file simply named “.Rdata” which is automatically loaded the next time you start R.  While this is convenient, I actually recommend against it and suggest using save or `save.image` explicitly instead because otherwise it is very easy to accidentally use variables and data sets defined in previous analyses, or to be unsure which version of an analysis you’re working with.
+
+### Other File Formats 
+
 	Finally, while we won’t use these explicitly in this class, there are a large number of other options for getting data in and out of R in specific formats (e.g. GIS data, image data, etc) and ways to connect R to data sources more dynamically (e.g. SQL databases) that can be particularly useful when dealing with large data sets. The **R Data Import/Export** manual on the R website is a place to start to learn more about moving data in and out of R.
 
-```
-12.	Save the frog data file delimited in a pipe-delimited format (i.e. separated by ‘|’). Open the file up in a text editor and cut-and-paste the first few lines of the file into your Rscript file (just so I can see what you did).  Load the data back up into R as ‘dat2’ (show code)
-```
+## ★ Questions (7-8)
+
+7. Use R commands (e.g., do not click "import dataset" and use the dialog there) read in the file  `met_hourly.csv` (which is in the `data` directory) and assign it the variable name `met`
+
+8. Save the matrix `x` to a csv file
 
 
-## Data types and dimensions
+## Data Exploration
 
 One of the first things you’ll do with any data set when you first load it up is some basic checks to see what you are dealing with.  Typing the variable name will show you its contents, but if you just loaded up something with a million entries then you’ll sit for a long time as R lists every number on the screen. The function class will tell you the type of data you’ve just loaded.  
  
@@ -297,19 +624,37 @@ dim(dat)
 nrow(dat)
 ncol(dat)
 ```
-Note that dim will not work on a single vector (e.g. dim(x)) but that **length(x)** will tell you the length of a vector. 
+Note that dim will not work on a single vector (e.g. dim(x)) but that **length(x)** will tell you the length of a vector. Similarly, `length` should not be used with a matrix or data frame. 
+
+```{r}
+x = 1:10 
+dim(x) # dim does not work on a vector
+length(x) # length works for a vector
+```
+
+The functions `head` and `tail` show just the first and last few lines of a data set, respectively.
+
 ```{r}
 head(dat)
 tail(dat)
 ```
-The functions **head** and **tail** show just the first and last few lines of a data set, respectively
+
+The `summary` function will give you basic summary statistics on a data set.
+
 ```{r}
 summary(dat)
 ```
-will give you basic summary statistics on a data set
+
+## ★ Questions (9)
+
+9. Use the commands above to explore the contents of `met`. Describe in words what this file contains and some of its characteristics.
+
+## Subsetting Data
+
 	Data within vectors, matrices, and data frames can be accessed using [ ] notation.  Subsets of data can also be accessed by specifying just rows, just columns, or ranges within either.  These are often referred to as subscripts or indices and the first is the row number while the second is the column.
  
 ```{r}
+x = 1:10
 x[5]  	   # select the 5th element only
 dat		     # select the entire data frame
 dat[5,1]	 # select the entry in the 5th row, 1st column
@@ -323,69 +668,86 @@ We can also refer to specific columns of data by name using the $ syntax
 ```{r}
 dat$frogs  	# show just the ‘frogs’ column
 dat$color[6:10]		# show the 6th though 10th elements of the color column
+met$AirTemp[1:10] # show the first 10 values of air temperature
 ```
 
 In general, it is better to **access data by name**, rather than using the row and column numbers, because this makes your code easier to understand and debug, making the process of coding less error prone. It also makes it much easier to adapt your code to new situations or data sets, where the columns might not come in the same order, or the data might not have the same number of rows or columns. This highlights a more general point, that you should use variables to represent names and numbers, especially if those names and numbers are reused, rather than ‘hard coding’ numeric values into the code.
-Finally, there are functions for converting data from one data type to another
+
+Another useful feature of R is that in addition to using positive indices to display specific rows, we can also use *negative* indices to remove specific rows. For example, if I wanted to drop the first 3 rows from the frog data:
+```{r}
+dat[-(1:3),]
+```
+
+Finally, our ability to access data is not restricted to consecutive rows and columns, and vectors can also be used for indexing other vectors. For example:
  
 ```{r}
-as.character(dat$color)
-as.numeric(dat$spots)
-as.logical(0:1)
-as.matrix(dat)
+x = c(1,10,100,1000)
+met$time[x]  		## return specific elements of a vector
 ```
 
-``` 
-13.	Show just the spots data as characters
-14.	Show the 3rd through 8th rows of the 1st  though 3rd columns
-15.	Show the first 3 rows
-```
+## ★ Questions (10-12)
 
-## Combining vectors
+10. **Show the 1033rd through 1056th row of weather data**
 
-There is a simple function **c( )** in R that “combines” vectors or numbers into a single vector. You use it like this:
- 
-```{r}
-x=c(1,7)
-x
-y=c(10:15,3,9)
-y
-c(x,y)
-```
+11. **Show the 3rd through 8th rows of the 1st though 3rd columns of the frog data**
 
-Vectors can also be used for indexing other vectors. For example:
- 
-```{r}
-y[x]  		## return the 1st and 7th element of y
-```
- 
-We can also combine vectors to build up data frames by “binding” them together either are rows or as columns
+12. **What was the _total_ amount of rain?** Hint: look back at Vector Math
+
+
+
+## Converting Data Types
+
+Sometimes we need to convert data from one data type to another. Most often this occurs when R reads data in as a different type than what we need. For example, if R has some numbers represented as character data, we can't actually use them in calculations.
 
 ```{r}
-p = 1:10
-q = 10:1
-cbind(p,q)  	# bind as columns
-rbind(q,p)		# bind as rows
+x = c("3.14","2.10","42")
+```
+If, for example, we tried to multiply `x*2` R would return an error message
+```
+Error in x * 2 : non-numeric argument to binary operator
+```
+We can fix this by asking R to convert `x` to numeric first
+```{r}
+x = as.numeric(x)
+x * 2
 ```
 
-**cbind** and **rbind** can also be applied to existing data frames, for example to add another column to an existing data frame or to take two data sets with the same columns and bind them together by row to make a larger data set.
-
-   
+R has conversion functions for all of it's basic data types, as well as many more advanced derived data types
+```{r}
+as.character(dat$color)  ## make sure colors are character
+as.numeric(dat$spots)    ## from logical to numeric
+as.logical(0:1)          ## from numeric to logical
+as.POSIXlt(met$time[1:24],tz = "GMT") ## date time conversion
 ```
-16.	Create a character vector that contains the names of 4 super heros.
-17.	Show just the odd numbered rows in the frog data. Write this code for the GENERAL CASE (i.e. don’t just type c(1,3,5,…) but use functions that you learned in previous sections to set up the sequence.
+
+The last example is more complicated and reflects that R has some fairly sophisticated tools for handling dates and times. In this case we're converting the _character_ column `time` to one of R's datetime representations. In general it is much more handy to convert dates and times to datetime variables, rather than leaving them as character strings, as there's a lot more we can do with them that way (e.g. extract specific days, times, months, etc).
+
+Furthermore, R also has conversion functions for *data structures* as well, if you even need to convert one data structure into another:
+```{r}
+as.matrix(x)
+as.data.frame(x)
+as.list(x)
 ```
 
-## Logical operators and indexing
+## ★ Questions (13)
+
+13. **Using the frog data, show just the spots column as characters**
+
+# Logical operators and indexing
+
+## Logical operators
 
 R can perform standard logical comparisons, which can be very useful for comparing and selecting data. It's important to know the syntax for the different logical operators, some of which are odd:
 
-		>	greater than
-		<	less than
-		>=	greater than or equal to
-		<=	less than or equal to
-		==	equal to (TWO equals signs...you were very close!)
-		!=	not equal
+```
+>	  # greater than
+<	  # less than
+>=	# greater than or equal to
+<=	# less than or equal to
+==	# equal to (TWO equals signs...you were very close!)
+!=	# not equal
+```
+
 As a simple example you could compare individual numbers:
  
 ```{r}
@@ -405,154 +767,314 @@ w > 0 & w < 10
 w < 0 | w > 10
 ```
 
-You can also apply logical operators to vectors and matrices. When you type a "logical" expression like "y > x" in R you get a TRUE/FALSE answer of the same shape as the inputs. e.g.:
+You can also apply logical operators to vectors and matrices. When you type a "logical" expression like "y > x" in R you get a TRUE/FALSE answer of the same shape as the inputs. For example, if we wanted to find all the ponds where there was a high density of tadpoles (which we'll define as greater than 5) we could do this as:
 
 ```{r}
-z = y>13
+z = dat$tadpoles > 5
 z
 ```
 
 You will notice that by default logical operations are performed element-by-element. If you want to apply a logical test to a whole vector at a time you can use the function **any** to test if any of the values are true and **all** to test if all values are true
 
 ```{r}
-any(y>13)
-all(y>13)
-```
-
-You also need to know that logical vectors like "z" above can be used as indices for other vectors of the same length. Commonly, you'll use them as indices to one of the vectors that produced them. e.g.:
-
-```{r}
-y[z]
-```
-
-Or, skipping the middleman "z":
-
-```{r}
-y[y>13]
-```
-
-These simple comparisons can provide a powerful means for subsetting data. These comparisons can also be used in matrices and data frames the same way we were using sequences of row or column numbers above. For example, if you just wanted the rows where there were 3 or more frogs, you could type  
-
-```{r}
-dat[dat$frogs >= 3,]
-```
-
-
-R also has a built in function **subset** for doing this sort of subsetting that takes the data set as the first argument and the condition used for subsetting as the second argument. So the above could also be rewritten as
- 
-```{r}
-subset(dat,frogs >= 3)
-```
-
-**subset** also has an optional 3rd argument for just returning specific columns. So if you wanted to run the previous subset but only needed the columns tadpoles and spots you could run
-
-```{r}
-subset(dat,frogs >= 3,c("tadpoles","spots"))
+any(dat$tadpoles > 5) # At least one of the values of tadpoles is larger than 5 so this will be TRUE
+all(dat$tadpoles > 5) # All of the values of tadpoles are not larger than 5 so this will be FALSE
 ```
 
 Note that when your data is characters you'll need double-quotes in your comparison. e.g. 
 
 ```{r}
-a=c("north","south","east","west")
+a = c("north","south","east","west")
 a == "east"
 ```
 
-Two more things about logical vectors. First, sometimes it's easier or necessary to have a list of the indices to the TRUE values only (e.g. when the list includes NA values). The R function "which" is just for this purpose:
+## Logical vectors
+
+A "logical vector" (i.e. a vector made up of logical values) can be a particularly useful tool when selecting and subsetting data. 
+
+Take for example the logical vector that we created earlier:
 
 ```{r}
-which(y==3)
-# The seventh element of y equals 3
+z = dat$tadpoles > 5
+z
 ```
 
-And finally, sometimes TRUE/FALSE behave just like 0/1, which can be very useful. For example, this handy syntax:
+For each value of tadpoles, we are checking if it is larger than 5.
+
+But which values in tadpoles are larger than 5?
+
+By looking at the data we can see that the 9th through 20th rows are `TRUE` and the other values are `FALSE`. But if the data were much longer, it would **not** be reasonable to look at it to find the answer. For example, in our met data, we might want to know how many days had temperatures > 25C, which is impractical to do by hand as there are `r nrow(met)` rows of data
+
+Instead we can use the function `which` for this very purpose: the `which` function returns the *indices* of the `TRUE` values in a logical vector. 
 
 ```{r}
-sum(y>13)
-# two elements of y are >13
+z = which(met$AirTemp > 25)
+length(z)  ## how many values meet this criteria
+head(z)    ## show the first few examples
 ```
 
-Logicals don't work exactly like 0/1 in some situations, so be careful. You can always convert them explicitly with as.numeric( ) too if need be:
+You can also sometimes treat `TRUE` and `FALSE` just like 1 and 0, which can be very useful. If you want to count the number of values of AirTemp that are larger than 13, you can use the `sum` function:
+
+
+```{r}
+hot = sum(met$AirTemp > 25)
+hot
+```
+Recall that our met data is hourly for the year 2013, so this indicates that a total of `r hot` hours were over 25C at this site (Lake Sunapee, NH) in this year.
+
+Logicals don't always work exactly like 0 and 1 in some situations, so be careful. You can always convert them explicitly with `as.numeric` if need be.
+ 
+## Subsetting using logical vectors
+
+So far we've seen that we can use logical vectors and their indices to identify conditions of interest and to count things, but frequently we need the ability to subset data based on criteria. For example, we might want to pull all the data for 'hot' days into a separate data frame for further analyses (were those days sunnier than average? less rainy?)
+
+You also need to know that logical vectors can be used as indices for other vectors of the same length. Commonly, you'll use them as indices to one of the vectors that produced them.
+
+For example, if we want to know the actual values in `y` that are larger than 13
+
+```{r}
+hot = met$AirTemp > 25 # create a logical vector 
+
+hotData = met[hot,] # use the logical vector to select the `hot` rows in met
+```
+
+Or, skipping the middleman:
+
+```{r}
+hotData = met[met$AirTemp > 25,]
+summary(hotData)
+```
+
+These simple comparisons can provide a powerful means for subsetting data.
+
+## The subset function
+
+R also has a built in function `subset` for doing this sort of subsetting that takes the data set as the first argument and the condition used for subsetting as the second argument. So the above could also be rewritten as
  
 ```{r}
-as.numeric(y>13)
+hotData = subset(met, AirTemp > 25)
 ```
 
-``` 
-18.	For the frog data set: 
-  a.	display just the rows where frogs have spots
-  b.	display just the rows where frogs are blue
-  c.	how many blue tadpoles are there?
-  d.	create a new object containing just the rows where there are between 3 and 5 tadpoles
-  e.	display just the rows where there are less than 2.5 red frogs
-  f.	display where either frogs do not have spots or there are more than 5 frogs
-```
-## Plots, tables, and exploratory analysis
-
-Often understanding our data requires more than just being able to subset the raw data, but also the ability to summarize and visualize data. The **table** command can do basic tabulation and cross tabulation of data
+`subset` also has an optional 3rd argument for just selecting specific columns. So if you wanted to run the previous subset but only needed the columns `ShortWave` and `Rain` you could run
 
 ```{r}
-table(dat$color)
-table(dat$color,dat$spots)
+# select the rows of dat for which frogs are larger than or equal to 3
+# select the columns tadpoles and spots
+foo = subset(met, AirTemp > 25, select = c("ShortWave","Rain"))
+head(foo)
 ```
 
-There are also a number of commands for calculating basic statistical measures
+## ★ Questions (14)
+
+14.	**For the frog data set:** 
+*  a.	display just the rows where frogs have spots
+*  b.	display just the rows where frogs are blue
+*  c.	how many blue tadpoles are there?
+*  d.	create a new object containing just the rows where there are between 3 and 5 tadpoles
+*  e.	display just the rows where there are less than 2.5 red frogs
+*  f.	display where either frogs do not have spots or there are more than 5 frogs
+
+# Summary tables and statistics
+
+## Tables
+
+Often understanding our data requires more than just being able to subset the raw data, but also the ability to summarize that data. The **table** command can do basic tabulation and cross tabulation of logical and categorical data (i.e. counting up the different cases)
 
 ```{r}
-mean(dat$frogs)
-median(dat$tadpoles)
-var(dat$frogs)  			## variance
-sd(dat$frogs)				## standard deviation
-cov(dat$frogs,dat$tadpoles)		## covariance
-cor(dat$frogs,dat$tadpoles)		## correllation
-quantile(dat$tadpoles,c(0.05,0.90))		## 5% and 95% quantiles
-min(dat$frogs)				## smallest value
-max(dat$frogs)				## largest value
+table(dat$color)           ## basic table
+table(dat$color,dat$spots) ## cross table
 ```
 
-R also has a set of apply functions for applying any function to sets of values within a data structure.
+## Summary statistics
+
+There are also a number of commands for calculating basic statistical measures.
+
+*min* and *max* return the smallest and largest values respectively
+```{r}
+min(met$AirTemp)				        ## smallest value
+max(met$AirTemp)				        ## largest value
+```
+while the *range* function returns both the min and max at the same time
+```{r}
+range(met$AirTemp)
+```
+
+*median* returns the median value, which is the one in the middle of a sorted list, such that half the values are larger and half are smaller
+```{r}
+median(met$AirTemp)
+```
+
+More generally, we can use the *quantile* function to find any percentile of a data set, not just the median (50%)
+```{r}
+quantile(met$AirTemp,c(0.25,0.75))		## 25% and 75% quantiles
+```
+and the *IQR* function returns the inter-quartile range (the difference between the 75th and 25th percentiles)
+```{r}
+IQR(met$AirTemp)
+```
+
+By far the most common summary statistic you'll encounter is the arithmetric *mean*
+
+$$mean(x) = \bar{x} = {{1}\over{n}} \sum x_i$$
+```{r}
+mean(met$AirTemp)
+```
+
+The other thing we'll encounter a lot this semester are statistics that measure uncertainty and variability. The most common measure of variability is *variance* which is calculated using the `var` function
+$$var(x) = {1 \over {n-1}} \sum (x-\bar{x})^2$$
+```{r}
+var(met$AirTemp)  		 	        ## variance (Celsius^2)
+```
+Variance is a measure of the mean squared difference, and as such it's units are that of the square of whatever units the data have (in this example Censius squared). For this reason, many people find it hard to interpret variances directly. If we take the square root of a variance we get a measure, the *standard deviation* that's in the same units as the data and thus much easier to interpret.
+```{r}
+sd(met$AirTemp)				          ## standard deviation (Celsius)
+```
+
+In addition to being able to calculate the variance of a single variable, we can also calculate a *covariance* to measure how two variables vary together
+
+$$cov(x,y) = {1 \over {n-1}} \sum (x-\bar{x})(y-\bar{y}) $$
 
 ```{r}
-apply(dat[,1:2],1,sum)  	        # calculate sum of frogs & tadpoles by row (1st dimension)
-apply(dat[,1:2],2,sum) 		        # calculate sum of frogs & tadpoles by column (2nd dimension)
+cov(met$AirTemp,met$LongWave)		## covariance between air temp and long wave (thermal) radiation
 ```
+Looking that these equations you'll also notice that *var(x) = cov(x,x)* (i.e. that variance is just the covariance of a variable with itself). 
 
-The function *apply* will apply a function to either every row (dimension 1) or every column (dimension 2) of a matrix or data.frame. In this example the commands apply the “sum” function to the first two columns of the data (frogs & tadpoles) first calculated by row (the total number of individuals in each population) and second by column (the total number of frogs and tadpoles)
+The other thing you'll notice is that the units of covariance are the product of the two variables, and thus are even harder to interpret than variance (in this case, the units are `Celsius*Watts`). Because of this, it is also common to normalize the cov by the standard deviations of the two variables to give us a unitless measure of how two variables are related known as *correlation*
+
+$$cor(x,y) = {{cov(x,y)} \over {sd(x) sd(y)}}$$
+```{r}
+cor(met$AirTemp,met$LongWave)		## correllation
+```
+Correlation coefficients vary from 1 to -1, with 1 indicating a perfect positive correlation (positive slope), 0 indicating no correlation, and -1 indicating a perfect negative correlation (negative slope).
+
+
+## Apply
+
+R also has a set of `apply` functions for applying any function to sets of values within a data structure.
+
+The function `apply` will apply a function to either every row (dimension 1) or every column (dimension 2) of a matrix or data.frame. In this example the commands apply the `sum` function to the first two columns of the data (frogs & tadpoles) first calculated by row (the total number of individuals in each population) and second by column (the total number of frogs and tadpoles)
+
+![](http://test-pecan.bu.edu/shiny/GE375/apply_1.png){width=600px}
 
 ```{r}
-tapply(dat$frogs,dat$color,mean)          # calculate mean of frogs by color
-tapply(dat$frogs,dat[,c("color","spots")],mean)  # calculate mean of frogs by color & spots
+# calculate sum of frogs & tadpoles by row (1st dimension)
+apply(dat[1:5,1:2], MARGIN = 1, FUN = sum)  
 ```
-
-The function **tapply** will apply a function to an R data object, grouping data according to a second variable or set of variables. The first example applies the “mean” function to frogs grouping them by color. The second shows that tapply can be used to apply a function over multiple groups, in this case color X spots. 
-
-There are a lot of options for plotting data in R.  The simplest of these include
+![](http://test-pecan.bu.edu/shiny/GE375/apply_2.png){width=600px}
 
 ```{r}
-plot(dat$frogs,dat$tadpoles)  		## x-y scatter plot
-abline(a=0,b=1)					## add a 1:1 line (intercept=0, slope=1)
-
-hist(dat$tadpoles)				## histogram
-abline(v=mean(dat$tadpoles))			## add a vertical line at the mean
-
-pairs(dat)					## all pairwise scatter plots
-
-barplot(tapply(dat$frogs,dat$color,mean))		## barplot of frogs by color
-abline(h=3)					## add a horizontal line at 3
+# calculate sum of frogs & tadpoles by column (2nd dimension)
+apply(dat[1:5,1:2], MARGIN = 2, FUN = sum)  
 ```
 
-The functions **lines** and **points** are also frequently used to add additional lines and points (respectively) to an existing plot.
+The function `tapply` will apply a function to an R data object, grouping data according to a second variable or set of variables. The first example applies the `mean` function to frogs grouping them by color. The second shows that `tapply` can be used to apply a function over multiple groups, in this case color and spots. 
 
-Within the Plot window, graphs can be cut-and-pasted into other documents or saved to file fairly simply by using Export. If you want to automate the process of exporting graphics, for example when you generate a whole bunch of figures at once and don’t want to Export each one by hand, you'll want to use the graphical functions such as 'postscript', 'pdf', or 'tiff'. For all of these plot functions there are numerous additional (optional) arguments that control the formatting of the plots. The help for par (i.e. ?par) gives a fairly detailed list of these options, some of which you will see in further examples below.
+```{r}
+# calculate mean of frogs by color
+tapply(dat$frogs, INDEX = dat$color, FUN = mean)  
+```
 
 
-  19.	Plot the following lines from 0 to 3 (hint: define x as a sequence with a small step size). Make sure to make the resolution of x sufficiently small to see the curves
-   a.	ln(x)
-   b. $e^{-x}$
-  20.	Make a barplot of the median number of frogs grouped by whether they have spots or not.
-  21.	Plot a histogram of blue frogs
-  22.	Use apply to calculate the across-population standard deviations in the numbers of frogs and tadpoles
+![](http://test-pecan.bu.edu/shiny/GE375/tapply.png){width=200px}
 
-## Classical tests
+```{r}
+# calculate mean of frogs by color & spots
+tapply(dat$frogs, INDEX =  dat[,c("color","spots")], FUN = mean)  
+```
+
+## ★ Questions (15)
+15. **Use apply to calculate the across-population standard deviations in the numbers of frogs and tadpoles**
+
+
+# Plotting & visualization
+
+## Base plots
+
+There are a *lot* of options for plotting data in R, far more than we could cover in one lab, so the aim here it to provide a basic introduction to the the most common plotting functions. 
+
+For example, you can make a simple *histogram* of data using the function `hist`
+```{r}
+hist(met$AirTemp) ## histogram
+abline(v = mean(met$AirTemp),col="red") ## add a (v)ertical line at the mean, set the (col)or to red
+```
+
+You can also make a *scatterplot* of two variables against each other using the `plot` function
+
+```{r}
+plot(met$AirTemp, met$LongWave)  ## x-y scatter plot
+```
+
+There are a multitude of optional arguements to plotting functions that can be used to control all aspects of the plot aesthetics -- you'll end up learning most of these through examples used in future labs. For example, if I wanted to add labels to the previous scatterplot and change the plotting character (pch) I could do that as:
+
+```{r}
+plot(met$AirTemp, met$LongWave,
+     cex = 0.5,      ## decrease the symbol size 50%
+     col = "purple", ## change the point color
+     pch = "+",      ## change the point symbol
+     xlab = "Air Temperature (Celsius)",  ## label the x-axis with name and units
+     ylab = "Longwave Radiation (Watts)", ## label the y-axis with name and units
+     cex.lab = 1.3,			# increase the axis label font size by 30%
+     main = "2013 weather data, Lake Sunapee, NH", # title
+     cex.main = 1.5			# increase title font size 50%
+     )
+```
+Throughout the semester, you'll be making a *LOT* of plots, and it's important to get in the habit early of producing figures with proper axes labels, units, and (where needed) legends
+
+R's plotting functions also allow us to vary things like symbols, color, and size depending on attributes of the data, which can be extremely helpful for teasing out patterns in data
+```{r}
+plot(dat$frogs,dat$tadpoles,
+     cex = 1.5,    		        # increase the symbol size
+     col = as.character(dat$color),	# change the symbol color by name
+     pch = dat$spots + 1,			# change the symbol (by number)
+     cex.axis = 1.3,			    # increase the font size on the axis 
+     xlab = "Frog Density",		# label the x axis
+     ylab = "Tadpole Density",# label the y axis
+     cex.lab = 1.3,			      # increase the axis label font size
+     main = "Frog Reproductive Effort", # title
+     cex.main = 2			        # increase title font size
+     )
+legend("topleft",  ## draw legend in top corner
+       c("Red no spot","Blue no spot","Red spots","Blue Spots"), ## legend text (vector)
+       pch = c(1,1,2,2),                      ## matching vectors of plot characters adn color
+       col = c("red","blue","red","blue"),
+       cex = 1.3
+       )
+```
+
+R plots can also handle dates and time intellegently if they're in the right format
+```{r}
+time <- as.POSIXlt(met$time,tz="GMT")
+plot(time,met$AirTemp,
+     type = 'l',   ## switch to plotting lines instead of points
+     ylab = "Air Temperature (Celsius)",  ## label the y-axis with name and units
+     )
+```
+
+The functions `lines` and `points` are also frequently used to add additional lines and points (respectively) to an existing plot.
+```{r}
+met$time <- as.POSIXct(met$time,tz="GMT")  ## coerce time from character to datetime
+plot(time,met$AirTemp,
+     type = 'l',   ## switch to plotting lines instead of points
+     ylab = "Air Temperature (Celsius)",  ## label the y-axis with name and units
+     )
+
+month = months(met$time)                                  ## extract months from dates
+Tbar  = tapply(met$AirTemp,INDEX = month,FUN = mean)  ## calc monthly mean temp
+mbar  = tapply(met$time,INDEX = month,FUN = mean)         ## calc monthly mean date
+mbar  = as.POSIXct(mbar,origin="1970-01-01 00:00.00 UTC") ## coerce result back to datetime
+points(mbar,Tbar,col="red",pch=18,cex=2)              ## add monthly means to plot as solid diamonds (pch=18)
+```
+
+For those accustomed to making figures with software that allows you to manipulate plots by hand by clicking on them, the process of making visualizations with code can initially feel difficult and frustrating. For example, you might want to nudge a label over by a little and you can't just drag it, you have to look up a lot of details in the `plot` or `par` functions to understand how to modify your code. However, what producing figures by code provides, which is ultimately time saving, is reliable *REPRODUCIBILITY*. It doesn't take many experiences of having to re-tweak a manual figure by hand when the data is updated, or when you need to produce a very similar plot for a similar dataset, to realize that manual, interactive figure drawing is imprecise, inefficient, and not scalable when you need to keep making figures (e.g. dashboards, regular reports).
+
+In addition to rendering plots directly within Markdown, within the Plot window, graphs can be cut-and-pasted into other documents or saved to file fairly simply by using Export. If you want to automate the process of exporting graphics, for example when you generate a whole bunch of figures at once and don’t want to Export each one by hand, you'll want to use the graphical functions such as 'postscript', 'pdf', or 'tiff'. For all of these plot functions there are numerous additional (optional) arguments that control the formatting of the plots. The help for `par` (i.e. `?par`) gives a fairly detailed list of these options, some of which you will see in further examples below.
+
+## ★ Questions (16-18)
+16. **Plot a histogram of blue frogs**
+17. **Plot shortwave (solar) radiation against time**
+18. **Plot shortwave (solar) radiation against relative humidity**
+
+# Linear Models
 
 Since R evolved out of the statistical programming language S, it can easily perform a wide variety of statistical tests and analyses. In R linear regression is done with the function “lm” (linear models)
  
@@ -578,38 +1100,7 @@ anov1 = aov(tadpoles ~ color + spots + color*spots,data=dat)
 summary(anov1)
 ```
 
-
-Finally, we can get a bit more sophisticated in our graphs to display these results. Note that R doesn’t care about white space—you can add spaces, tabs, and/or carriage returns wherever you want to make your code more readable.
-
-```{r}
-plot(dat$frogs,dat$tadpoles,
-     cex=1.5,  			# increase the symbol size
-     col=as.character(dat$color),	# change the symbol color by name
-     pch=dat$spots+1,			# change the symbol (by number)
-     cex.axis=1.3,			# increase the font size on the axis 
-     xlab="Frog Density",		# label the x axis
-     ylab="Tadpole Density",		# label the y axis
-     cex.lab=1.3,			# increase the axis label font size
-     main="Frog Reproductive Effort", # title
-     cex.main=2			# increase title font size
-     )
-abline(reg1,col="green",		# add the regression line
-     ,lwd=3)				# increase the line width
-legend("topleft",
-       c("Red no spot","Blue no spot","Red spots","Blue Spots"),
-       pch=c(1,1,2,2),
-       col=c("red","blue","red","blue"),cex=1.3
-       )
-```
-
-``` 
-23.	Using the frog data
-  a.	Fit a linear model of tadpoles as a function of frogs for just the RED individuals and report the summary data of the fit.  
-  b.	Make a scatter plot of this data that includes the regression line
-  c.	Fit a series of linear models of tadpoles as a function of frogs, spots, color, and their interaction terms. Build up from a simple model to the most complex model that is supported by the available data (i.e. all terms should be significant). Also test the full model that includes all variables and interaction terms.
-```
-
-## IF statements
+# IF statements
 
 Logical operators are not just used for subsetting data, but can be used to control the flow of an analysis and make decisions. The idea is that we want to tell the computer a set of rules, such as “if X happens, then do Y, otherwise do Z”.  The syntax for this in R is 
 
@@ -646,19 +1137,7 @@ if(!is.numeric(x) | !is.numeric(y)){
 z
 ```
 
-
-For cases where the outcomes are simple, or when we want to apply an ‘if’ to every element in a vector, then the ifelse function can be an efficient alternative. ifelse takes three arguments, the condition, what to do if its true, and what to do if its false. For example, the following checks the sign on the frog data before taking a log. 
-```{r}
-ifelse(dat$frogs>0, log(dat$frogs),log(-dat$frogs))
-```
-
-Aside: As is very common in R, as we learn more we often find more efficient ways of solving problems . For example, the above is equivalent to log(abs(dat$frogs))
-
-```
-24.	Write an if statement that makes a scatter plot of x if all the values are positive, and plots a histogram otherwise.
-```
-
-## Defining custom functions
+# Defining custom functions
 
 One of the powerful things about computer languages is that they allow us to encapsulate repetitive tasks into functions, making it easier to abstract a problem. In R you are not limited to the pre-defined functions but you can define your own functions as well. For example, if we found that we were repeating the previous block of ‘if’ code multiple places in our code, we might want to convert it to a function so that we could save on retyping the code again and again. Putting the code in one place also means that if we change the code we only need to change it once and it applies everywhere. At the extreme, its often argued that anything you do more than once in a piece of code should be converted to a function.  So how do we define a function in R?  
 
@@ -688,12 +1167,7 @@ my.division(y,x)
 my.division(x,"5")
 ```
 
- 
-```
-25.	Convert the more complicated graphing example at the end of  “Classic Tests” into a function that will make the same plots for any data set. Show how you would call the function passing it just the subset of data where there are 5 or more tadpoles.
-```
-
-## For loops
+# For loops
 
 Another powerful aspect of computers is there ability to easily repeat the same task time and time again. In fact, one of the major reasons many people learn to code is that they’ve figured out how to do some analysis once, but they want to apply the same analysis hundreds or thousands of times to different data sets, sites, individuals, pictures, etc. Doing so by clicking through a typical graphical user interface thousands of times if at best mind-numbing, if not outright impossible. Loops allow us to easily repeat an analysis over and over. The most common type of loop we will encounter is the for loop, which will repeat a chunk of code one time for each values specified by some sequence
  
@@ -725,38 +1199,14 @@ for(t in 2:NT){
 plot(N)
 ```
 
-```
-26.	Starting with a vector x = 1:10, write a for loop that adds 5 to each value in the vector. Note that it is permissible to assign an element in a vector to itself (e.g. x[i] = x[i] + 5)
-27.	Modify the logistic growth code to simulate discrete-time exponential growth and plot the output.
-```
+## ★ Questions (19)
+19. **Modify the logistic growth code to simulate discrete-time exponential growth and plot the output.**
 
-## Vector and Matrix Math
+## Matrix Math
 
-While loops are a powerful tool, there are many places where a calculation we want to perform can be done so directly on a vector or a matrix as a whole rather than having to loop through each value. For example, in question 26 we had a vector x = 1:10 and we wanted to add 5 to every value. We could have done this more simply as
- 
-```{r}
-x + 5
-```
+While loops are a powerful tool, there are many places where a calculation we want to perform can be done so directly on a vector or a matrix as a whole rather than having to loop through each value. 
 
-which adds 5 to each element. We can also multiply, divide, and subtract with vectors, and the operations are applied to each element
-
-```{r}
-5*x
-x/5
-x-5
-```
-
-Furthermore, if we have two or more vectors, and we perform mathematical operations on them, the operations are performed element by element
-
-```{r}
-y = 10:1
-x*y
-x-y
-x/y
-dat$frogs + dat$tadpoles
-```
-
-R also allows us to define matrices and perform element-wise math on them as well
+In addition to the vector math covered earlier, R allows us to define matrices and perform element-wise math on them as as well
 
 ```{r}
 z = matrix(1:25,5,5)
@@ -816,3 +1266,9 @@ Everyone:
  +	Search for new functions and techniques
  +	Scour the web when debugging. 
 * The key to good programming is being able to teach yourself
+
+
+
+<!-- Ignore code below this line, it's for formatting the table of contents. -->
+<!-- ----------------------------------------------------------------------- -->
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
