@@ -6,7 +6,9 @@ Note: This activity supplements material in Ecological Forecasting Chapter 2 "Fr
 Simulating the discrete-time logistic
 -------------------------------------
 
-Define parameters
+Models play an essential role in forecasting, but forecasting involves more than just running a model forward in time. That said, knowing how to run a model forward in time is a pretty important starting point for learning how to forecast. To illustrate this we start with the Logistic Growth model, which is probably the most well-known and impactful models in ecology, and one that is capable of surprisingly rich dynamics despite its simplicity
+
+To begin, define the model's parameters, initial conditions, and the time period we want to run the model for.
 ```{r}
 r = 1         ## intrinsic growth rate
 K = 10        ## carrying capacity      
@@ -15,7 +17,7 @@ NT = 30       ## number of time steps to simulate
 time = 1:NT
 ```
 
-Iterative simulation
+Next we'll make a simple, deterministic prediction using a discrete-time iterative simulation
 ```{r}
 n = rep(n0,NT)    ## vector to store results
 for(t in 2:NT){
@@ -37,6 +39,8 @@ plot(time,n,ylim=c(0,12),lwd=3,type='l',
 
 Probability distributions in R
 ------------------------------
+
+Now that we know how to run a model forward, we need a way to incorporate one of the most basic features of what makes a forecast a forecast -- that forecasts should use probabilities to incorporate uncertainties.
 
 Because it is a statistical language, there are a large number of probability distributions in R by default and an even larger number that can be loaded from packages.  The table below gives a listing of the most common distributions in R, the name of the function within R, and the parameters of the distribution.
 
@@ -137,14 +141,14 @@ This example demonstrates that as the number of random draws from a probability 
 
 ### Problems
 
-2. Choose another probability distribution and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+2. Choose another probability distribution from the table above and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
 
 Monte Carlo Simulation
 ----------------------
 
 Most of the figures from the logistic growth example in Chapter 2 included plots of the median trajectory and 95% interval estimates. These summary statistics are a reflection of the fact that the underlying model prediction was a timeseries of probability distributions, rather than a single trajectory. So how do we project a probability distribution through time?
 
-In Chapter 11 we will explore a variety of analytical and numerical approachs to propagating uncertainty, and the trade-offs among them, in much greater detail. Today I wanted to introduce a particularly common and general numerical approach, **Monte Carlo** simulation. A Monte Carlo method is any algorithm that relys on randomization to approximate a computation. These approaches and other will be discussed in more detail later (e.g. Chapters 5, 11, 13, & 14).
+In Chapter 11 we will explore a variety of analytical and numerical approaches to propagating uncertainty, and the trade-offs among them, in much greater detail. Today I wanted to introduce a particularly common and general numerical approach, **Monte Carlo** simulation. A Monte Carlo method is any algorithm that relys on randomization to approximate a computation. These approaches and other will be discussed in more detail later (e.g. Chapters 5, 11, 13, & 14).
 
 The previous example of approximating the Normal distribution with a histogram of samples from the Normal distribution is a simple illustration of this approach. What makes this approach powerful is that we can transform the samples from a distribution through whatever function we would like and the resulting set of samples is the correct histogram for that transformation. This is important because, by contrast, we **cannot** transform the summary statistics, such as the mean of the probability distribution, through an arbitrary function because of **Jensen's Inequality**.
 
@@ -191,12 +195,13 @@ Next, we need to run the Monte Carlo simulation for the logistic. In this case w
 n = matrix(n0,NE,NT)   # storage for all simulations
 rE = rnorm(NE,r,r.sd)  # sample of r
 KE = rnorm(NE,K,K.sd)  # sample of K
-for(i in 1:NE){        # loop over samples
-  for(t in 2:NT){      # for each sample, simulate throught time
+for(i in 1:NE){        # loop over ensemble members
+  for(t in 2:NT){      # for each ensemble member, simulate throught time
     n[i,t] = max(0,n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i]))
   }
 }
 ```
+Note that the use of the `max` function in the simulation above ensures that population extinction events stay at 0, rather than generating negative individuals.
 
 Next we'll use *apply* to calculate the median and CI for each time point.
 ```{r}
