@@ -6,7 +6,7 @@ Note: This activity supplements material in Ecological Forecasting Chapter 2 "Fr
 Simulating the discrete-time logistic
 -------------------------------------
 
-Models play an essential role in forecasting, but forecasting involves more than just running a model forward in time. That said, knowing how to run a model forward in time is a pretty important starting point for learning how to forecast. To illustrate this we start with the Logistic Growth model, which is probably the most well-known and impactful models in ecology, and one that is capable of surprisingly rich dynamics despite its simplicity
+Models play an essential role in forecasting, but forecasting involves more than just running a model forward in time. That said, knowing how to run a model forward in time is a pretty important starting point for learning how to forecast. To illustrate this we start with the Logistic Growth model, which is probably the most well-known and impactful model in ecology, and one that is capable of surprisingly rich dynamics despite its simplicity
 
 To begin, define the model's parameters, initial conditions, and the time period we want to run the model for.
 ```{r}
@@ -152,7 +152,7 @@ In Chapter 11 we will explore a variety of analytical and numerical approaches t
 
 The previous example of approximating the Normal distribution with a histogram of samples from the Normal distribution is a simple illustration of this approach. What makes this approach powerful is that we can transform the samples from a distribution through whatever function we would like and the resulting set of samples is the correct histogram for that transformation. This is important because, by contrast, we **cannot** transform the summary statistics, such as the mean of the probability distribution, through an arbitrary function because of **Jensen's Inequality**.
 
-To illustrate this point, consider the function x^2 and a standard Normal distribution (mean = 0, sd = 1). Now if we ignore Jensen's Inequality and tranform the mean and 95% CI we'd end up with a probability distribution that has a mean of 0^2 = 0, a lower confidence interval of -1.96^2 = 3.84 and an upper confidence interval of 1.96^2 = 3.84. Clearly this can't be correct, since the upper and lower CI are identical and the lower CI is higher than the mean. By contrast, if we do this transformation numerically
+To illustrate this point, consider the function x^2 and a standard Normal distribution (mean = 0, sd = 1). Now if we ignore Jensen's Inequality and transform the mean and 95% CI we'd end up with a probability distribution that has a mean of 0^2 = 0, a lower confidence interval of -1.96^2 = 3.84 and an upper confidence interval of 1.96^2 = 3.84. Clearly this can't be correct, since the upper and lower CI are identical and the lower CI is higher than the mean. By contrast, if we do this transformation numerically
 
 ```{r}
 x = rnorm(10000,0,1)
