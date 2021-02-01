@@ -23,10 +23,12 @@ get.pkg <- function(pkg){
   }
 }
 get.pkg("RCurl")
+get.pkg("readr")
 get.pkg("XML")
 get.pkg("ncdf4")
 get.pkg("devtools")
 get.pkg("MODISTools")
+get.pkg("EML")
 ```
 
 
@@ -36,9 +38,9 @@ Pulling data directly off the web
 In the previous exercises we loaded data into R using functions like read.csv. However, it is also possible to read data into R directly off the web by passing a web address to the file name. For smaller files that are quick to load this approach can ensure that the script is always operating with the most up-to-date version of a data file. 
 
 ```{r}
-gflu = read.csv("http://www.google.org/flutrends/about/data/flu/us/data.txt",skip=11)
+gflu = readr::read_csv("https://raw.githubusercontent.com/EcoForecast/EF_Activities/master/data/gflu_data.txt",skip = 11)
 time = as.Date(gflu$Date)
-plot(time,gflu$Boston..MA,type='l')
+plot(time,gflu$"Boston, MA",type='l')
 ```
 
 That said, for publication purposes it is usually important to save the data that you used for an analysis, and that the date of access is recorded (and version number if available), as some datasets are subject to frequent revision.
@@ -60,90 +62,77 @@ For more information, please visit http://www.google.org/flutrends
 
 **Question 1:**
 
-Using the US Forest Service's Forest Inventory and Analysis (FIA) data set, plot the rank vs log(abundance) curve for tree seedling counts from Rhode Island. Data is available at https://apps.fs.usda.gov/fia/datamart/CSV/RI_SEEDLING.csv and the relevant columns are TREECOUNT (raw seedling counts) and SPCD (species codes). 
-Hints: tapply, sum, na.rm=TRUE, sort, decreasing=TRUE, log='y'
-
-
-Web Scraping
-------------
-
-Often the data that we want to use from the web has been formatted in HTML for human-readability rather than in tab- or comma-delimited files for inport and export. The process of extracting data from webpages has been dubbed **scraping**. For these sorts of more complex problems we can use the RCurl library to grab HTML or XML structured content directly off the web, and then use the XML library to parse the markup into more standard R data objects. In the example below we grab data on the status of all the files that make up the FIA in order to look for files that have been updated after a certain date.
-
-```{r}
-fia_html <- getURL("https://apps.fs.usda.gov/fia/datamart/CSV/datamart_csv.html")  ## grab raw html
-fia_table = readHTMLTable(fia_html)[[3]]    ## We're interested in the 3rd table on this webpage
-update = as.Date(fia_table[,"Last Modified Date"])
-hist(update,"months")                       ## Plot a histogram of update times
-recent <- fia_table[which(update > "2018/01/01"),]
-```
-
-
-**Question 2:**
-Create a sorted table of how many FLUXNET eddy-covariance towers are in each country according to the website at http://fluxnet.fluxdata.org/sites/site-list-and-pages/. Hint: use substring to extract the country code from the overall FLUXNET ID code.
-
-### NEED TO UPDATE, TABLE COMING BACK EMPTY
+Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed an d saved here https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
 
 grep, system, RegExp
 --------------------
 
+## GREP
+
 `grep` is a handy little _command prompt_ function that returns lines from a file that match a search string. I continue to use this 'old school' utility on a daily basis to help manage code and data because this simple little search continues to be able to perform actions that elude newer search software:
 
-- `grep` looks within files, but is able to search across file and recursively within a directory structure. I use this constantly to follow variables or functions through complex code. For example, if I wanted to find uses of the term _fia_ in my current directory and all subdirectories I could type
+- `grep` looks within files, but is able to search across file and recursively within a directory structure. I use this constantly to follow variables or functions through complex code. For example, if I wanted to find uses of the term _phenology_ in my current directory and all subdirectories, I could type the following in my Terminal (not my R prompt)
 
 ```
-grep -ir "fia" .
+grep -ir "phenology" .
 ```
+### Note: Some Windows users won't have grep installed but
+### will have a similar function, findstr
+### system("cmd.exe",input='findstr "phenology" *.Rmd')
+### findstr is more limited and it is OK to skip examples that don't run
 
 here the -i means ignore case when searching, the -r means to search recursively through subdirectories, and the `.` means to start from the current directory. Used in this way grep can help you quickly find your way through new and complex code, iteratively hopping through the code from one search to another. It is also extremely helpful in debugging, when a program returns a cryptic error message and you want to find _where_ in the code that message was generated.
 
 - `grep` returns the full lines/rows that match a search, allowing one to quickly and easily subset large datasets into smaller files and/or merge subsets across different files.
 
-- `grep` supports **Regular Expressions**, both within the search itself and in the set of filenames searched. For example, if we wanted to find all lines that contain 'fia', in all the `.Rmd` files in the current directory we could type
+## RegExp
+
+- `grep` supports **Regular Expressions**, both within the search itself and in the set of filenames searched. For example, if we wanted to find all lines that contain 'phenology', in all the `.Rmd` files in the current directory we could type
 
 ```
-grep -ir 'fia' *.Rmd
+grep -ir 'phenology' *.Rmd
 ```
 
-where the * means 'match zero or more occurances of any character', in this case preceeding .Rmd (the zero part means this would match a file just named .Rmd). If I just wanted to find instances where `fia` is at the start of the line I could use the `^` to indicate the beginning of the line
+where the * means 'match zero or more occurances of any character', in this case preceeding .Rmd (the zero part means this would match a file just named .Rmd). If I just wanted to find instances where `phenology` is at the start of the line I could use the `^` to indicate the beginning of the line
 ```
-grep -ir '^fia' *.Rmd
+grep -ir '^phenology' *.Rmd
 ```
 
-If I instead wanted just instances where `fia` is followed immediately by another letter I could use [a-z] to match just letters in the English alphabet.
+If I instead wanted to broaden my search to instances where `pheno` is followed immediately by another letter I could use [a-z] to match just letters in the English alphabet, which would pick up phenological and phenocam.
 ```
-grep -ir 'fia[a-z]' *.Rmd
+grep -ir 'pheno[a-z]' *.Rmd
 ```
-or I could be more specific an just look for specific letters, e.g. fia[fds] would match fiaf, fiad, and fias. A full description of regular expressions is beyond the scope of this tutorial, and RegExp statements for matching complex patterns can quickly become cryptic, so following up on this further is left to the reader.
+or I could be more specific an just look for specific letters, e.g. pheno[cl] would match phenoc and phenol but not phenom. A full description of regular expressions is beyond the scope of this tutorial, and RegExp statements for matching complex patterns can quickly become cryptic, so following up on this further is left to the reader.
 
+## system()
 
 There are often times when working in R that one needs to run another command, script, or piece of software that is external to R. If I'm working in an R script want the operating system to run a command I can do this with the `system` command
 
 ```{r}
-system('grep -ir "fia" *.Rmd')
+system('grep -ir "pheno" *.Rmd')
 ```
-
-### On windows:
-### system("cmd.exe",input='findstr "fia" *.Rmd')
 
 Furthermore, often we want to capture the output of that command directly into R, which we can do using the `intern` flag:
 
 ```{r}
-fia.lines = system('grep -ir "fia" *.Rmd',intern=TRUE)
-fia.lines[1:3]
+pheno.lines = system('grep -ir "pheno" *.Rmd',intern=TRUE)
+pheno.lines[1:3]
 ```
+
+## grep()
 
 Finally, it is also worth mentioning that R has its own, internal, version of grep that can be useful for searching and subsetting data and which also supports RegExp. Unlike the command-line version of grep, this function returns the row numbers matching the search string. In the example below we use the function readLines to read unstructured text in as vector of strings, one corresponding to each row in a file. It also demonstrates the function `sub`, which is related to grep but which substitutes the matching string rather than just finding it.
 
 ```{r}
 myCode = readLines("Exercise_03_BigData.Rmd")  ## read unstructured text
-x = grep("RI",myCode)    ## returns the line numbers that include the string 'RI'
+x = grep("HARV",myCode)    ## returns the line numbers that include the string 'HARV'
 myCode[x]
-sub("RI","VT",myCode[x])  ## substitute FIRST: VT for RI
-gsub("RI","VT",myCode[x])  ## substitute ALL: VT for RI
+sub("HARV","BART",myCode[x])  ## substitute FIRST: HARV for BART
+gsub("HARV","BART",myCode[x])  ## substitute ALL: HARV for BART
 ```
 
 
-**Question 3:** Within the object myCode, find all the lines that begin with the comment character, #.
+**Question 2:** Within the object myCode, find all the lines that begin with the comment character, #.
 
 
 netCDF, wget
@@ -175,7 +164,7 @@ doy = ncvar_get(wlef,"time")  # day of year
 nc_close(wlef)
 ```
 
-Finally, we can plot the data at the different heights. Since this flux data is recorded hourly the raw data is a bit of a cloud, therefore we use the function `filter` to impose a 24 hour moving window, which is indicated in the function as a vector of 24 weights, each given an equal weight of 1/24. 
+Finally, we can plot the data at the different heights. Since this flux data are recorded hourly the raw data are a bit of a cloud, therefore we use the function `filter` to impose a 24 hour moving window, which is indicated in the function as a vector of 24 weights, each given an equal weight of 1/24. 
 
 ```{r}
 ## print fluxes at 3 different heights
@@ -184,33 +173,31 @@ plot(doy,filter(NEE[i,],rep(1/24,24)),type='l',main=paste("Height =",height[i],"
 }
 ```
 
-Alternative, if I just wanted to get a subset of air temperature data (e.g. 24 hours of data from the top height for the 220th day of the year)
+Alternative, if I just wanted to get a subset of flux data (e.g. 24 hours of data from the top height for the 220th day of the year), I could do this by using the optional `start` and `count` arguments. `start` gives the starting point for each dimension (in this case, height and time) and `count` the length of each dimension. One of the powerful things about this syntax is that netCDF doesn't need to load the entire file into your computer's memory just to extract these values, which contrasts with most other file formats (e.g. csv, xlsx) which can make a huge difference in efficiency when working with large data files.
 
 ```{r}
 start = which(doy > 220)[1]
 wlef = nc_open("US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
-TA = ncvar_get(wlef,"TA",c(3,start),c(1,24))
-plot(TA,type = 'l')
+diurnal = ncvar_get(wlef,"NEE_co2",start=c(3,start),count=c(1,24))
+plot(diurnal,type = 'l')
 nc_close(wlef)
 ```
 
+**Question 3:** 
 
-
-**Question 4:** 
-
-Similar to how we can point read.csv to the URL of a text file, you can open and manipulate netCDF files on remote servers if those servers support THREDDS/OpenDAP. Furthermore, these utilities let you grab just the part of the file that you need rather than the file in it's entirety. Using this approach, download and plot the air temperature data for Boston for 2004 that's located on the ORNL DAAC server `http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4`.  The underlying file is quite large so make sure to grab just the subset you need. To do so you'll need to first grab the lat, lon, and time variables to find _which_ grid cell to grab for lat and lon and how many values to grab from time (i.e. _length_). 
-
+Similar to how we can point read.csv to the URL of a text file, you can open and manipulate netCDF files on remote servers if those servers support THREDDS/OpenDAP. Furthermore, these utilities let you grab just the part of the file that you need rather than the file in it's entirety. Using this approach, download and plot the DAYMET maximum air temperature data for Harvard Forest for 2019 that's located on the ORNL DAAC server `http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4`. Compare this to the phenocam data for the same year. The underlying file is quite large so make sure to grab just the subset you need. To do so you'll need to first grab the lat, lon, and time variables to find _which_ grid cell to grab for lat and lon and how many values to grab from time (i.e. _length_). 
 
 Using APIs
 ----------
 
-In addition to data that is directly downloadable, and that which is scraped, there are a number of places on the web where data is available though interactive, code-based webservices called Application Programming Interfaces (APIs). In this example we will access the NASA MODIS API, using a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
+In addition to data that are directly downloadable there are a number of places on the web where data are available though interactive, code-based webservices called Application Programming Interfaces (APIs). In this example we will access the NASA MODIS API, using a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
 
-First, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product (its definition, calculation, units, and missing data string) is available at https://lpdaac.usgs.gov/products/modis_products_table
+First, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product is available at https://modis.ornl.gov/sites/?network=AMERIFLUX&network_siteid=US-WCr
+where we see that the tool has been expanded to also include some of the VIIRS, SMAP, and DAYMET data products as well.
 
 ```{r}
 MODISTools::mt_products()
-MODISTools::mt_bands(product="MOD13Q1")
+MODISTools::mt_bands(product="MOD13Q1") ## vegetation indices
 ```
 
 Next, lets grab the data for a specific band (EVI) within a specific product (MOD13Q1). We'll focus on the location of the WLEF flux tower and look at the same year as we did with the flux data (2012). The argument Size defines the dimensions of the box grabbed in terms of distance (in kilometers) outward from the center. Note that in practice we would also want to query the QAQC data for this variable, `250m_16_days_VI_Quality`, as well and use it to screen the data.
@@ -232,7 +219,7 @@ if(file.exists(WC_file)){
   save(subset,file=WC_file)
 }
 ## let's look at the first few rows to get a feel for the structure
-subset[1:5,]
+head(subset)
 ```
 
 Here we extracted a 250m data products and looked +/ 1km in both directions, which gives us a 9x9 area and thus 81 pixels.
@@ -248,20 +235,62 @@ EVI = tapply(subset$value*as.numeric(subset$scale), subset$calendar_date, mean,n
 time = as.Date(names(EVI))
 ```
 
-**Question 5:** Plot EVI versus time and compare to the CO2 flux observations.
+**Question 4:** Plot EVI versus time and compare to the CO2 flux observations.
+
+FYI, APIs now exist for an enormous range of data sources that are available on the web, as well as a range of web-services that allow you to not just download data but to also upload data or push requests various cloud platforms.
+
+EML Metadata
+------------
+
+Data is usually only as the valuable as the meta-data associated with it. While some data is internally documented (e.g. netCDF) or highly standardized (e.g. MODIS), most data need to have external documentation.
+
+A particularly common metadata standard in ecology is the Ecological Metadata Language (EML). This is also the standard that the Ecological Forecasting Initative built upon when developing a community standard for documenting forecasts outputs (yes, forecasts need metadata too!). In the example below we explore the structure and content of the metadata for a simple forecast.
+
+```{r}
+## load example metadata from the EFI standard github repo
+md <- read_eml("https://raw.githubusercontent.com/eco4cast/EFIstandards/master/inst/extdata/forecast-eml.xml")
+```
+
+We'll then use `eml_get` to extract basic information about the forecast
+```{r}
+eml_get(md, "title")
+eml_get(md, "abstract")
+eml_get(md, "creator")
+```
+Next, we can learn about the spatial, temporal, and taxonomic coverage of the forecast
+```{r}
+eml_get(md, "coverage")
+```
+Next, let's look at the structure of the dataset itself
+```{r}
+dt_md <- eml_get(md, "dataset")
+eml_get(dt_md, "physical")
+get_attributes(dt_md$dataTable$attributeList)
+```
+The EFI standard also includes some additional Metadata fields related specifically to what uncertainties are included in a forecast
+
+```{r}
+eml_get(md$additionalMetadata, "forecast")
+```
+In the example above the `complexity` variables record the dimension of each uncertainty term (number of parameters, number of process error variances, etc.).
+
+More information about the EFI metadata standard can be found here https://github.com/eco4cast/EFIstandards, which includes a link to the external Documentation (note: you'll want to look at Table 1 and 2 in the Documentation to answer the following question)
+
+**Question 5**
+Based on the metadata above, what were the identities of the species_1 and species_2 columns in the forecast file, what units were used, and did this forecast propagate the initial condition uncertainty for these species?
 
 cron
 ----
 
-The last topic I wanted to touch on isn't for data processing per se, but is handy for scheduling the automatic execution of tasks, and thus is frequently used in dynamic big data problems where new data is arriving on a regular basis and analyses need to be updated. An obvious example in the context of this course would be a forecast that would be updated on a daily or weekly basis. [note: like grep, cron is a *nix utility, so will run on linux, unix, and Mac OS, but not Windows].
+The last topic I wanted to touch on isn't data processing per se, but is handy for scheduling the automatic execution of tasks, and thus is frequently used in dynamic big data problems where new data are arriving on a regular basis and analyses need to be updated. An obvious example in the context of this course would be a forecast that would be updated on a daily or weekly basis. [note: like grep, cron is a *nix utility, so will run on linux, unix, and Mac OS, but not Windows].
 
-cron jobs are specified in the cron table using the function `crontab` with takes the arguements -l to list the current contents or -e to edit the contents. The file contains a header component that allows us to specify information such as the shell used (SHELL=), path variables (PATH=), who to email job status updates (MAILTO=), and the directory to start from (HOME=), each on a separate line. Below the header is the table of the cron jobs themselves. A cron job consists of two components, the scheduling information and the command/script/program to be run. Lets take a look at a simple cron table
+cron jobs are specified in the cron table using the function `crontab` with takes the arguments -l to list the current contents or -e to edit the contents. The file contains a header component that allows us to specify information such as the shell used (SHELL=), path variables (PATH=), who to email job status updates (MAILTO=), and the directory to start from (HOME=), each on a separate line. Below the header is the table of the cron jobs themselves. A cron job consists of two components, the scheduling information and the command/script/program to be run. Lets take a look at a simple cron table
 
 ```
 MAILTO=dietze@bu.edu
 55 */2 * * * /home/scratch/dietze_lab/NOMADS/get_sref.sh
 ```
-The last part of this is the easiest to explain -- we're starting a script called get_sref from the NOMADS folder. NOMADS is the NOAA met server and SREF is one of their weather forecast products, so it should come as no surprise that this script is grabbing the numerical weather forecast.  The first part of the script is more cryptic, but the five values given correspond to:
+The last part of this is the easiest to explain -- we're running a script called get_sref from the NOMADS folder. NOMADS is the NOAA met server and SREF is one of their weather forecast products, so it should come as no surprise that this script is grabbing the numerical weather forecast.  The first part of the script is more cryptic, but the five values given correspond to:
 
 ```
 minute  This controls what minute of the hour the command will run on,
@@ -279,7 +308,7 @@ Values that are not specified explicitly are filled in with a *. Also, it is pos
 
 **Question #6:**
 
-Imagine you are working with the full FIA database and want to ensure that the data you are using is always up to date. However, the total size of the database is large, the USFS server is slow, and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
+Imagine you are working with MODIS data, but are grabbing a large region (rather than a single pixel) and want to ensure that the data you are using is always up to date. However, the total size of the database is large and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
 
 * Write out the pseudocode/outline for how to keep the files up to date
 * Write out what the cron table would look like to schedule this job (assume the update only needs to be done weekly)
