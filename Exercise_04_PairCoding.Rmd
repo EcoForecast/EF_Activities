@@ -1,7 +1,6 @@
 ---
 title: "Activity 04 - Pair coding"
 author: "Michael Dietze"
-date: "February 11, 2016"
 output: html_document
 ---
 
@@ -11,7 +10,11 @@ The primary goal of this exercise is to gain experience working collaboratively 
 
 ## Prairie Phenology
 
-The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. We will be using green chromatic coordinate (GCC), which is a color index. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv 
+The goal of our analysis is to investigate the phenological state of the U. Illinois Tall Grass Prairie. We will be using green chromatic coordinate (GCC), which is a color index. Before building the workflow you are encouraged to take a look at the site http://phenocam.sr.unh.edu/webcam/sites/uiefprairie/ and the raw csv data
+https://phenocam.sr.unh.edu/data/archive/uiefprairie2/ROI/uiefprairie2_AG_1000_1day.csv
+
+Note: older data for this site (2009-2018) is available at:
+http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv 
 
 The workflow for this analysis with have three components: 
 
@@ -226,7 +229,7 @@ fit.logistic <- function(dat,par){
   
   ## define log likelihood
   lnL.logistic <- function(theta,dat){
-    -sum(dnorm(dat$gcc_mean,pred.logistic(theta,dat$doy),dat$gcc_std,log=TRUE))
+    -sum(dnorm(dat$gcc_mean,pred.logistic(theta,dat$doy),dat$gcc_std,log=TRUE),na.rm=TRUE)
   }
   
   ## fit by numerical optimization
@@ -277,20 +280,20 @@ if(file.exists("02_plot.phenocam.R"))     source("02_plot.phenocam.R")
 if(file.exists("03_logistic.R"))          source("03_logistic.R")
 
 ## Download phenology data
-URL = "http://phenocam.sr.unh.edu/data/archive/uiefprairie/ROI/uiefprairie_GR_1000_1day.csv"
+URL = "https://phenocam.sr.unh.edu/data/archive/uiefprairie2/ROI/uiefprairie2_AG_1000_1day.csv"
 prairie.pheno <- download.phenocam(URL)
 
 ## Plot overall phenology data
 plot.phenocam(prairie.pheno)
 
 ## Create and visualize subset of data for leaf out
-spring = as.Date(c("2015-01-01","2015-06-01"))
+spring = as.Date(c("2019-01-01","2019-06-01"))
 dat = subset(prairie.pheno,date > spring[1] & date < spring[2], select=c(date,gcc_mean,gcc_std))
 plot.phenocam(dat)
 
 ## Fit logistic model
 dat$doy = as.POSIXlt(dat$date)$yday
-par = c(0.33,0.11,-10,0.1)
+par = c(0.3,0.11,-10,0.1)
 fit = fit.logistic(dat,par)
 
 ## Visualize model and data
