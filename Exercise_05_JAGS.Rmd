@@ -16,7 +16,7 @@ The aim of this activity is to provide a tutorial on JAGS (Just Another Gibbs Sa
 
 While tools like JAGS can be run by themselves, they are not really designed for managing or manipulating data, and thus it is common to use R packages to interface with these tools. In the example below we will use the rjags package to call JAGS. To be able to install rjags you will need to first install JAGS itself: http://mcmc-jags.sourceforge.net/
 
-The reason for choosing JAGS in this course is that it has much better cross-platform support than the earlier BUGS language, which really only operates well in Windows. The STAN language is newer, also works across platforms, and is becoming increasingly popular. 
+The reason for choosing JAGS in this course is that it has much better cross-platform support than the earlier BUGS language, which really only operates well in Windows. The NIMBLE and STAN languages are newer, also work across platforms, and are becoming increasingly popular. 
 
 
 ### Resources
@@ -24,7 +24,7 @@ JAGS itself provides a reference manual that is useful for looking up the syntax
 
 There’s a large amount of info in both the JAGS and BUGS manuals but I wanted to point out a few sections that you’ll find yourself coming back to repeatedly. One of these topics is the BUGS “Model Specification” which provides a lot of detail on how to write models in BUGS/JAGS, how data must be formatted, and the list of functions and distributions that BUGS/JAGS knows about. The naming convention for distributions in BUGS/JAGS is very similar to the convention in R, but there are a few cases where the parameterization is different (e.g. Weibull) so it is always good to check that the values you are passing to a BUGS/JAGS distribution are what you think they are. One very important example of this is that the Normal distribution in BUGS/JAGS, dnorm, is parameterized in terms of a mean and precision (1/variance) rather than a mean and standard deviation, which is the parameterization in R. To make life even more complicated, there are a small number of places where the JAGS syntax is slightly different from the BUGS version, so it's best to check the JAGS manual specifically for the definitions of any distributions and functions.
 
-Within the BUGS Examples page you'll find three volumes of examples that provided written explanations of analyses with the BUGS code. Working through these is a great way to learn more about how BUGS works. When you first start analyzing your own data it is often easiest to start from an existing example and modify it to meet your needs rather than starting from scratch.
+Within the BUGS Examples page you'll find three volumes of examples that provide written explanations of analyses with the BUGS code. Working through these is a great way to learn more about how BUGS works. When you first start analyzing your own data it is often easiest to start from an existing example and modify it to meet your needs rather than starting from scratch.
 
 
 # Bayesian Regression using Gibbs Sampling
@@ -111,7 +111,7 @@ model {
 
 }
 ```
-If you're accustomed to R the above seems 'wrong' because you're using mu in the data model before you've 'defined' it. But JAGS models are not a set of sequential instructions, rather they are the definition of a problem which JAGS will parse into a graph and then analyze to how to best sample from. Futhermore, even if the code were evaluated sequentially, MCMC is a cyclic algorithm and thus, after initial conditions are provided, it doesn't really matter what order thing are in.
+If you're accustomed to R the above seems 'wrong' because you're using mu in the data model before you've 'defined' it. But JAGS models are not a set of sequential instructions, rather they are the definition of a problem which JAGS will parse into a graph and then analyze to determine how to best sample from each posterior. Furthermore, even if the code were evaluated sequentially, MCMC is a cyclic algorithm and thus, after initial conditions are provided, it doesn't really matter what order thing are in.
 
 The other major "quirk" of JAGS is that what JAGS does with a model can depend a LOT on what's passed in as knowns! Understanding how this works will help you considerably when writing and debug models. Key to this is to realize that _no variables are 'unknowns' that JAGS is trying to solve for in the algebraic sense_. Rather, some variables are constants or derived (calculated) quantities while others are **random variables**. Random variables _HAVE to have a distribution_. If we look at our simple model, x, b0, Pb, s1, s2, and n don't have distributions so they have to be provided as inputs. If they are not, JAGS will throw an error. Next, b and S are clearly random variables as they shows up on the left-hand side of the prior and on the right-hand side of the likelihood. Similarly, mu is on the left-hand side of a deterministic calculation. S, b, and mu _cannot_ be specified as an input -- this likewise will throw an error. But the interesting part is that, depending on context, $y$ could either be known or random and thus what JAGS does with this model depends a lot of whether $y$ is in the list of inputs. If $y$ is NOT specified, then the JAGS reads the above code as:
 
@@ -120,9 +120,9 @@ The other major "quirk" of JAGS is that what JAGS does with a model can depend a
 
 However, if $y$ IS specified then JAGS will generate samples of $y | b,S,x$ -- in other words it will estimate the posteriors of b and S. This polymorphic behavior leads to another quirk -- all distributions are in the "d" form even if you're using them to generate random numbers (i.e. there is no rnorm in JAGS).
 
-Because of how JAGS views random variables, **no variable can show up on the left-hand side more than once** -- it's can't be both calculated and random, it can't be calculated more than once, and it can't have multiple priors or data models. Most of the time this is fine, but what catchs many people is that it means you **can't reuse temporary variables**, because JAGS will view this as an attempt to redefine them.
+Because of how JAGS views random variables, **no variable can show up on the left-hand side more than once**. In other words, a variable can't be both calculated and random, it can't be calculated more than once, and it can't have multiple priors or data models. Most of the time this is fine, but what catches many people is that it means you **can't reuse temporary variables**, because JAGS will view this as an attempt to redefine them.
 
-# Evaluating a JAGS model
+# Fitting a JAGS model
 
 OK, so how do we now use JAGS to fit our model to data? We can divide the R code required to perform this analysis into three parts:
 
@@ -156,11 +156,11 @@ model{
 "
 ```
 
-To pass this model to JAGS we'll use the `rjags` function `jags.model`, which has required arguements of the model and the data, and optional arguements for specifiying initial conditions and the number of chains (I encourage you to read the man page for this function!). So before running this function let's first set up these other inputs
+To pass this model to JAGS we'll use the `rjags` function `jags.model`, which has required arguments of the model and the data, and optional arguments for specifying initial conditions and the number of chains (I encourage you to read the man page for this function!). So before running this function let's first set up these other inputs
 
 ## Load data
 
-Any data analysis begins with loading and organizing the data. In this case we have two variables, x1 and y, sorted in a file:
+Any data analysis begins with loading and organizing the data. In this case we have two variables, x1 and y, stored in a file:
 
 ```{r}
 load("data/Ex05.Part1.RData")
@@ -175,9 +175,9 @@ data <- list(x = x1, y = y, n = length(y))
 
 ## Specify priors
 
-Now that we have “data” and the model, the next task in setting up the analysis is to specify the parameters for the prior distributions.  
+Now that we have “data” and a model, the next task in setting up the analysis is to specify the parameters for the prior distributions.  
 
-Since b is a vector, the prior mean, b0, is also a vector, and the prior variance is a matrix.  Since we have no prior conceptions about our data we'll select relatively weak priors, assuming a prior mean of 0 and a prior variance matrix that is diagonal (i.e. no covariances) and with a moderately large variance of 10000 (s.d. of 100).  We'll use the _diag_ command to set up a diagonal matrix that has a size of 2 and values of 10000 along the diagonal.  In practice, JAGS requires that we specify the multivariate normal in terms of a precision matrix, therefore we will compute the inverse of the prior variance matrix, vinvert,  using the _solve_ function.  For the residual error, we will specify an uninformative gamma prior on the precision with parameters s1 = 0.1 and s2 = 0.1. Finally, we'l add all of these prior parameters to the `data` object so we can pass them in to the JAGS model
+Since b is a vector, the prior mean, b0, is also a vector, and the prior variance is a matrix.  Since we have no prior conceptions about our data we'll select relatively weak priors, assuming a prior mean of 0 and a prior variance matrix that is diagonal (i.e. no covariances) and with a moderately large variance of 10000 (s.d. of 100).  We'll use the _diag_ command to set up a diagonal matrix that has a size of 2 and values of 10000 along the diagonal.  In practice, JAGS requires that we specify the multivariate normal in terms of a precision matrix, therefore we will compute the inverse of the prior variance matrix using the _solve_ function.  For the residual error, we will specify an uninformative gamma prior on the precision with parameters s1 = 0.1 and s2 = 0.1. Finally, we'll add all of these prior parameters to the `data` object so we can pass them in to the JAGS model
 
 ```{r}
 ## specify priors
@@ -259,21 +259,21 @@ When running an MCMC analysis the first question to ask with any output is "has 
 plot(jags.out)
 ```
 
-For every variable you are tracking this will spit out two plots, a trace plot and a density plot. The traceplot looks like a time-series with the parameter value on the Y-axis and the iterations on the X-axis. Each chain is plotted in a different color. In a model that has converged these chains will be overlapping and will bounce around at random, preferably looking like white noise but sometimes showing longer term trends. 
+For every variable you are tracking this will spit out two plots, a trace plot and a density plot. The trace plot looks like a time-series with the parameter value on the Y-axis and the iterations on the X-axis. Each chain is plotted in a different color. In a model that has converged these chains will be overlapping and will bounce around at random, preferably looking like white noise but sometimes showing longer term trends. 
 
-To help make the assessment of convergence more objective, coda offers a number of diagnostics, with the most common being the Brooks-Gelman-Rubin (BGR) statistic. GBR requires that you have run multiple chains because it compares the among chain variance to the within change variance. If a model has converged then these two should be identical and the GBR should be 1. There's no hard-and-fast rule for the threshold that this statistic needs to hit but in general values less than 1.01 are excellent, 1.05 is good, and >1.1 is generally held to be not yet converged.
+To help make the assessment of convergence more objective, coda offers a number of diagnostics, with the most common being the Brooks-Gelman-Rubin (BGR) statistic. BGR requires that you have run multiple chains because it compares the among chain variance to the within change variance. If a model has converged then these two should be identical and the BGR should be 1. There's no hard-and-fast rule for the threshold that this statistic needs to hit but in general values less than 1.01 are excellent, 1.05 is good, and >1.1 is generally held to be not yet converged.
 
 ```{r}
 gelman.diag(jags.out)
 ```
 
-In addition to having checked for overall convergence, it is important to remove any samples from before convergence occurred. Determining when this happened is done both visually and by plotting the GBR statistic versus sample
+In addition to having checked for overall convergence, it is important to remove any samples from before convergence occurred. Determining when this happened is done both visually and by plotting the BGR statistic versus sample
 
 ```{r}
-GBR <- gelman.plot(jags.out)
+BGR <- gelman.plot(jags.out)
 ```
 
-The point up to where the GBR drops below 1.05 is termed the "burn in" period and should be discarded. For example, if I determine the burn in to be 500 steps I could remove the first 500 as:
+The point up to where the BGR drops below 1.05 is termed the "burn-in" period and should be discarded. For example, if I determine the burn-in to be 500 steps I could remove the first 500 as:
 
 ```{r}
 burnin = 500                                ## determine convergence
@@ -308,7 +308,7 @@ Autocorrelation is always 1 by definition at lag 0 and then typically decays tow
 effectiveSize(jags.burn)
 ```
 
-For the second question, the number of samples required increases with the tails of the posterior distribution. For example, if you only care about the posterior mean or median, then you can get a stable estimate with an effective sample size of only a few hundred points. The standard deviation and interquartile range are more extreme and thus require more samples to estimate, while the 95% CI requires even more -- **a common rule of thumb would be an effective size of 5000 samples**. Recall that the CI is determined by the most exteme values, so at n=5000 it is only the 125 largest and 125 smallest values that determine the value. If you need to work with even larger CI or even lower probability events you'll require more samples. This phenomena can be shown graphically (and diagnosed) by looking at plots of how different statistics change as a function of sample size:
+For the second question, the number of samples required increases with the tails of the posterior distribution. For example, if you only care about the posterior mean or median, then you can get a stable estimate with an effective sample size of only a few hundred points. The standard deviation and interquartile range are more extreme and thus require more samples to estimate, while the 95% CI requires even more -- **a common rule of thumb would be an effective size of 5000 samples**. Recall that the CI is determined by the most extreme values, so at n=5000 it is only the 125 largest and 125 smallest values that determine the value. If you need to work with even larger CI or even lower probability events you'll require more samples. This phenomena can be shown graphically (and diagnosed) by looking at plots of how different statistics change as a function of sample size:
 
 ```{r}
 cumuplot(jags.burn,probs=c(0.025,0.25,0.5,0.75,0.975))
@@ -316,7 +316,7 @@ cumuplot(jags.burn,probs=c(0.025,0.25,0.5,0.75,0.975))
 
 ### Thinning
 
-Older texts will advise that you thin your posterior samples to account for autocorrelation. Current thinking is that this is unnessisary unless you need to reduce the size of the output you save. Intuitively, setting “thin” to 10 retains only every 10th sample for further analysis, etc.
+Older texts will advise that you thin your posterior samples to account for autocorrelation. Current thinking is that this is unnecessary unless you need to reduce the size of the output you save. Intuitively, setting “thin” to 10 retains only every 10th sample for further analysis, etc.
 ```{r}
 jags.thin = window(jags.burn,thin=10)
 plot(jags.thin)
@@ -360,7 +360,7 @@ summary(SD)
 
 
 ### Task 1
-* Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burnin
+* Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burn-in
 * Report parameter summary table and plot marginal distributions
 * Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.
 * Compare the summary statistics for the Bayesian regression model to those from the classical regression:  summary(lm( y ~ x1 )).  This should include a comparison of the means and uncertainties of **all 3 model parameters**
