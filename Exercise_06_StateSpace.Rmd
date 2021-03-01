@@ -21,11 +21,15 @@ y = gflu$Massachusetts
 plot(time,y,type='l',ylab="Flu Index",lwd=2,log='y')
 ```
 
-Next we'll want to define the JAGS code, which we'll do by writing the code as a string in R. The code itself has three components, the data model, the process model, and the priors. The data model relates the observed data, y, at any time point to the latent variable, x. For this example we'll assume that the observation model just consists of Gaussian observation error. The process model relates the state of the system at one point in time to the state one time step ahead. In this case we'll start with the simplest possible process model, a random walk, which just consists of Gaussian process error centered around the current value of the system.
+Next we'll want to define the JAGS code, which we'll do by writing the code as a string in R. The code itself has three components, the data model, the process model, and the priors. The **data model** relates the observed data, y, at any time point to the latent variable, x. For this example we'll assume that the observation model just consists of Gaussian observation error. 
+
+$$Y_{t} \sim N(X_{t},\tau_{obs})$$
+
+The **process model** relates the state of the system at one point in time to the state one time step ahead. In this case we'll start with the simplest possible process model, a random walk, which just consists of Gaussian process error centered around the current value of the system.
 
 $$X_{t+1} \sim N(X_{t},\tau_{add})$$
 
-Finally, for the priors we need to define priors for the initial condition, the process error, and the observation error.
+Finally, for the priors we need to define **priors** for the initial condition, the process error, and the observation error.
 
 ```{r}
 RandomWalk = "
@@ -51,7 +55,11 @@ model{
 
 Next we need to define the data and priors as a list. For this analysis we'll work with the log of the Google flu index since the zero-bound on the index and the magnitudes of the changes appear much closer to a log-normal distribution than to a normal.
 ```{r}
-data <- list(y=log(y),n=length(y),x_ic=log(1000),tau_ic=100,a_obs=1,r_obs=1,a_add=1,r_add=1)
+data <- list(y=log(y),n=length(y),      ## data
+             x_ic=log(1000),tau_ic=100, ## initial condition prior
+             a_obs=1,r_obs=1,           ## obs error prior
+             a_add=1,r_add=1            ## process error prior
+             )
 ```
 
 Next we need to definite the initial state of the model's parameters for each chain in the MCMC. The overall initialization is stored as a list the same length as the number of chains, where each chain is passed a list of the initial values for each parameter. Unlike the definition of the priors, which had to be done independent of the data, the initialization of the MCMC is allowed (and even encouraged) to use the data. However, each chain should be started from different initial conditions. We handle this below by basing the initial conditions for each chain off of a different random sample of the original data. 
@@ -60,7 +68,8 @@ nchain = 3
 init <- list()
 for(i in 1:nchain){
   y.samp = sample(y,length(y),replace=TRUE)
-  init[[i]] <- list(tau_add=1/var(diff(log(y.samp))),tau_obs=5/var(log(y.samp)))
+  init[[i]] <- list(tau_add=1/var(diff(log(y.samp))),  ## initial guess on process precision
+                    tau_obs=5/var(log(y.samp)))        ## initial guess on obs precision
 }
 ```
 
@@ -81,7 +90,7 @@ jags.out   <- coda.samples (model = j.model,
 plot(jags.out)
 ```
 
-Here we see that the model converges rapidly. Since rjags returns the samples as a CODA object, we can use any of the diagnositics in the R *coda* library to test for convergence, summarize the output, or visualize the chains.
+Here we see that the model converges rapidly. Since rjags returns the samples as a CODA object, we can use any of the diagnostics in the R *coda* library to test for convergence, summarize the output, or visualize the chains.
 
 Now that the model has converged we'll want to take a much larger sample from the MCMC and include the full vector of X's in the output
 ```{r}
@@ -90,10 +99,10 @@ jags.out   <- coda.samples (model = j.model,
                                 n.iter = 10000)
 ```
 
-Given the full joint posteror samples, we're next going to visualize the output by just looking at the 95% credible interval of the timeseries of X's and compare that to the observed Y's. To do so we'll convert the coda output into a matrix and then calculate the quantiles. Looking at colnames(out) will show you that the first two columns are `tau_add` and `tau_obs`, so we calculate the CI starting from the 3rd column. We also transform the samples back from the log domain to the linear domain.
+Given the full joint posterior samples, we're next going to visualize the output by just looking at the **95% credible interval of the time-series of X's** and compare that to the observed Y's. To do so we'll convert the coda output into a matrix and then calculate the quantiles. Looking at colnames(out) will show you that the first two columns are `tau_add` and `tau_obs`, so we calculate the CI starting from the 3rd column. We also transform the samples back from the log domain to the linear domain.
 ```{r}
-time.rng = c(1,length(time)) ## adjust to zoom in and out
-out <- as.matrix(jags.out)
+time.rng = c(1,length(time))       ## adjust to zoom in and out
+out <- as.matrix(jags.out)         ## convert from coda to matrix  
 x.cols <- grep("^x",colnames(out)) ## grab all columns that start with the letter x
 ci <- apply(exp(out[,x.cols]),2,quantile,c(0.025,0.5,0.975)) ## model was fit on log scale
 
@@ -106,7 +115,7 @@ ecoforecastR::ciEnvelope(time,ci[1,],ci[3,],col=ecoforecastR::col.alpha("lightBl
 points(time,y,pch="+",cex=0.5)
 ```
 
-Next, lets look at the posterior distributions for `tau_add` and `tau_obs`, which we'll convert from precisions back into standard deviations. 
+Next, lets look at the posterior distributions for `tau_add` and `tau_obs`, which we'll convert from precisions back into **standard deviations**. 
 ```{r}
 hist(1/sqrt(out[,1]),main=colnames(out)[1])
 hist(1/sqrt(out[,2]),main=colnames(out)[2])
@@ -121,9 +130,9 @@ cor(out[,1:2])
 Assignment:
 -----------
 
-To explore the ability of state space models to generate forecasts (or in this case, a hindcast) remove the last 40 observations (convert to NA) and refit the model.
+To explore the ability of state space models to generate forecasts (or in this case, a hindcast) make a copy of the data and **remove the last 40 observations (convert to NA)** and refit the model.
 
-* Generate a time-series plot for the CI of x that includes the observations (as above but zoom the plot on the last ~80 observations). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
+* Generate a time-series plot for the CI of x that includes all the original observed data (as above but zoom the plot on the last ~80 observations). Use a different color and symbol to differentiate observations that were included in the model versus those that were converted to NA's.
 * Comment on how well the random walk model performed (both accuracy and precision) and how it might be modified to improve both these criteria.
 
 
@@ -143,7 +152,7 @@ The random walk model can easily be generalized to more sophisiticated models de
 
 $$X_{t+1} \sim N(X_t + \beta_0 + \beta_1 z_t + \beta_{X} X_{t}, \tau_{add})$$
 
-where $\beta_0$ is the intercept, $\beta_1$ is the slope of the covariate effect, and $\beta_{X}$ is the slope of the initial condition effect, expressed as a deviation from the random walk default (i.e. the actual slope is $1 + \beta_X$). Rather than implement this model in JAGS directly, we're going to rely on the ecoforecastR package, which accepts a `lm` like syntax for specifying covariates (with the notable exception that the response variable, which is our latent X, is not specified explictly). Here we're going to use the Daymet product to get daily weather estimates, and then use daily minimum temperature (Tmin) as the covariate in our influenza model
+where $\beta_0$ is the intercept, $\beta_1$ is the slope of the covariate effect, and $\beta_{X}$ is the slope of the initial condition effect, expressed as a deviation from the random walk default (i.e. the actual slope is $1 + \beta_X$). Rather than implement this model in JAGS directly, we're going to rely on the `ecoforecastR` package, which accepts a `lm` like syntax for specifying covariates (with the notable exception that the response variable, which is our latent X, is not specified explicitly). Here we're going to use the Daymet product to get daily weather estimates, and then use daily minimum temperature (Tmin) as the covariate in our influenza model
 
 ```{r}
 ## grab weather data
@@ -155,6 +164,8 @@ df <- daymetr::download_daymet(site = "Boston",
                 internal = TRUE)$data
 df$date <- as.Date(paste(df$year,df$yday,sep = "-"),"%Y-%j")
 data$Tmin = df$tmin..deg.c.[match(time,df$date)]
+Tbar = mean(data$Tmin,na.rm=TRUE)
+data$Tmin = df$tmin..deg.c.[match(time,df$date)] - Tbar ## covert Tmin to anomalies
 
 ## fit the model
 ef.out <- ecoforecastR::fit_dlm(model=list(obs="y",fixed="~ 1 + X + Tmin"),data)
@@ -202,7 +213,7 @@ Part 2:
 
 * Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
 * Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
-* Explain and discuss the parameter estimates (betas) from the linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
+* Explain and discuss the parameter estimates (betas) from the dynamic linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
 
 Part 3:
 -----------
