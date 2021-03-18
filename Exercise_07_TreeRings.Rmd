@@ -19,17 +19,17 @@ library(rjags)
 library(ecoforecastR)
 ```
 
-Steps 1-4 have already been done for you and leverages functions that are part of the [PEcAn system](https://pecanproject.org). Specifically, they are within PEcAn's land data R package, which can be downloaded and installed off Github using devtools
+Steps 1-4 have already been done for you and leverages functions that are part of the [PEcAn system](https://pecanproject.org). Specifically, they are within PEcAn's land data R package, which can be downloaded and installed off Github using `remotes` or `devtools`. Because these steps have been done fore you, you don't need to run the following chunk of code.
 
 ```
 if(!require(PEcAn.data.land)){
-  library(devtools)
+  library(remotes)
   install.packages(c("digest","dplR","PeriodicTable"),repos = "https://cloud.r-project.org")
-  devtools::install_github("PecanProject/pecan/base/logger")
-  devtools::install_github("PecanProject/pecan/base/remote")
-  devtools::install_github("PecanProject/pecan/base/utils")
-  devtools::install_github("PecanProject/pecan/base/db")
-  devtools::install_github("PecanProject/pecan/modules/data.land")
+  remotes::install_github("PecanProject/pecan/base/logger")
+  remotes::install_github("PecanProject/pecan/base/remote")
+  remotes::install_github("PecanProject/pecan/base/utils")
+  remotes::install_github("PecanProject/pecan/base/db")
+  remotes::install_github("PecanProject/pecan/modules/data.land")
   library(PEcAn.data.land)
 }
 
@@ -55,8 +55,12 @@ Instead we'll just load and investigate the final, prepared data object
 load("data/Activity07.RData")
 # y = increment (tree x year)
 # z = dbh (tree x year)
+# ni = number of individuals
+# nt = number of time points
 # make sure to take a look at all the priors!
 str(data)
+knitr::kable(head(data$y))
+knitr::kable(head(data$z))
 ```
 
 
@@ -247,15 +251,24 @@ for(i in 1:ni){
 }"
 
   ## state variable initial condition (subtract observed diameter increments off from the observed diameter)
-  z0 = t(apply(data$y,1,function(y){-rev(cumsum(rev(y)))})) + data$z[,ncol(data$z)] 
+  z0 = data$z
+  for(i in 1:data$ni){
+    z0[i,] = data$z[i,ncol(data$z)] - rev(cumsum(rev(data$y[i,])))
+  }
   
   ## JAGS initial conditions
   nchain = 3
   init <- list()
   for(i in 1:nchain){
     y.samp = sample(data$y,length(data$y),replace=TRUE)
-    init[[i]] <- list(x = z0,tau_add=runif(1,1,5)/var(diff(y.samp),na.rm=TRUE),
-                      tau_dbh=1,tau_inc=500,tau_ind=50,tau_yr=100,ind=rep(0,data$ni),year=rep(0,data$nt))
+    init[[i]] <- list(x = z0,
+                      tau_add=runif(1,1,5)/var(diff(y.samp),na.rm=TRUE), ## process precision
+                      tau_dbh=1,   ## DBH obs precision
+                      tau_inc=500, ## tree ring obs precision
+                      tau_ind=50,  ## individual effect
+                      tau_yr=100)  ## year effect
+    init[[i]]$year = rnorm(data$nt,0,1/sqrt(init[[i]]$tau_yr)) ## use tau_yr to draw random year effects
+    init[[i]]$ind  = rnorm(data$ni,0,1/sqrt(init[[i]]$tau_ind)) ## use tau_ind to draw random individual effects
   }
   
   ## compile JAGS model
@@ -263,10 +276,15 @@ for(i in 1:ni){
                            data = data,
                            inits = init,
                            n.chains = 3)
+  ## note: this will give a WARNING (not an error) about unused tau_ind, tau_yr, ind, yr 
+  ## because we haven't included those to the JAGS code yet
+  
+  
   ## burn-in
   jags.out   <- coda.samples (model = j.model,
                               variable.names = c("tau_add","tau_dbh","tau_inc","mu","tau_ind","tau_yr"),
                               n.iter = min(n.iter,2000))
+  ## note: will also give a WARNING about tau_ind, tau_yr
   plot(jags.out)
   
   ## run MCMC
@@ -276,10 +294,12 @@ for(i in 1:ni){
                               n.iter = n.iter)
 ```
 
-Next, lets generate some diagnostic plots to look at the model. First, lets plot the posterior CI for growth and DBH and compare these to observations. Since we have scores of cores and trees, we'll pick a random subset of trees to check. One thing that's critical to note is that for the confidence intervals on growth that these are calculated pathwise -- we're looking at the growth from a whole MCMC iteration -- rather than pairwise (i.e. subtracting the posterior distribution for DBH at one point from the posterior distribution of DBH at the next). Because there's high correlations between successive time points, the pathwise uncertainty estimates are considerably lower in uncertainty -- essentially saying that we know can know the growth rate of the tree better than we can know the actual size of the tree
+Next, lets generate some diagnostic plots to look at the model. First, lets plot the posterior CI for growth and DBH and compare these to observations. Since we have scores of cores and trees, we'll pick a random subset of trees to check. 
+
+One thing that's critical to note is that for the confidence intervals on growth that these are calculated **pathwise** -- we're looking at the growth from a whole MCMC iteration -- rather than pairwise (i.e. subtracting the posterior distribution for DBH at one point from the posterior distribution of DBH at the next). Because there's high correlations between successive time points, the pathwise uncertainty estimates are considerably lower in uncertainty -- essentially saying that we know can know the growth rate of the tree better than we can know the actual size of the tree
 
 ```{r, fig.height=8}
-#### Helper function
+#### Helper function to parse JAGS variable names that include matrix syntax (e.g. "x[40,13]")
 ##' @param w mcmc object containing matrix outputs
 ##' @param pre prefix (variable name) for the matrix variable to be extracted
 ##' @param numeric boolean, whether to coerce class to numeric
@@ -298,13 +318,15 @@ parse.MatrixNames <- function(w, pre = "x", numeric = FALSE) {
   #### Diagnostic plots
   
   ### DBH
-  layout(matrix(1:8,4,2))
+  layout(matrix(1:8,4,2)) ## arrange plots in a 4 x 2 matrix
   out <- as.matrix(jags.out)
   x.cols = which(substr(colnames(out),1,1)=="x")   ## which columns are the state variable, x
   ci <- apply(out[,x.cols],2,quantile,c(0.025,0.5,0.975))
   ci.names = parse.MatrixNames(colnames(ci),numeric=TRUE)
   
   smp = c(sample.int(data$ni,3),49)  ## I've rigged the sampling to make sure you see tree 49!
+  
+  ## plot sample of DBH timeseries
   for(i in smp){
     sel = which(ci.names$row == i)
     plot(data$time,ci[2,sel],type='n',ylim=range(ci[,sel],na.rm=TRUE),ylab="DBH (cm)",main=i)
@@ -312,13 +334,13 @@ parse.MatrixNames <- function(w, pre = "x", numeric = FALSE) {
     points(data$time,data$z[i,],pch="+",cex=1.5)
   }
   
-  ## growth
+  ## sample of growth timeseries
   for(i in smp){
     sel = which(ci.names$row == i)
     inc.mcmc = apply(out[,x.cols[sel]],1,diff)
     inc.ci = apply(inc.mcmc,1,quantile,c(0.025,0.5,0.975))*5
     
-    plot(data$time[-1],inc.ci[2,],type='n',ylim=range(inc.ci,na.rm=TRUE),ylab="Ring Increment (mm)")
+    plot(data$time[-1],inc.ci[2,],type='n',ylim=range(inc.ci,na.rm=TRUE),ylab="Ring Increment (mm)",main=i)
     ciEnvelope(data$time[-1],inc.ci[1,],inc.ci[3,],col="lightBlue")
     points(data$time,data$y[i,]*5,pch="+",cex=1.5,type='b',lty=2)
   }
@@ -330,7 +352,7 @@ Second, let's look at the histogram of our fixed effect, mu, and the precisions.
 ```{r}
   ## process model
   vars = (1:ncol(out))[-c(which(substr(colnames(out),1,1)=="x"),grep("tau",colnames(out)),
-                          grep("year",colnames(out)),grep("ind",colnames(out)))]
+                          grep("year",colnames(out)),grep("ind",colnames(out)))] ## remove x, tau's, yr, and ind from plots
   par(mfrow=c(1,1))
   for(i in vars){
     hist(out[,i],main=colnames(out)[i])
@@ -339,7 +361,7 @@ Second, let's look at the histogram of our fixed effect, mu, and the precisions.
 
   ## Standard Deviations
   par(mfrow=c(2,3))
-  prec = out[,grep("tau",colnames(out))]
+  prec = out[,grep("tau",colnames(out))] ## select just taus to plot
   for(i in 1:ncol(prec)){
     hist(1/sqrt(prec[,i]),main=colnames(prec)[i])
   }
@@ -348,9 +370,10 @@ Second, let's look at the histogram of our fixed effect, mu, and the precisions.
 ```
 
 
-Third, let's look at the random effects. It is easy enough to plot the year effects by year. For the individual effects we'll plot these twice, first ordering the effects by plot and the second ordering them by species.
+Third, let's look at the random effects. It is easy enough to plot the year effects by year. For the individual effects we'll plot these twice, first ordering the effects by plot and the second ordering them by species. Note that this chunk of code will not plot ANYTHING until the year and/or individual effects are added to the model.
 
 ```{r}
+  load("data/combined.07.RData")
   par(mfrow=c(1,1))
   ### YEAR
   year.cols = grep("year",colnames(out))
@@ -383,13 +406,13 @@ Third, let's look at the random effects. It is easy enough to plot the year effe
 
 
 
-By default this code is set to run with a small number of years (15), and a much too low number of MCMC iterations (500), just so that the code with "knit" quickly initially. For your analyses you should obviously increase these -- I found that convergence was adequate with around 20,000 samples, though I probably would run 10x longer than that for a publishable analysis. However, such an analysis would take hours to run.
+By default this code is set to run with a small number of years (15), and a much too low number of MCMC iterations (500), just so that the code with "knit" quickly initially. **For your analyses you should obviously increase these** -- I found that convergence was adequate with around 20,000 samples, though I probably would run 10x longer than that for a publishable analysis. However, such an analysis would take hours to run.
 
 Assignment:
 
-1. Run the model initially with random effects off
+1. Run the model initially with random effects off.
 
-2. Rerun the model with random effects on. Compare this to the previous run. What is the relative partitioning of uncertainties in the different versions of the model among observation error, process error, and the different random effects? What does the size of these effects suggest about the drivers of uncertainty in tree growth?
+2. Rerun the model with both random effects on. Make sure to check convergence, burn-in, and effective sample size. Compare model fit and parameter estimates to the previous run. What is the relative partitioning of uncertainties in the different versions of the model among observation error, process error, and the different random effects? What does the size of these effects suggest about the drivers of uncertainty in tree growth?
 
 3. Based on the diagnostics, propose an additional effect (fixed or random) to add to the model. Such an effect should plausibly chip away at a sizable fraction of the unexplained variability -- you wouldn't want to propose an effect that isn't associated with systematic variability. 
 
@@ -397,7 +420,7 @@ Assignment:
 
 5. Write the JAGS code that would fit the proposed model (note: you don't have to track down additional covariate data or run this model, just propose the code)
 
-** BECAUSE THE PRODUCTION VERSION OF THIS CODE TAKES A LONG TIME TO RUN, PLEASE SUBMIT THE KNIT HTML NOT THE Rmd **
+**BECAUSE THE PRODUCTION VERSION OF THIS CODE TAKES A LONG TIME TO RUN, PLEASE SUBMIT THE KNIT HTML NOT THE Rmd**
 
 ## Applying this to your own forecast
 
@@ -407,6 +430,6 @@ Assignment:
 
 * The code above also provides a useful template for adding different random effects 
 
-* While the `fit_dlm` function discussed in Exercise 06 doesn't yet support data fusion models or multivariate models, the `ParseFixed` function can be used to help expand a basic random walk model to a more complex model.
+* While the `fit_dlm` function discussed in Exercise 06 doesn't yet support data fusion models or multivariate models, the `ParseFixed` function in the ecoforecastR package can be used to help expand a basic random walk model to a more complex model.
 
 * When developing your own more sophisticated analyses, make sure to start simple and add complexity incrementally. By only adding one new thing at a time it becomes much easier to debug when something goes wrong and to stop when you push the model beyond the constraints the data are able to provide.

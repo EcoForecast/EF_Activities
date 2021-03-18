@@ -7,9 +7,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The propagation of uncertainty into predictions is one of the key things that set forecasts apart from just running models. The aim of this exercise is to build on work in previous chapters to show how to propagate uncertainty into a forecasts built upon the outputs from a simple but non-trivial state space model. In particular, we are going to start by looking at the data and model but will take it's MCMC output as a given. To explore the uncertainties in the forecast we will start by building a function that allows us to run a forward simulation and then look at what that model predicts when run deterministically (ignoring all uncertainties). Next we will incrementally add different uncertainties in one-at-a-time to see how this changes the forecast.
+The propagation of uncertainty into predictions is one of the key things that set forecasts apart from just running models. The aim of this exercise is to build on work in previous chapters to show how to propagate uncertainty into a forecast. We do this using an example built upon the outputs from a simple, but non-trivial, state space model. In particular, we are going to start by looking at the data and model but will take its MCMC output as a given. To explore the uncertainties in the forecast we will start by building a function that allows us to run a forward simulation, and then look at what that model predicts when run deterministically (ignoring all uncertainties). Next we will incrementally add different uncertainties in one-at-a-time to see how this changes the forecast.
 
-In exploring uncertainties we will explictly do so within the framework in Dietze 2017 (Ecol Appl.), which is also discussed in Chapter 2.5.3. Specifically, we consider a dynamic model that predicts the future state of the system, $Y_{t+1}$, given the current state, $Y_t$, a set of covariates/drivers, $X_t$, model parameters, $\theta$, random effects, $\alpha$, and process error, $\epsilon$
+We will explore the impact of different uncertainties on our forecast within the framework in Dietze 2017 (Ecol Appl.), which is also discussed in Chapter 2.5.3. Specifically, we consider a dynamic model that predicts the future state of the system, $Y_{t+1}$, given the current state, $Y_t$, a set of covariates/drivers, $X_t$, model parameters, $\theta$, random effects, $\alpha$, and process error, $\epsilon$
 
 $$Y_{t+1} = f(Y_t,X_t | \theta + \alpha) + \epsilon$$   {#eq:eqn1}
 
@@ -50,7 +50,7 @@ Within this dataset `No[s,t]` is the observed population at a specific site, s, 
 plot(precip,type='b',xlab="time",ylab="precip (mm/yr)")
 ```
 
-Based on this the data was fit to a logistic growth state space model that assumes K has a random site effect, $\alpha_s$, and varies as a function of $log(precip)$. Both the process error, $Q = Var[\epsilon]$, and the observation error, R, are assumed to follow lognormal distributions.
+Based on these observations, the data was fit to a logistic growth state space model that assumes K has a random site effect, $\alpha_s$, and varies as a function of $log(precip)$. Both the process error, $Q = Var[\epsilon]$, and the observation error, R, are assumed to follow lognormal distributions.
 
 ```{r}
 logisticRE <- "
@@ -96,7 +96,7 @@ model{
 "
 ```
 
-The variable names Q and R may seem odd but this is done for consistency with material we will cover in Chapter 13. 
+The variable names Q (process error) and R (observation error) may seem odd but this is done for consistency with material we will cover in Chapter 13 and the data assimilation literature. 
 
 ### Posterior Diagnostics
 
@@ -134,7 +134,7 @@ time1 = 1:NT       ## calibration period
 time2 = time1+NT   ## forecast period
 ```
 
-Before we get started with prediction, let's focus in on a single site to make the task a bit simpler. Because we'll want to display this site for all the different model runs we do let's create a simple function to encapsulate making the plot rather than cluttering our code with constant cut-and-paste redundance.
+Before we get started with prediction, let's focus in on a single site to make the task a bit simpler. Because we'll want to display this site for all the different model runs we do let's create a simple function to encapsulate making the plot rather than cluttering our code with constant cut-and-paste redundancy.
 
 ```{r}
 plot.run <- function(){
@@ -154,14 +154,14 @@ Our next goal in making a forecast is to run the model forward under it's 'defau
 
 ```{r}
 ##` @param IC    Initial Conditions
+##` @param ppt   Precipitation forecast
 ##` @param r     Intrinsic growth rate
 ##` @param Kg    Across-site ('global') mean carrying capacity
-##` @param alpha Site random effect
 ##` @param beta  Slope of precipitation effect on K
-##` @param ppt   Precipitation forecast
+##` @param alpha Site random effect
 ##` @param Q     Process error (default = 0 for deterministic runs)
 ##` @param n     Size of Monte Carlo ensemble
-forecastN <- function(IC,r,Kg,alpha,beta,ppt,Q=0,n=Nmc){
+forecastN <- function(IC,ppt,r,Kg,beta,alpha,Q=0,n=Nmc){
   N <- matrix(NA,n,NT)  ## storage
   Nprev <- IC           ## initialize
   for(t in 1:NT){
@@ -188,11 +188,11 @@ param.mean <- apply(params,2,mean)
 IC <- as.matrix(out$predict)
 
 N.det <- forecastN(IC=mean(IC[,"N[6,30]"]),
+                   ppt=ppt.mean,
                    r=param.mean["r_global"],
                    Kg=param.mean["K_global"],
-                   alpha=param.mean["alpha_site[6]"],
                    beta=param.mean["beta"],
-                   ppt=ppt.mean,
+                   alpha=param.mean["alpha_site[6]"],
                    Q=0,  ## process error off
                    n=1)
 
@@ -203,7 +203,7 @@ lines(time2,N.det,col="purple",lwd=3)
 
 # Monte Carlo Error Propagation
 
-For each source of uncertainty we'll be exploring the Monte Carlo approach to error propagation. As a starting point let's start with the initial condition uncertainty. For this set of runs we'll want to continue to hold all the parameters and drivers at their means, and keep the process error off, but we'll vary the initial conditions. Specifically, we'll run the model `r Nmc` times, and each time we run the model we'll start from a different initial condition. For this analysis the distribution of initial conditions that we want to sample from is just the posterior distribution of the population size at our focal site in the last year of the calibration period, `N[6,30]`. Because we know that posterior distributions often have covariances among parameters, rather than sample the posterior state directly we're going to sample the _row numbers_ in the MCMC output. We'll save these row numbers and use the same rows when we later sample the model parameters, process error, and random effects as well. While we had the benefit of the posterior state estimate here, in other contexts the initial condition uncertainty might be derived directly from field sampled data, or (for unmeasured sites) may require another statistical model to make a _spatial_ prediction of the state of the system to new locations. If we're particularly data limited we may have to rely on Bayesian priors to inform the initial conditions (e.g. through expert elicitation).
+For each source of uncertainty we'll be exploring the Monte Carlo approach to error propagation. Let's start with the initial condition uncertainty. For this set of runs we'll want to continue to hold all the parameters and drivers at their means, and keep the process error off, but we'll vary the initial conditions. Specifically, we'll run the model `r Nmc` times, and each time we run the model we'll start from a different initial condition. For this analysis the distribution of initial conditions that we want to sample from is just the posterior distribution of the population size at our focal site in the last year of the calibration period, `N[6,30]`. Because we know that posterior distributions often have covariances among parameters, we're going to sample the _row numbers_ in the MCMC output rather than sample the posterior state directly. We'll save these row numbers and use the same rows when we later sample the model parameters, process error, and random effects as well. While we had the benefit of the posterior state estimate here, in other contexts the initial condition uncertainty might be derived directly from field sampled data, or (for unmeasured sites) may require another statistical model to make a _spatial_ prediction of the state of the system to new locations. If we're particularly data limited we may have to rely on Bayesian priors to inform the initial conditions (e.g. through expert elicitation).
 
 ### Initial Condition uncertainty
 ```{r}
@@ -211,11 +211,11 @@ For each source of uncertainty we'll be exploring the Monte Carlo approach to er
 prow = sample.int(nrow(params),Nmc,replace=TRUE)
 
 N.I <- forecastN(IC=IC[prow,"N[6,30]"],  ## sample IC
+                   ppt=ppt.mean,
                    r=param.mean["r_global"],
                    Kg=param.mean["K_global"],
-                   alpha=param.mean["alpha_site[6]"],
                    beta=param.mean["beta"],
-                   ppt=ppt.mean,
+                   alpha=param.mean["alpha_site[6]"],
                    Q=0,
                    n=Nmc)
 
@@ -230,17 +230,17 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 ### Parameter uncertainty
 
-Next, let's add parameter uncertainty to our forecast. To do this we'll want to sample the **joint** parameter posterior distribution using the row numbers as before. In this forecast we're still running `r Nmc` model runs, but now each run get's its own unique parameters _and_ it's own unique initial conditions. We expect the total uncertainty to increase, so we can layer the run both uncertainties on top of the run with just initial conditions to get a feel for how much more uncertainty is added when we incorporate parameter uncertainty.
+Next, let's add parameter uncertainty to our forecast. To do this we'll want to sample the **joint** parameter posterior distribution using the row numbers as before. In this forecast we're still running `r Nmc` model runs, but now each run get's its own unique parameters _and_ its own unique initial conditions. We expect the total uncertainty to increase, so we can layer the run with both uncertainties on top of the run with just initial conditions to get a feel for how much more uncertainty is added when we incorporate parameter uncertainty.
 
-One important thing that is important to note about the parameter uncertainty propagation is that it relies on having meaningful estimates of parameter uncertainty. That's not to say that forecasts can't be done with priors (e.g. through literature synthesis or expert elicitation), but forecasting what you expect to happen in a real system is definitely different than slapping an arbitrary uniform prior on default parameters (e.g. +/- 20%).
+One thing that is important to note about the parameter uncertainty propagation is that it relies on having meaningful estimates of parameter uncertainty. That's not to say that forecasts can't be done with priors (e.g. through literature synthesis or expert elicitation), but forecasting what you expect to happen in a real system is definitely different than slapping an arbitrary uniform prior on default parameters (e.g. +/- 20%).
 
 ```{r}
 N.IP <- forecastN(IC=IC[prow,"N[6,30]"],  ## sample IC
+                   ppt=ppt.mean,
                    r=params[prow,"r_global"],  ## sample parameters
                    Kg=params[prow,"K_global"],
-                   alpha=params[prow,"alpha_site[6]"],
                    beta=params[prow,"beta"],
-                   ppt=ppt.mean,
+                   alpha=params[prow,"alpha_site[6]"],
                    Q=0,
                    n=Nmc)
 
@@ -269,18 +269,18 @@ for(i in 1:NE){
 
 This example of having a smaller number of driver ensembles is not uncommon, and we can handle this easily by resampling _with replacement_ the ensemble members (again, represented as row numbers) the same number of times as our overall ensembles. Thus, while every run may have a unique initial condition and parameter combination, many runs share the same drivers.
 
-When driving ecological forecasts with other forecast outputs (weather, land use, economics, etc), it is important to remember that we can only resample **predictions** or we can sample ensemble members **within a projection**, but we CANNOT resample **across projections**. For example, if I have a given climate scenario (e.g. RCP4.5), I can resample over what different climate models predict, but I cannot resample across the different scenarios, because those scenarios themselved do not represent random draws from the distribution of possible futures.
+When driving ecological forecasts with other forecast outputs (weather, land use, economics, etc), it is important to remember that we can only resample **predictions** or we can sample ensemble members **within a projection**, but we CANNOT resample **across projections**. For example, if I have a given climate scenario (e.g. RCP4.5), I can resample over what different climate models predict, but I cannot resample or average across the different scenarios (e.g. RCP4.5 and 8.5), because those scenarios themselves do not represent random draws from the distribution of possible futures.
 
 ```{r}
 ## sample driver rows
 drow = sample.int(nrow(ppt_ensemble),Nmc,replace=TRUE)
 
 N.IPD <- forecastN(IC=IC[prow,"N[6,30]"],  ## sample IC
+                   ppt=ppt_ensemble[drow,],   ## Sample drivers
                    r=params[prow,"r_global"],  ## sample parameters
                    Kg=params[prow,"K_global"],
-                   alpha=params[prow,"alpha_site[6]"],
                    beta=params[prow,"beta"],
-                   ppt=ppt_ensemble[drow,],   ## Sample drivers
+                   alpha=params[prow,"alpha_site[6]"],
                    Q=0,
                    n=Nmc)
 
@@ -297,18 +297,18 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 ### Process uncertainty
 
-Adding process error to the model looks similar to both older _stochastic_ modeling approachs and to the _residual_ error in statistical models. However, it is subtly distinct in a few important ways. First, unlike theoretical stochastic models, process error is estimated explictly by fitting models to data. Second, unlike residual error, when we estimate process error we partition it from the observation error. Thus the process error represents things in the process that the model is unable to capture (which will always occur because all models are approximations). The distinction between process and observation error is important because observation error only affects the current observation, but process error propagates into the future.
+Adding process error to the model looks similar to both older _stochastic_ modeling approachs and to the _residual_ error in statistical models. However, it is subtly distinct in a few important ways. First, unlike theoretical stochastic models, process error is estimated explicitly by fitting models to data. Second, unlike residual error, when we estimate process error we partition it from the observation error. Thus the process error represents things in the process that the model is unable to capture (which will always occur because all models are approximations). The distinction between process and observation error is important because observation error only affects the current observation, but process error propagates into the future.
 
 ```{r}
 ## process error samples
 Qmc <- 1/sqrt(params[prow,"Q"])  ## convert from precision to standard deviation
 
 N.IPDE <- forecastN(IC=IC[prow,"N[6,30]"],  ## sample IC
+                   ppt=ppt_ensemble[drow,],   ## Sample drivers
                    r=params[prow,"r_global"],  ## sample parameters
                    Kg=params[prow,"K_global"],
-                   alpha=params[prow,"alpha_site[6]"],
                    beta=params[prow,"beta"],
-                   ppt=ppt_ensemble[drow,],   ## Sample drivers
+                   alpha=params[prow,"alpha_site[6]"],
                    Q=Qmc,
                    n=Nmc)
 
@@ -330,16 +330,16 @@ The last figure above represent our best forecast if we're making an **in-sample
 
 ```{r}
 ## Random effect samples
-tau.mc <- 1/sqrt(params[prow,"tau_site"]) ## converst from precision to std deviation
-aNew.mc <- rnorm(Nmc,0,tau.mc)
+tau.mc <- 1/sqrt(params[prow,"tau_site"]) ## convert from precision to std deviation
+aNew.mc <- rnorm(Nmc,0,tau.mc)            ## draw out-of-sample predictions of alpha at a new site
 
-N.IPDEA <- forecastN(IC=IC[prow,"N[6,30]"],  ## sample IC
+N.IPDEA <- forecastN(IC=IC[prow,"N[6,30]"],    ## sample IC
+                   ppt=ppt_ensemble[drow,],    ## Sample drivers
                    r=params[prow,"r_global"],  ## sample parameters
                    Kg=params[prow,"K_global"],
-                   alpha=aNew.mc,              ## sample random effect
                    beta=params[prow,"beta"],
-                   ppt=ppt_ensemble[drow,],   ## Sample drivers
-                   Q=Qmc,
+                   alpha=aNew.mc,              ## sample random effect
+                   Q=Qmc,                      ## process error
                    n=Nmc)
 
 ## Plot run
@@ -389,7 +389,7 @@ legend("topleft",legend=c("Process","Driver","Parameter","InitCond"),col=rev(N.c
 ```
 
 
-**Question 6:**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about in-sample predictions?
+**Question 6:**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about improving in-sample predictions? What is the current balance between process and parameter error and what does that tell us about the potential value of increasing model complexity?
 
 ## Next steps:
 
