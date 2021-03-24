@@ -278,10 +278,12 @@ Task 3, KF10: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix
 Task 4, KF11: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
 
 Task 5: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
+
 * Take the previous forecast and the new data (for just that day) as inputs (plus any other parameters you may need)
 * Assimilates the new data
 * Makes a forecast 16 time steps into the future
 * Returns a list that starts from (& includes) the current best estimate (i.e. nowcast) and the forecast for the next 16 time steps. This list should include both means (mu) and covariances (P), but shouldn't need to include separate mu.a/mu.f and P.a/P.f objects.
+
 You should leverage the existing `KalmanAnalysis` and `KalmanForecast` functions in your new function, and you shouldn't need to change anything in or about those functions.
 
 Note: in a real world situation, where your forecast model has driver/covariate data, you would actually want to first re-run the forecast from yesterday to today with the actual (now observed) driver/covariate data, rather than using your archived forecast (which was done based on your forecasted covariate/driver data), before assimilating today's new observations of your response data.
