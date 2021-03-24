@@ -277,9 +277,7 @@ Task 3, KF10: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix
 
 Task 4, KF11: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
 
-Task 5: Explain conceptually what would have to change in the Kalman Filter function if we replaced the current linear model with a nonlinear process model, in order to turn it into an Extended Kalman Filter function.
-
-Task 6: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
+Task 5: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
 * Take the previous forecast and the new data (for just that day) as inputs (plus any other parameters you may need)
 * Assimilates the new data
 * Makes a forecast 16 time steps into the future
