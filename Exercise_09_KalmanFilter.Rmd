@@ -11,6 +11,8 @@ In this exercise we will apply the classic Kalman Filter (KF) algorithm to the G
 
 In the multivariate version of the KF, the connection between state variables in the Analysis step is provided in two ways: (1) through interactions in the process model itself, $MPM^T$, and (2) through the covariance in the process error, $Q$. In this assignment we'll assimilate all 4 combinations of with/without interactions in the process model versus with/without correlation in the process error to evaluate how each impacts the inferences made. Since the KF will always be following the data, where we'll see the largest impact of these choices will be in the differences in the state uncertainties, especially in the periods of missing data.
 
+## The data and model: Flu in New England
+
 To begin, let's load and plot the flu data for New England.
 
 ```{r}
@@ -95,7 +97,7 @@ knitr::kable(cov2cor(tau_proc),col.names = states)
 sqrt(diag(tau_proc))
 ```
 
-
+## Kalman Filter equations and functions
 
 Now that we have estimates for our parameters, let's write functions that evaluates the classic Kalman Filter. Note, if you were running the KF in 'operational' mode, where new data is arriving in real time, you wouldn't run the function all at once but rather just call the KalmanAnalysis every time new data is observed, followed by KalmanForecast to make a new forecast.
 
@@ -155,7 +157,11 @@ KalmanAnalysis <- function(mu.f,P.f,Y,R,H,I){
     H <- H[obs,]                                              ## observation matrix
     K <- P.f %*% t(H) %*% solve(H%*%P.f%*%t(H) + R[obs,obs])  ## Kalman gain
     mu.a <- mu.f + K%*%(Y[obs] - H %*% mu.f)                  ## update mean
-    P.a <- (I - K %*% H)%*%P.f                                    ## update covariance
+    P.a <- (I - K %*% H)%*%P.f                                ## update covariance
+    ## Note: Here's an alternative form that doesn't use the Kalman gain
+    ## it is less efficient due to the larger number of matrix inversions (i.e. solve)
+    ## P.a <- solve(t(H)%*%solve(R[obs,obs])%*%(H) + solve(P.f))                             
+    ## mu.a <- P.a %*% (t(H)%*%solve(R[obs,obs])%*%Y[obs] + solve(P.f)%*%mu.f)
   } else {
     ##if there's no data, the posterior is the prior
     mu.a = mu.f
@@ -176,6 +182,8 @@ KalmanForecast <- function(mu.a,P.a,M,Q){
 }
 ```
 
+## Applying the Kalman Filter to the Flu data
+
 With the Kalman Filter function defined, we need to define the inputs to the function. Note below that I'm using the variable KF00 to store the outputs, where I'm using 00 to indicate that this run was done with the defaults for both the process model and process error covariance. In the assignment below you will rerun this analysis under a number of alternatives varying the process error and the magnitude of spatial flux in the process model.
 
 ```{r}
@@ -183,13 +191,13 @@ With the Kalman Filter function defined, we need to define the inputs to the fun
 Y   = log10(y)
 
 ## options for process model 
-alpha = 0       ## assume no spatial flux
+alpha = 0        ## assume no spatial flux
 #alpha = 0.05    ## assume a large spatial flux
 M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
 
 ## options for process error covariance
-Q = tau_proc            ## full covariance matrix
-#Q = diag(diag(Q))       ## diagonal covariance matrix
+#Q = tau_proc            ## full process error covariance matrix
+Q = diag(diag(tau_proc))        ## diagonal process error matrix
 
 ## observation error covariance (assumed independent)  
 R = diag(tau_obs,nstates) 
@@ -203,6 +211,8 @@ P0 = cov(t(Y),use="pairwise.complete.obs")
 ## Run Kalman Filter
 KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
 ```
+
+## Visualizing Outputs
 
 After running the Kalman Filter, we can visualize the outputs. The first set of figures below shows the posterior analysis for each state through time. The second set shows the forecast and analysis standard deviations change through time, indicating when there is missing data in green on the bottom of the plot. As you can see the missing data is not synchronous across states, but the mean of the Analysis is influenced by the across-state covariances.
 
@@ -255,16 +265,27 @@ lines(time3,mu,lwd=2)
 points(time,Y[1,])
 ```
 
-### Assignment
+## Assignment
 
-The assignment is to run the KF under all four combinations of covariance in the process model versus process error and compare the results. In particular you'll want to pay attention to the missing data at the beginning of the timeseries for some states. You'll also want to comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. Finally, you'll want to note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
+Run the KF under all four combinations of covariance in the process model versus process error and compare the results. In particular you'll want to pay attention to the missing data at the beginning of the timeseries for some states. You'll also want to comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. Finally, you'll want to note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
 
-* KF01: Rerun with process error set to just the diagonal matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
+Task 1, KF00: Run the default analysis, KF00, with no spatial flux in the process model, and no spatial covariance in the process error
 
-* KF11: Rerun with alpha = 0.05 and the diagonal Q matrix. Comparing KF11 to KF01, what impact does including a spatial flux in the process model have on the inference?
+Task 2, KF01: Rerun with process error set to the full covariance matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
 
-* KF10: Rerun with alpha = 0.05 and the original Q matrix. Compare KF10 to previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
+Task 3, KF10: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix (no spatial covariance). Comparing KF10 to KF00, what impact does including a spatial flux in the process model have on the inference?
 
-* If the process model included a strong environmental covariate that correlated with the seasonal oscillation of influenza, how would this impact the Forecast and Analysis? Comment on how this would affect mu.f, mu.a, P.f, P.a, Q, and  R specifically.
+Task 4, KF11: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
 
-* Explain conceptually what would have to change in the Kalman Filter function if we replaced the current linear model with a nonlinear process model, in order to turn it into an Extended Kalman Filter function.
+Task 5: Explain conceptually what would have to change in the Kalman Filter function if we replaced the current linear model with a nonlinear process model, in order to turn it into an Extended Kalman Filter function.
+
+Task 6: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
+* Take the previous forecast and the new data (for just that day) as inputs (plus any other parameters you may need)
+* Assimilates the new data
+* Makes a forecast 16 time steps into the future
+* Returns a list that starts from (& includes) the current best estimate (i.e. nowcast) and the forecast for the next 16 time steps. This list should include both means (mu) and covariances (P), but shouldn't need to include separate mu.a/mu.f and P.a/P.f objects.
+Note: in a real world situation, where your forecast model has driver/covariate data, you would actually want to first re-run the forecast from yesterday to today with the actual (now observed) driver/covariate data, rather than using your archived forecast (which was done based on your forecasted covariate/driver data), before assimilating today's new observations of your response data.
+
+Extra Credit:
+Using the run with alpha=0.05 and full process error covariance Q, apply your forecast function to make, and visualize, 5 iterative forecasts. Hint: when visualizing, remember that each forecast starts from a different day.
+
