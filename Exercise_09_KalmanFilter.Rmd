@@ -282,6 +282,8 @@ Task 5: In a true forecasting situation you don't have all the data in hand at o
 * Assimilates the new data
 * Makes a forecast 16 time steps into the future
 * Returns a list that starts from (& includes) the current best estimate (i.e. nowcast) and the forecast for the next 16 time steps. This list should include both means (mu) and covariances (P), but shouldn't need to include separate mu.a/mu.f and P.a/P.f objects.
+You should leverage the existing `KalmanAnalysis` and `KalmanForecast` functions in your new function, and you shouldn't need to change anything in or about those functions.
+
 Note: in a real world situation, where your forecast model has driver/covariate data, you would actually want to first re-run the forecast from yesterday to today with the actual (now observed) driver/covariate data, rather than using your archived forecast (which was done based on your forecasted covariate/driver data), before assimilating today's new observations of your response data.
 
 Extra Credit:
