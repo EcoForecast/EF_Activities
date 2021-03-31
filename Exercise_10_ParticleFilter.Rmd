@@ -12,7 +12,7 @@ This exercise explores the use of the particle filter to constrain a simple
 ecosystem model for the Metolius Ameriflux sites in Oregon. Specifically, we'll 
 be looking at the Metolius Intermediate Pine site (US-ME2) 
 http://ameriflux.lbl.gov/sites/siteinfo/US-Me2 and assimilating a derived MODIS 
-data product, LAI. In the code below we will perform three analyses:
+data product, LAI, into a super simple ecosystem model. In the code below we will perform three analyses:
 
 1) Run an ensemble forecast for one year
 2) Use a particle filter to analyse the existing ensemble based on MODIS LAI
@@ -29,9 +29,9 @@ this document.
 
 **The final run should be conducted with a decently large ensemble (500-5000 
 depending on what your computer can handle) and be for the full year 
-(nt = length(time). Since this requires large simulation, if you are doing this 
+`nt = length(time)`. Since this requires large simulation, if you are doing this 
 activity for a class turn in the final HTML, not the Rmd, and feel free to 
-answer questions separately (e.g. in email or another doc) so you don't have to 
+answer questions separately (e.g. in another doc) so you don't have to 
 run a second time to include your answers.** 
 
 Alternatively, you could change the output type to `html_notebook` and run the 
@@ -44,13 +44,13 @@ functions that will be useful in simulation and analysis. The model below is
 very simple but is complex enough to have some chance at capturing observed 
 variability. In addition, unlike most ecosystem models, it explicitly contains 
 process error. The model has three state variables (X) that are all expressed in
-terms of carbon (Mg/ha): Leaf Biomass, Non-leaf Plant Biomass (wood, roots, etc),
-and soil organic matter (SOM). The model also only has two drivers: 
-photosynthetically active radiation (PAR), and air temperature. First, we 
+terms of carbon (Mg/ha): Leaf Biomass, Structural Biomass (wood, roots, etc),
+and soil organic matter (SOM). The model also has only two drivers: 
+photosynthetically active radiation (PAR), and air temperature. Within the model we first 
 estimate LAI from Leaf Biomass and SLA. Using LAI and light we estimate GPP 
 using a simple light use efficiency approach. GPP is then allocated to 
 autotrophic respiration (Ra), leaf NPP, and woody NPP. These leaf and wood 
-biomass pools can then turns over into SOM as litterfall and Coarse Woody Debris. 
+biomass pools can then turns over into SOM as litterfall and Coarse Woody Debris / mortality. 
 Heterotrophic respiration is assumed to follow a standard Q10 temperature 
 sensitivity. Finally, Normal process error is added to X.
 
@@ -129,17 +129,21 @@ There are a few assumptions in developing the initial conditions
 ne = 10 ## production run should be 200 - 5000, depending on what your computer can handle
 
 ### Initial State (Mg/ha)
-Bwood = (c(11983, 12097)+c(3668, 3799)+c(161, 192)) * 1e-6 * 10000 
+### These specific data points were extracted from the Ameriflux BADM files
+Bwood = (c(11983, 12097)+c(3668, 3799)+c(161, 192)) * 1e-6 * 10000 ## sum up stems, coarse roots, and fine roots; change units
 Bleaf = c(206, 236) * 0.01
-SOM = c(1.57, 1.58) + c(0.49, 1.39) + c(2.06, 2.59) * 1e-3 * 10000
+SOM = c(1.57, 1.58) + c(0.49, 1.39) + c(2.06, 2.59) * 1e-3 * 10000 ## sum up litter, CWD, and soil; change units
 X = as.matrix(c(mean(Bleaf), mean(Bwood), mean(SOM)))
+### sample initial condition ensemble members
 if(ne > 1){
   X = as.matrix(cbind(
       rnorm(ne, X[1], sd(Bleaf)),
       rnorm(ne, X[2], sd(Bwood)),
       rnorm(ne, X[3], sd(SOM))))
 }
-X.orig = X
+X.orig = X ## make a copy so that we can run different experiments
+
+## visualize initial condition priors
 pool.lab = c("leaf", "wood", "SOM")
 for(i in 1:3){
   hist(X[, i], main = pool.lab[i])
@@ -167,9 +171,9 @@ litterfall = c(71,94)*0.01*3 ## gC/m2/yr->Mg/ha/yr
 ### initial params
 timestep = 1800 #seconds
 params = list()
+params$SLA = rnorm(ne, mean(SLA), sd(SLA))     ## Specific leaf area
 
 ## univariate priors: expert opinion
-params$SLA = rnorm(ne, mean(SLA), sd(SLA))     ## Specific leaf area
 params$alpha = rlnorm(ne, log(0.02), 0.05)     ## light use efficiency
 params$Q10 = rnorm(ne, 2.1, 0.1)               ## soil respiration Q10
 params$Rbasal = rlnorm(ne, log(0.2), 1) / (params$Q10^2.5) ## Soil basal respiration (umol/m2/sec per Mg/ha of SOM)
@@ -275,6 +279,7 @@ params$mortality = rbeta(ne,mortality.param$a,mortality.param$b)
 
 Next, we need to load the observed meteorology from the flux tower to provide our
 input drivers. The data are for a full year (2 per hour * 24 hours * 365 days).
+For simplicity, we won't worry about the uncertainty in the met data.
 
 ```{r}
 ## load met data
@@ -286,27 +291,28 @@ plot(inputs$temp,type='l')
 ## Initial forecast
 
 Now we're ready to produce our initial ensemble forecast for the system. To do 
-this we'll just set up some storage and loop over calling the model each time 
+this we'll set up some storage and loop over time where we calling the model each time 
 step. After this we'll generate some basic diagnostic plots for the model.
 
 ```{r}
-X = X.orig
-nt = 17 * 48                           ## production run should be nrow(inputs)
-output = array(0.0, c(nt, ne, 12))         ## output storage 
+X = X.orig                             ## initial condition
+nt = 17 * 48                           ## 17 days of 30min; production run should be nrow(inputs) *********
+output = array(0.0, c(nt, ne, 12))     ## output storage [time step,ensembles,variables]
 
 ## foreward ensemble simulation
 for(t in 1:nt){
-  output[t, , ] <- SSEM(X, params, inputs[t, ])
-  X <- output[t, , 1:3]
-  if((t %% 336) == 0) print(t / 336)      ## counter: weeks elapsed
+  output[t, , ] <- SSEM(X, params, inputs[t, ])  ## run model, save output
+  X <- output[t, , 1:3]                          ## set most recent prediction to be the next IC
+  if((t %% 336) == 0) print(t / 336)             ## counter: weeks elapsed (7*48 = 1 week)
 }
 output[is.nan(output)] = 0
 output[is.infinite(output)] = 0
+output.ensemble = output                         ## save original ensemble projection
 
 ## average the output to daily
-bin = 86400 / timestep
-out.daily = array(0.0, c(ceiling(nt/bin), ne, 12))
-for(i in 1:12){
+bin = 86400 / timestep          ## seconds per day / timestep = number of timesteps per day
+out.daily = array(0.0, c(ceiling(nt/bin), ne, 12))  ## [day, ensemble, variables]
+for(i in 1:12){                 ## loop over each variable
   print(i)
   out.daily[,,i] <- apply(output[,,i],2, ctapply, rep(1:365,each=bin)[1:nt], mean)
 }
@@ -318,12 +324,12 @@ units <- c("Mg/ha","Mg/ha","Mg/ha","m2/m2","umol/m2/sec","umol/m2/sec",
            "umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec",
            "Mg/ha/timestep","Mg/ha/timestep")
 
-for(i in 1:12){
-  ci = apply(out.daily[, , i], 1, quantile, c(0.025, 0.5, 0.975))
+for(i in 1:12){  ## loop over variables
+  ci = apply(out.daily[, , i], 1, quantile, c(0.025, 0.5, 0.975))   ## calculate CI over ensemble members
   plot(ci[2, ], main = varnames[i], 
        xlab = "time", ylab = units[i], type='l',ylim  =range(ci))
-  ciEnvelope(1:ncol(ci), ci[1, ], ci[3, ], col = col.alpha("lightGrey", 0.5))
-  lines(ci[2, ])
+  ciEnvelope(1:ncol(ci), ci[1, ], ci[3, ], col = col.alpha("lightGrey", 0.5)) ## plot interval
+  lines(ci[2, ])                                                              ## plot median
 }
 ```
 
@@ -343,17 +349,17 @@ understand the data.
 ## the standard deviation, and the QAQC flags 
 MODIS = read.csv("data/Lat44.45230Lon-121.55740Start2000-01-01End2012-12-31_MOD15A2.asc",
                  header = FALSE, as.is = TRUE, na.string = "-3000")
-MODvar = substr(MODIS[, 1], 43, 52)
-Mtime.raw = substr(MODIS[which(MODvar == "Lai_1km"), 3], 2, 8)
-Mtime = as.Date(Mtime.raw, format="%Y%j")
-QC = MODIS[which(MODvar == "FparLai_QC"), 10]
-LAIr = MODIS[which(MODvar == "Lai_1km"), 10] * 0.1  #Convert units
-LAIr.sd = MODIS[which(MODvar == "LaiStdDev_"), 10] * 0.1  #Convert units
+MODvar = substr(MODIS[, 1], 43, 52)                             ## extract variable names
+Mtime.raw = substr(MODIS[which(MODvar == "Lai_1km"), 3], 2, 8)  ## extract and process dates
+Mtime = as.Date(Mtime.raw, format="%Y%j")                       
+QC = MODIS[which(MODvar == "FparLai_QC"), 10]                   ## extract Quality Control flags 
+LAIr = MODIS[which(MODvar == "Lai_1km"), 10] * 0.1              ## extract LAI data, Convert units
+LAIr.sd = MODIS[which(MODvar == "LaiStdDev_"), 10] * 0.1        ## extract LAI SD, Convert units
 
 ## apply QC
 LAIr[QC > 1] = NA
 LAIr.sd[QC > 1] = NA
-LAIr.sd[LAIr.sd < 0.66] = 0.66
+LAIr.sd[LAIr.sd < 0.66] = 0.66  ## use a published validation estimate to set floor on LAI uncertainty
 
 ## select year
 yr = grep("2005", Mtime.raw)
@@ -364,7 +370,7 @@ Mtime = Mtime[yr]
 ```
 
 Plot a time-series of LAI and the relationship between the MODIS-LAI and its 
-standard deviation.
+standard deviation. Remember that this is an evergreen forest, so we're not expecting much true variability or seasonality in LAI.
 
 ```{r}
 plot(Mtime,LAIr,type = 'o') 
@@ -377,7 +383,8 @@ calculate the time-averaged LAI from the model for the same periods as MODIS.
 
 In the 17-day period, there could be three MODIS LAI values but the first two do
 not pass the QC test so they are not used.  Therefore, only the MODIS LAI 
-estimate for the end of the 17-day period is shown in the plot below
+estimate for the end of the 17-day period is shown in the plot below.
+Once you increase the length of the model run, more observations will show up.
 
 ```{r}
 ## Calculate model ensemble means for same periods
@@ -411,7 +418,7 @@ First, calculate the likelihood of each ensemble member
 ```{r}
 ## calculate the cumulative likelihoods
 ## to be used as PF weights
-LAIlike = array(NA, dim(LAIm))
+LAIlike = array(NA, dim(LAIm))  ## storage, same size as model [ensemble, MODIS time points]
 sel = 1:ncol(LAIm.ci)
 for(i in 1:ne){
   LAIlike[i, ] = dnorm(LAIm[i, ], LAIr[sel], LAIr.sd[sel], log = TRUE)  ## calculate log likelihoods
@@ -428,8 +435,8 @@ weighted quantile using the `wtd.quantile() function`.
 ## Non-resampling Particle Filter
 ## calculation of CI
 nobs = ncol(LAIlike)                     ## number of observations
-LAIpf = matrix(NA, 3, nobs)
-wbar = apply(LAIlike, 2, mean)             ## mean weight at each time point
+LAIpf = matrix(NA, 3, nobs)              ## storage [intervals,time]
+wbar = apply(LAIlike, 2, mean)           ## mean weight at each time point
 for(i in 1:nobs){
   ## calculate weighted median and CI
   LAIpf[, i] = wtd.quantile(LAIm[, i], LAIlike[, i] / wbar[i], c(0.025, 0.5, 0.975))  
@@ -437,16 +444,16 @@ for(i in 1:nobs){
 
 ## plot original ensemble and PF with data
 col.pf   = c(col.alpha("lightGrey", 0.5), col.alpha("lightBlue", 0.5), 
-             col.alpha("lightGreen", 0.5)) ## color sequence
-names.pf = c("ensemble", "non-resamp PF", "resamp PF") ## legend names
+             col.alpha("lightGreen", 0.5))                      ## color sequence
+names.pf = c("ensemble", "non-resamp PF", "resamp PF")          ## legend names
 plot(Mtime[Msel],LAIm.ci[2, ], ylim = range(c(range(LAIm.ci), range(LAIr, na.rm = TRUE))),
      type='n',ylab="LAI",xlab="Time")
 ciEnvelope(Mtime[Msel], LAIm.ci[1, ], LAIm.ci[3, ], col = col.pf[1])  ## original ensemble
-ciEnvelope(Mtime[Msel], LAIpf[1, ], LAIpf[3, ], col = col.pf[2]) ## non-resampling Particle Filter
-points(Mtime, LAIr)                                                           ## observations
-for(i in 1:length(LAIr)){                                                    ## observation uncertainty
+ciEnvelope(Mtime[Msel], LAIpf[1, ], LAIpf[3, ], col = col.pf[2])      ## non-resampling Particle Filter
+points(Mtime, LAIr)                                                   ## observations
+for(i in 1:length(LAIr)){                                             ## observation uncertainty
   if(!is.na(QC[i])){
-    lines(rep(Mtime[i], 2), LAIr[i]+c(-1, 1) * LAIr.sd[i])
+    lines(rep(Mtime[i], 2), LAIr[i]+c(-1, 1) * LAIr.sd[i])            ## data is +/- 1 SD; NOT 95%
   }
 }
 legend("topleft", legend = names.pf[1:2], col = col.pf[1:2], lwd = 5)
@@ -481,10 +488,9 @@ observations only occur every 8 days, we only repeat the analysis step every
 8 days (which for a 30 min timestep is every 48*8 timesteps).
 
 ```{r}
-hist.params = list()               ## since we resample parameters, create a record (history) of what values were used at each step
+hist.params = list()             ## since we resample parameters, create a record (history) of what values were used at each step
 hist.params[[1]] = params        ## initialize with original parameters
 X = X.orig                       ## reset state to the initial values, not the final values from the previous ensemble
-output.ensemble = output         ## save original projection
 
 ### resampling particle filter
 sample = 1                         ## counter
@@ -495,13 +501,13 @@ for(t in 1:nt){
   X = output[t, , 1:3]
   
   ## analysis step
-  if(t%%(48*8) == 0){            ## if at data frequence (remainder == 0) 
-    sample = sample + 1            ## increment counter
+  if(t%%(48*8) == 0){            ## if at data frequency (remainder == 0) 
+    sample = sample + 1          ## increment counter
     print(sample)
     if(!is.na(LAIr[sample])){    ## if observation is present
       
       ## calulate Likelihood (weights)
-      Lm = apply(output[t + 1-(48 * 8):1, ,4], 2, mean)    ## average model LAI over obs period
+      Lm = apply(output[t + 1-(48 * 8):1, ,4], 2, mean)## average model LAI over obs period
       wt = dnorm(LAIr[sample], Lm, LAIr.sd[sample])    ## calculate likelihood (weight)
       
       ## resample ensemble members in proportion to their weight
@@ -524,17 +530,17 @@ non-resampling PF.
 
 ```{r}
 ## Extract and summarize LAI (pr = PF, resampling)
-LAIpr = t(apply(output[, , 4], 2, tapply, window, mean))         ## summarize PF LAI at measurment frequency
+LAIpr = t(apply(output[, , 4], 2, tapply, window, mean))     ## summarize PF LAI at measurement frequency
 LAIpr.ci = apply(LAIpr, 2, quantile, c(0.025,0.5,0.975))     ## calculate median and CI
  
 ## plot time-series
 plot(Mtime[Msel], LAIm.ci[2, ], 
      ylim = range(c(range(LAIm.ci), range(LAIr, na.rm = TRUE))),
      type='n', ylab = "LAI", xlab = "Time")
-ciEnvelope(Mtime[Msel], LAIm.ci[1, ], LAIm.ci[3, ], col=col.pf[1]) 
-ciEnvelope(Mtime[Msel], LAIpf[1, ], LAIpf[3, ], col = col.pf[2])
-ciEnvelope(Mtime[Msel], LAIpr.ci[1, ], LAIpr.ci[3, ], col = col.pf[3])
-points(Mtime, LAIr)    
+ciEnvelope(Mtime[Msel], LAIm.ci[1, ], LAIm.ci[3, ], col=col.pf[1])     ## original ensemble
+ciEnvelope(Mtime[Msel], LAIpf[1, ], LAIpf[3, ], col = col.pf[2])       ## non-resampling PF
+ciEnvelope(Mtime[Msel], LAIpr.ci[1, ], LAIpr.ci[3, ], col = col.pf[3]) ## resampling PF
+points(Mtime, LAIr)                                                    ## data
 for(i in 1:length(LAIr)){
   if(!is.na(QC[i])){
     lines(rep(Mtime[i], 2), LAIr[i] + c(-1, 1) * LAIr.sd[i])
@@ -551,27 +557,27 @@ degenerate, placing too much weight on a small number of parameter combinations.
 More advanced methods exist for proposing new parameter values but they're 
 beyond the scope of this primer.
 
-Note, the digits on the posterior and prior plots are the mean and std for the 
+Note, the **digits on the posterior and prior plots are the mean and standard deviation** for the 
 prior (top row, black line), and the posterior (second row, red line)
 
 ```{r, echo=FALSE, fig.asp=1}
 ### assess shifts in any parameter values
-par(mfrow=c(5,3))
-par(mar=c(2,2,4,0.7))
-for(i in 1:length(params)){
+par(mfrow=c(5,3))                ## 5 x 3 grid of plots
+par(mar=c(2,2,4,0.7))            ## make plot margins smaller
+for(i in 1:length(params)){      ## loop over parameters
   if(is.null(dim(params[[i]]))){ ## parameter is scalar
-    orig = density(hist.params[[1]][[i]])
-    new = density(params[[i]])
+    orig = density(hist.params[[1]][[i]])      ## parameter density at start of PF
+    new = density(params[[i]])                 ## parameter density at end of PF
     ylim=range(c(range(new$y),range(orig$y)))
     plot(orig,main=names(params)[i],xlab=" ",
          ylim=ylim)
     lines(new,col=2,lwd=2)
     text(max(orig$x),ylim[2],
-         paste("Prior",format(mean(hist.params[[1]][[i]]),digits=3),
+         paste("Prior",format(mean(hist.params[[1]][[i]]),digits=3), ## write the mean and SD onto the figure
                format(sd(hist.params[[1]][[i]]),digits=3)),
          pos=2)
       text(max(orig$x),ylim[2]*0.9,
-         paste("Final timestep:",format(mean(params[[i]]),digits=3),
+         paste("Final timestep:",format(mean(params[[i]]),digits=3), ## write the mean and SD onto the figure
                format(sd(params[[i]]),digits=3)),
          pos=2,col=2)
   } else {
@@ -611,9 +617,9 @@ to 365 days.  Do the results match your expectations?
 state variables that are output by the model (which should be updated in 
 proportion to how much they covary with LAI)? 
 
-**Question 6**:Which parameters were most constrained by LAI? Does this make sense?
+**Question 6**: Which parameters were most constrained by LAI? Does this make sense?
 
-## More advanced exercise
+## Extra Credit
 
 **Question 7**: Convert the Analysis step of the resampling PF to an EnKF, rerun and compare 
 to the previous runs. For the sake of keeping this activity simple, don't worry 
