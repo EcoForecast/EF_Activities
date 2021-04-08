@@ -9,52 +9,16 @@ Let's start by loading the ensemble output from the previous lab and the observe
 library("plotrix")
 library(rpart)
 library(randomForest)
+library(scoringRules)
 
 ## load SSEM output
-load("Ex10.output.RData")
+load("data/Ex10.output.RData")
+load("data/Ex10.output.pf.RData")
 
 ## load flux tower data
 L4 = read.csv("data/AMF_USMe2_2005_L4_h_V002.txt",header=TRUE,na.strings="-9999")
 L4[L4==-9999] = NA
 ```
-
-Sanity Check
-------------
-
-When assessing model performance, one can often diagnose bugs in the code and other large errors without the need to make a direct model-data comparison, simply by looking at basic statistics and diagnostic graphs. Also, it is not uncommon to have model outputs for quantities that are not directly observed, but which should be checked to make sure they make sense and that the model is not producing the right answer somewhere else for the wrong reason. In the code below we look at the daily-mean outputs from the unweighted ensemble (output.ensemble) and the resampled particle filter (output)
-
-```{r}
-ciEnvelope <- function(x,ylo,yhi,...){
-  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
-                                      ylo[1])), border = NA,...) 
-}
-col.alpha <- function(col,alpha=1){
-  rgb = col2rgb(col)
-  rgb(rgb[1],rgb[2],rgb[3],alpha*255,maxColorValue=255)
-}
-varnames <- c("Bleaf","Bwood","BSOM","LAI","NEP","GPP","Ra","NPPw","NPPl","Rh","litter","CWD")
-units <- c("Mg/ha","Mg/ha","Mg/ha","m2/m2","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","umol/m2/sec","Mg/ha/timestep","Mg/ha/timestep")
-
-## Time-series visualization, daily means
-DoY = floor(L4$DoY-0.02)
-uDoY = sort(unique(DoY))
-ci = list(pf=list(),ens=list())
-for(i in 1:12){
-  ci.pf  = apply(apply(output[,,i],2,tapply,DoY,mean),1,quantile,c(0.025,0.5,0.975))
-  ci.ens = apply(apply(output.ensemble[,,i],2,tapply,DoY,mean),1,quantile,c(0.025,0.5,0.975))
-#  ci.pf = apply(output[,,i],1,quantile,c(0.025,0.5,0.975))
-#  ci.ens = apply(output.ensemble[,,i],1,quantile,c(0.025,0.5,0.975))
-  plot(uDoY,ci.ens[2,],main=varnames[i],xlab="time",ylab=units[i],type='l',ylim=range(ci.ens))
-  ciEnvelope(uDoY,ci.ens[1,],ci.ens[3,],col=col.alpha("lightGrey",0.5))
-  ciEnvelope(uDoY,ci.pf[1,],ci.pf[3,],col=col.alpha("lightGreen",0.5))
-  lines(uDoY,ci.ens[2,])
-  lines(uDoY,ci.pf[2,],col=3)
-  ci$pf[[i]] = ci.pf
-  ci$ens[[i]] = ci.ens
-}
-```
-
-Question 1: Do the predicted pools and fluxes make sense? Are the signs correct? Are the seasonal patterns reasonable? Is the magnitude of the pools & fluxes reasonable? 
 
 Model vs. Data
 --------------
@@ -65,10 +29,10 @@ In the following section we will begin with some basic diagnostic plots and stat
 
 ## Calculate ensemble means & apply QAQC
 qaqc = (L4$qf_NEE_st == 0)
-NEE.ens = -apply(output.ensemble[,,5],1,mean)
-NEE.pf  = -apply(output[,,5],1,mean)
-E = NEE.ens[qaqc]
-P = NEE.pf[qaqc]
+NEE.ens.bar = -apply(NEE.ens[,],1,mean)
+NEE.pf.bar  = -apply(NEE.pf[,],1,mean)
+E = NEE.ens.bar[qaqc]
+P = NEE.pf.bar[qaqc]
 O = L4$NEE_st_fMDS[qaqc]
 
 ## Model vs obs regressions
@@ -101,9 +65,216 @@ abline(NEE.pf.fit,col=3,lwd=3,lty=2)
 legend("bottomright",legend=c('obs','1:1','reg'),col=1:3,lwd=3)
 ```
 
-Question 2: Which version of the model performed better? Do the statistics or plots give any indication about what parameters might need to be fixed, or processeses refined in the model?
+Question 1: Which version of the model performed better? Do the statistics or plots give any indication about what parameters might need to be fixed, or processeses refined in the model?
 
-Question 3: Repeat the daily-mean time-series plot for NEE from the previous section, but add the observed daily-mean NEE to the plot. Make sure to use the gap-filled NEE estimates, since flux data are not missing at random.
+Question 2: Plot a time-series of observed and modeled **daily mean** NEE. Make sure to use the gap-filled NEE estimates, since flux data are not missing at random. Hint: you can use `tapply` and the day of year column in the data
+
+Taylor diagram
+--------------
+
+Next, let's use a Taylor diagram to pull our summary statistics together into one plot. One of the advantages of the Taylor diagram is that it makes it simpler to visually diagnose the relative differences in model performance, especially when comparing multiple models or different versions of the same model. In the figure below we'll begin by plotting the ensemble, the particle filter, and the climatology. While not common, the Taylor diagram also provides a way of expressing model and data uncertainty in the plot by plotting ensemble estimates of both. Below we add all 200 members of the model ensemble, as well as a Monte Carlo estimate of observation error in the flux data. The latter is derived based on the research by Richardson et al (2006), who showed that eddy covariance data has a non-symmetric heteroskedastic, Laplace distribution. The non-symmetric part refers to the fact that there is greater error in positive fluxes (= respiration, typically nocturnal measurments) than in negative ones.
+
+```{r}
+## Taylor diagrams: Ensemble
+taylor.diagram(ref=O,model=E,normalize=TRUE,ref.sd=TRUE)
+
+## add full ensemble
+for(i in 1:ncol(NEE.pf)){
+  taylor.diagram(ref=O,model=-NEE.ens[qaqc,i],col=2,pch=".",add=TRUE,normalize=TRUE)
+}
+
+# Taylor Diagram: particle filter
+taylor.diagram(ref=O,model=P,add=TRUE,normalize=TRUE,col=3)
+
+## add data uncertainty
+rlaplace = function(n,mu,b){
+  return(mu + ifelse(rbinom(n,1,0.5),1,-1)*rexp(n,b))
+}
+beta = ifelse(O > 0,0.62+0.63*O,1.42-0.19*O) #Heteroskedasticity, parameters from Richardson et al 2006
+for(i in 1:200){
+  x = rlaplace(length(O),O,beta)
+  taylor.diagram(ref=O,model=x,col=5,add=TRUE,normalize=TRUE)
+}
+legend("topright",legend=c("ens","PF","obsUncert"),col=2:5,pch=20,cex=0.7)
+```
+
+Question 3: What did you learn about model performance from the Taylor diagram? 
+
+Question 4: How do our simple models compare to the ensemble of ecosystem models in Figure 7 of Schwalm et al 2010  "A model-data intercomparison of CO2 exchange across North America: results from the north american carbon program site synthesis". J. Geophys. Res. ?
+
+Bayesian p-values
+-----------------
+
+Next, let's look at the patterns in the Bayesian 'p-values', which is essentially a plot of the quantiles of the observed values relative to the predictive distributions. The ideal distribution of quantiles if flat (values show up as frequently as predicted), overcalibrated models tend to have too many observations near 50%, while poorly calibrated models will tend to produce a lot of 0's and 1's (consistently under- or over-predicting). 
+
+```{r}
+O = L4$NEE_st_fMDS  ## observed
+pval.pf = 0
+for(i in 1:nrow(NEE.pf)){
+  pval.pf[i] = sum(O[i] > -NEE.pf[i,])/ncol(NEE.pf)  ## quantiles of the particle filter
+}
+plot(pval.pf)   ## quantile 'residuals'
+hist(pval.pf,probability=TRUE) ## quantile distribution (should be flat)
+```
+Question 5: How do **both** the ensemble and particle filter perform in terms of the predicted quantiles?
+
+CRPS
+----
+
+Building on our ideas related to model skill scores (e.g. accuracy vs precision) and our ideas about assessing probabilistic forecasts (e.g. Bayesian p-values), is the idea of skill scores for probabalistic forecasts. A number of such scores exist, with one of the more popular being the Continuous Rank Probability Score (CRPS). 
+
+$$CRPS = {1 \over m} \sum_{i=1}^m|X_i-y| 
+- {1 \over {2m^2}}\sum_{i=1}^m\sum_{j=1}^m|X_i-X_j|$$
+
+Where y is the data and the X's are ensemble members within the prediciton. The first term in CRPS represents the mean absolute error. The second applies a penalty based on the magnitude of the ensemble spread. To start, let's apply CRPS to the particle filter forecast, which returns a score for every data point. To summarize and visualize this we then calculate the average CRPS, plot CRPS over time, and calculate a histogram to visualize the distribution.
+
+```{r}
+crps = scoringRules::crps_sample(y = O, dat = NEE.pf)
+mean(crps)
+plot(crps)
+hist(crps)
+```
+
+It's not particularly easy to see how the model is doing from the timeseries, so we also calculate the mean diurnal cycle and the relationship between model skill and flux 
+
+```{r}
+### diurnal cycle of model skill
+crps.diurnal = tapply(crps,L4$Hour,mean)
+time.of.day = as.numeric(names(crps.diurnal))
+plot(time.of.day,crps.diurnal)
+
+## CRPS skill as a function of observed NEE
+plot(O,crps)
+```
+
+Question 6: Compare the CRPS for the ensemble and PF models. How do they perform overall (mean) in terms of their ability to produce the correct seasonal and diurnal cycles? Explain the pattern of the relationship between NEE and CRPS.
+
+Mining the Residuals
+--------------------
+
+In the final section we'll use a few off-the-shelf data mining approaches to look at the model residuals and ask what parts of our input space are associated with the largest model error. Note that we are not limited to just examining the effects of the model inputs, we might also look at other potential drivers that are not included in our model, such as soil moisture, to ask if model error is associated with our failure to include this (or other) drivers. Alternatively, we could have looked at other factors such as the time of day or even other model variables (e.g. is model error higher when LAI is larger or small?)
+
+Of the many algorithms out there we'll look at two: the Classification and Regression Tree (CART) model and the Random Forest model. For both we'll define our error metric as $(E-O)/beta$, where beta is the parameter equivalent to the variance in Laplace distribution. Specifically, we're using the heteroskedastic observation error to reweight the residuals to account for the fact that large residuals at times of high flux is likely due to high measurement error. Thus the errors can be interpreted as similar to the number of of standard deviations.
+
+The CART model is a classification algorithm which will build a tree that discretely classifies when the model has high and low error.
+
+The Random Forest model is more like a response surface. The Random Forest will generate 'partial dependence' plots, which indicate the importance of each factor across its range, as well as an overall estimate of the importance of each factor in the model error. 
+
+The key thing to remember in all these plots is that we're modelling the RESIDUALS in order to diagnose errors, not modeling the NEE itself.
+
+```{r}
+## define error metric and dependent variables
+O = L4$NEE_st_fMDS[qaqc]
+err = (E-O)/beta
+x = cbind(inputs$PAR[qaqc],inputs$temp[qaqc])
+colnames(x) = c("PAR","temp")
+smp = sample.int(length(err),1000)  ## take a sample of the data since some alg. are slow
+
+### Classification tree
+rpb = rpart(err ~ x) ## bias
+plot(rpb)
+text(rpb)
+e2 = err^2
+rpe = rpart(e2 ~ x) ## sq error
+plot(rpe)
+text(rpe)
+
+## Random Forest
+rfe = randomForest(x[smp,],abs(err[smp]))
+rfe$importance
+partialPlot(rfe,x[smp,],"PAR")
+partialPlot(rfe,x[smp,],"temp")
+```
+
+Question 7: Overall, which driver is most important in explaining model error? What conditions are most associated with model success? With model failure?  Where do these results reinforce conclusions we reached earlier and where do they shine light on new patterns you may have missed earlier?
+
+Functional Responses
+--------------------
+
+In this section we look at how well the model performed by assessing the modeled relationships between inputs and outputs and comparing that to the same relationship in the data. The raw relationships are very noisy, as many covariates are changing beyond just the single input variable we are evaluating, so in addition we calculate binned means for both the model and data.
+
+```{r}
+## raw
+plot(inputs$temp[qaqc],O,pch=".",ylab="NEE")
+points(inputs$temp[qaqc],E,pch=".",col=2)
+
+## binned
+nbin = 25
+#PAR = inputs$PAR[qaqc]
+#x = seq(min(PAR),max(PAR),length=nbin)
+Tair = inputs$temp[qaqc]
+xd = seq(min(Tair),max(Tair),length=nbin)
+xmid = xd[-length(xd)] + diff(xd)
+bin = cut(Tair,xd)
+Obar = tapply(O,bin,mean,na.rm=TRUE)
+Ose  = tapply(O,bin,std.error,na.rm=TRUE)
+Ebar = tapply(E,bin,mean,na.rm=TRUE)
+Ese  = tapply(E,bin,std.error,na.rm=TRUE)
+OCI = -cbind(Obar-1.96*Ose,Obar,Obar+1.96*Ose)
+ECI = -cbind(Ebar-1.96*Ese,Ebar,Ebar+1.96*Ese)
+rng = range(rbind(OCI,ECI))
+
+col2=ecoforecastR::col.alpha("darkgrey",0.9)
+col1=ecoforecastR::col.alpha("lightgrey",0.6)
+
+plot(xmid,Obar,ylim=rng,type='n',xlab="Air Temperature (C)",ylab="NEP (umol/m2/s)",cex.lab=1.3)
+ecoforecastR::ciEnvelope(xmid,ECI[,1],ECI[,3],col=col2)
+lines(xmid,ECI[,2],col="white",lwd=4)
+ecoforecastR::ciEnvelope(xmid,OCI[,1],OCI[,3],col=col1)
+lines(xmid,OCI[,2],col="lightgrey",lwd=4)
+
+legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.7)
+
+
+```
+
+Question 8: Evaluate the model's ability to capture functional responses to both Temperature and PAR.
+
+Overall 
+-------
+
+Below is a final summary figure of the model's performance on a daily timescale that combines many of the previous assessments.
+
+```{r}
+
+### other summary figures to go in multi-panel
+par(mfrow=c(2,2))
+
+## Time-series visualization, daily means
+DoY = floor(L4$DoY-0.02)
+uDoY = sort(unique(DoY))
+ci.pf  = apply(apply(NEE.pf[,],2,tapply,DoY,mean),1,mean)
+NEE = -L4$NEE_st_fMDS
+NEEd = tapply(NEE,DoY,mean)
+plot(uDoY,ci.pf,xlab="time",ylab="NEE",type='l',ylim=range(c(ci.pf,NEEd)),cex.lab=1.3)
+points(uDoY,NEEd,col=2,pch="+")
+legend("topright",legend=c("Model","Data"),lty=c(1,NA),pch=c(NA,"+"),col=1:2,cex=1.3)
+
+## predicted vs observed
+plot(NEEd,ci.pf,xlab="Model",ylab="Data",cex.lab=1.3)
+abline(0,1,lty=2,lwd=4)
+abline(lm(ci.pf ~ NEEd),col=2,lwd=3,lty=3)
+legend("topleft",legend=c("1:1","Reg"),lty=2:3,lwd=4,col=1:2,cex=1.3)
+
+## Functional response
+plot(xmid,Obar,ylim=rng,type='n',xlab="Air Temperature (C)",ylab="NEP (umol/m2/s)",cex.lab=1.3)
+ecoforecastR::ciEnvelope(xmid,ECI[,1],ECI[,3],col=col2)
+lines(xmid,ECI[,2],col="white",lwd=4)
+ecoforecastR::ciEnvelope(xmid,OCI[,1],OCI[,3],col=col1)
+lines(xmid,OCI[,2],col="lightgrey",lwd=4)
+
+legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.3)
+
+### Classification tree
+par(mar=c(0,0,0,0))
+rpe = rpart(e2 ~ PAR+temp,as.data.frame(x),method="anova") ## sq error
+plot(rpe,margin=0.1)
+text(rpe,cex=1.5)
+
+```
+
+
+# Extra Material
 
 Comparison to flux "climatology"
 -------------------------------
@@ -143,39 +314,7 @@ lines(L4$DoY,-NEE.clim,col=4,lwd=2,lty=2)
 legend("topright",legend=c("Obs","clim"),lty=1:2,col=c(1,4),lwd=2)
 ```
 
-Question 4: How does the process model perform relative to the average flux data? Which statistics showed the largest differences between the model and climatology? 
-
-Taylor diagram
---------------
-
-Next, let's use a Taylor diagram to pull our summary statistics together into one plot. One of the advantages of the Taylor diagram is that it makes it simpler to visually diagnose the relative differences in model performance, especially when comparing multiple models or different versions of the same model. In the figure below we'll begin by plotting the ensemble, the particle filter, and the climatology. While not common, the Taylor diagram also provides a way of expressing model and data uncertainty in the plot by plotting ensemble estimates of both. Below we add all 200 members of the model ensemble, as well as a Monte Carlo estimate of observation error in the flux data. The latter is derived based on the research by Richardson et al (2006), who showed that eddy covariance data has a non-symmetric heteroskedastic, Laplace distribution. The non-symmetric part refers to the fact that there is greater error in positive fluxes (= respiration, typically nocturnal measurments) than in negative ones.
-
-```{r}
-## Taylor diagrams
-taylor.diagram(ref=O,model=E,normalize=TRUE,ref.sd=TRUE)
-taylor.diagram(ref=O,model=P,add=TRUE,normalize=TRUE,col=3)
-taylor.diagram(ref=O,model=C,add=TRUE,normalize=TRUE,col=4)
-
-## add full ensemble
-for(i in 1:ncol(output)){
-  taylor.diagram(ref=O,model=-output.ensemble[qaqc,i,5],col=2,pch=".",add=TRUE,normalize=TRUE)
-}
-
-## add data uncertainty
-rlaplace = function(n,mu,b){
-  return(mu + ifelse(rbinom(n,1,0.5),1,-1)*rexp(n,b))
-}
-beta = ifelse(O > 0,0.62+0.63*O,1.42-0.19*O) #Heteroskedasticity, parameters from Richardson et al 2006
-for(i in 1:200){
-  x = rlaplace(length(O),O,beta)
-  taylor.diagram(ref=O,model=x,col=5,add=TRUE,normalize=TRUE)
-}
-legend("topright",legend=c("ens","PF","clim","obsUncert"),col=2:5,pch=20,cex=0.7)
-```
-
-Question 5: What did you learn about model performance from the Taylor diagram? 
-
-Question 6: How do our simple models and flux climatology compare to the ensemble of ecosystem models in Figure 7 of Schwalm et al 2010  "A model-data intercomparison of CO2 exchange across North America: results from the north american carbon program site synthesis". J. Geophys. Res. ?
+Question 9: How does the process model perform relative to the average flux data? Which statistics showed the largest differences between the model and climatology? 
 
 Time-scales
 -----------
@@ -199,148 +338,4 @@ lines(tod,NEE.obs.diurnal,lwd=3)
 legend("bottomright",legend=c("obs","ens","PF","clim"),col=1:4,pch=20,cex=0.75)
 ```
 
-Question 7: What time of day has the largest uncertainty? What does this suggest about what parameter(s) needs to be modified in the model, in what direction, and by approximately how much? In providing this answer, recall the structure of the model as well as the fact that the particle filter has assimilated LAI so we can assume that that term is unbiased for that case.
-
-Bayesian p-values
------------------
-
-Next, let's look at the patterns in the Bayesian 'p-values', which is essentially a plot of the quantiles of the observed values relative to the predictive distributions. The ideal distribution of quantiles if flat (values show up as frequently as predicted), overcalibrated models tend to have too many observations near 50%, while poorly calibrated models will tend to produce a lot of 0's and 1's (consistently under- or over-predicting). 
-
-```{r}
-O = L4$NEE_st_fMDS  ## observed
-pval.pf = 0
-for(i in 1:nrow(output)){
-  pval.pf[i] = sum(O[i] > -output[i,,5])/ncol(output)  ## quantiles of the particle filter
-}
-plot(pval.pf)   ## quantile 'residuals'
-hist(pval.pf,probability=TRUE) ## quantile distribution (should be flat)
-```
-Question 8: How do the ensemble and particle filter perform in terms of the predicted quantiles?
-
-Mining the Residuals
---------------------
-
-In the final section we'll use a few off-the-shelf data mining approaches to look at the model residuals and ask what parts of our input space are associated with the largest model error. Note that we are not limited to just examining the effects of the model inputs, we might also look at other potential drivers that are not included in our model, such as soil moisture, to ask if model error is associated with our failure to include this (or other) drivers. Alternatively, we could have looked at other factors such as the time of day or even other model variables (e.g. is model error higher when LAI is larger or small?)
-
-Of the many algorithms out there we'll look at two: the Classification and Regression Tree (CART) model and the Random Forest model. For both we'll define our error metric as $(E-O)/beta$, where beta is the parameter equivalent to the variance in Laplace distribution. Specifically, we're using the heteroskedastic observation error to reweight the residuals to account for the fact that large residuals at times of high flux is likely due to high measurement error. Thus the errors can be interpreted as similar to the number of of standard deviations.
-
-The CART model is a classification algorithm which will build a tree that discretely classifies when the model has high and low error.
-
-The Random Forest model is more like a response surface. The Random Forest will generate 'partial dependence' plots, which indicate the importance of each factor across its range, as well as an overall estimate of the importance of each factor in the model error. 
-
-The key thing to remember in all these plots is that we're modelling the RESIDUALS in order to diagnose errors, not modeling the NEE itself.
-
-```{r}
-## define error metric and dependent variables
-O = L4$NEE_st_fMDS[qaqc]
-err = (E-O)/beta
-x = cbind(inputs$PAR[qaqc],inputs$temp[qaqc])
-colnames(x) = c("PAR","temp")
-smp = sample.int(length(err),1000)  ## take a sample of the data since some alg. are slow
-
-### Classification tree
-rpb = rpart(err ~ x) ## bias
-plot(rpb)
-text(rpb)
-e2 = err^2
-rpe = rpart(e2 ~ x) ## sq error
-plot(rpe)
-text(rpe)
-
-## Random Forest
-rfe = randomForest(x[smp,],abs(err[smp]))
-rfe$importance
-partialPlot(rfe,x[smp,],"PAR")
-partialPlot(rfe,x[smp,],"temp")
-```
-
-Question 9: Overall, which driver is most important in explaining model error? What conditions are most associated with model success? With model failure?  Where do these results reinforce conclusions we reached earlier and where do they shine light on new patterns you may have missed earlier?
-
-Functional Responses
---------------------
-
-In this section we look at how well the model performed by assessing the modeled relationships between inputs and outputs and comparing that to the same relationship in the data. The raw relationships are very noisy, as many covariates are changing beyond just the single input variable we are evaluating, so in addition we calculate binned means for both the model and data.
-
-```{r}
-## raw
-plot(inputs$temp[qaqc],O,pch=".",ylab="NEE")
-points(inputs$temp[qaqc],E,pch=".",col=2)
-
-## binned
-nbin = 25
-#PAR = inputs$PAR[qaqc]
-#x = seq(min(PAR),max(PAR),length=nbin)
-Tair = inputs$temp[qaqc]
-xd = seq(min(Tair),max(Tair),length=nbin)
-xmid = xd[-length(xd)] + diff(xd)
-bin = cut(Tair,xd)
-Obar = tapply(O,bin,mean,na.rm=TRUE)
-Ose  = tapply(O,bin,std.error,na.rm=TRUE)
-Ebar = tapply(E,bin,mean,na.rm=TRUE)
-Ese  = tapply(E,bin,std.error,na.rm=TRUE)
-OCI = -cbind(Obar-1.96*Ose,Obar,Obar+1.96*Ose)
-ECI = -cbind(Ebar-1.96*Ese,Ebar,Ebar+1.96*Ese)
-rng = range(rbind(OCI,ECI))
-
-col2=col.alpha("darkgrey",0.9)
-col1=col.alpha("lightgrey",0.6)
-
-plot(xmid,Obar,ylim=rng,type='n',xlab="Air Temperature (C)",ylab="NEP (umol/m2/s)",cex.lab=1.3)
-ciEnvelope(xmid,ECI[,1],ECI[,3],col=col2)
-lines(xmid,ECI[,2],col="white",lwd=4)
-ciEnvelope(xmid,OCI[,1],OCI[,3],col=col1)
-lines(xmid,OCI[,2],col="lightgrey",lwd=4)
-
-legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.7)
-
-
-```
-
-Question 10: Evaluate the model's ability to capture functional responses to both Temperature and PAR.
-
-Overall 
--------
-
-Below is a final summary figure of the model's performance on a daily timescale that combines many of the previous assessments.
-
-```{r}
-
-### other summary figures to go in multi-panel
-par(mfrow=c(2,2))
-
-## Time-series visualization, daily means
-DoY = floor(L4$DoY-0.02)
-uDoY = sort(unique(DoY))
-i=5
-ci.pf  = apply(apply(output[,,i],2,tapply,DoY,mean),1,mean)
-NEE = -L4$NEE_st_fMDS
-NEEd = tapply(NEE,DoY,mean)
-plot(uDoY,ci.pf,xlab="time",ylab=units[i],type='l',ylim=range(c(ci.pf,NEEd)),cex.lab=1.3)
-points(uDoY,NEEd,col=2,pch="+")
-legend("topright",legend=c("Model","Data"),lty=c(1,NA),pch=c(NA,"+"),col=1:2,cex=1.3)
-
-## predicted vs observed
-plot(NEEd,ci.pf,xlab="Model",ylab="Data",cex.lab=1.3)
-abline(0,1,lty=2,lwd=4)
-abline(lm(ci.pf ~ NEEd),col=2,lwd=3,lty=3)
-legend("topleft",legend=c("1:1","Reg"),lty=2:3,lwd=4,col=1:2,cex=1.3)
-
-## Functional response
-plot(xmid,Obar,ylim=rng,type='n',xlab="Air Temperature (C)",ylab="NEP (umol/m2/s)",cex.lab=1.3)
-ciEnvelope(xmid,ECI[,1],ECI[,3],col=col2)
-lines(xmid,ECI[,2],col="white",lwd=4)
-ciEnvelope(xmid,OCI[,1],OCI[,3],col=col1)
-lines(xmid,OCI[,2],col="lightgrey",lwd=4)
-
-legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.3)
-
-### Classification tree
-par(mar=c(0,0,0,0))
-rpe = rpart(e2 ~ PAR+temp,as.data.frame(x),method="anova") ## sq error
-plot(rpe,margin=0.1)
-text(rpe,cex=1.5)
-
-```
-
-
-
+Question 10: What time of day has the largest uncertainty? What does this suggest about what parameter(s) needs to be modified in the model, in what direction, and by approximately how much? In providing this answer, recall the structure of the model as well as the fact that the particle filter has assimilated LAI so we can assume that that term is unbiased for that case.
