@@ -126,7 +126,7 @@ There are a few assumptions in developing the initial conditions
 
 ```{r}
 #### SET THE ENSEMBLE SIZE
-ne = 10 ## production run should be 200 - 5000, depending on what your computer can handle
+ne = 1000 ## production run should be 200 - 5000, depending on what your computer can handle
 
 ### Initial State (Mg/ha)
 ### These specific data points were extracted from the Ameriflux BADM files
@@ -296,7 +296,7 @@ step. After this we'll generate some basic diagnostic plots for the model.
 
 ```{r}
 X = X.orig                             ## initial condition
-nt = 17 * 48                           ## 17 days of 30min; production run should be nrow(inputs) *********
+nt = nrow(inputs)#17 * 48                           ## 17 days of 30min; production run should be nrow(inputs) *********
 output = array(0.0, c(nt, ne, 12))     ## output storage [time step,ensembles,variables]
 
 ## foreward ensemble simulation
@@ -314,7 +314,7 @@ bin = 86400 / timestep          ## seconds per day / timestep = number of timest
 out.daily = array(0.0, c(ceiling(nt/bin), ne, 12))  ## [day, ensemble, variables]
 for(i in 1:12){                 ## loop over each variable
   print(i)
-  out.daily[,,i] <- apply(output[,,i],2, ctapply, rep(1:365,each=bin)[1:nt], mean)
+  out.daily[,,i] <- apply(output[,,i],2, tapply, rep(1:365,each=bin)[1:nt], mean)
 }
 
 ## Basic time-series visualizations
