@@ -1,0 +1,515 @@
+---
+title: "Activity 04 - Pair coding"
+author: "Michael Dietze"
+output: html_document
+---
+
+## Objectives
+
+The primary goal of this exercise is to gain experience working collaboratively to develop a scientific workflow. As such, this assignment is best completed with a partner. Specifically, we will outline a simple analysis, break the overall job into parts, and have each person complete part of the project. To put these parts together we will be using Github. Along the way we will also be exploring the statistical concept of Likelihood.
+
+## neon4cast workflow
+
+The goal of this analysis is to develop a basic forecasting workflow. Specifically, we will be forecasting water temperature and dissolved oxygen concentration for a set of lakes and streams monitored by the National Ecological Observatory Network (NEON) as part of the Ecological Forecasting Initiative's NEON Forecasting Challenge. This analysis is based on the example developed by Quinn Thomas (EFI-RCN lead PI) at https://github.com/eco4cast/neon4cast-example but refactored to focus on teaching Github and team code development. The data processing steps here draw upon concepts covered in Activity 3.
+
+
+The workflow for this analysis with have three components: 
+
+1. Download required data
+2. Calibrate forecast model
+3. Make a forecast into the future
+4. Save and submit forecast and metadata
+
+From this overall design, let's next outline the specific steps involved as pseudocode
+
+```
+### Aquatic Forecast Workflow ###
+
+### Step 1: Download Required Data
+
+## Target data (Y-variables)
+
+## Site metadata
+
+## Past meteorological data for calibration (X-variables)
+
+## Weather forecast (future X)
+
+### Step 2: Calibrate forecast model
+
+### Step 3: Make a forecast into the future
+
+### Step 4: Save and submit forecast and metadata
+
+```
+
+## Modular Design
+
+From this overall design we can look for ways to modularize the analysis by creating functions to run each step. At this step in design, we're not focused on how each of these functions is implemented, but rather on the inputs going into each function and the outputs coming out. Once this sort of high-level design is in place, individual team members can then work on implementing different functions with confidence that the overall workflow will work. Furthermore, in the future you might decide to completely change how a specific function is implemented (write a different model, use a different weather forecast, etc.) without breaking the overall workflow as long as the overall inputs and outputs don't change. Rather than writing your code front-to-back, like an email, time spent at this stage getting the design right will pay large dividends down the road in terms of efficiency, organization, and reliability, all of which are important for any coding project, but which are particularly important for an automated forecast.
+
+As a first step, because the raw data will be downloaded off the web and has embedded meta-data to handle, let's go ahead and create a set of download functions. Some of these functions simply grab and open a predefined file so don't need any input parameters, while others will need to know things about dates, sites, and covariate. At the design stage we'll list both specify the names of these things as function arguments and document them using the `@param` tag used by ROxygen2, R code documenting standard. All of these functions will return something (the data that was downloaded), so it is also good design to document what is returned and how it will be formatted, which we'll do using the ROxygen2 tag `@return`. More info about ROxygen2, other tags it uses, and how it can be used to automatically build help pages for your functions (like the ones that you see in the packages you download from CRAN) can be found at https://roxygen2.r-lib.org/.
+
+```
+##' Download Targets
+##' @return data.frame in long format with days as rows, and time, site_id, variable, and observed as columns
+download_targets <- function()
+
+##' Download Site metadata
+##' @return metadata dataframe
+download_site_meta <- function()
+
+##' append historical meteorological data into target file
+##' @param target targets dataframe
+##' @return updated targets dataframe with added weather data
+merge_met_past <- function(target)
+
+##' Download NOAA GEFS weather forecast
+##' @param forecast_date start date of forecast
+##' @return dataframe
+download_met_forecast <- function(forecast_date)
+```
+
+Most of the above design choices should be fairly straightforward. The possible exception is the decision to have the function that downloads the historical weather data also automatically merge that with the targets data. This was done to both simplify the overall workflow, and to simplify the arguments passed to the function, which implicitly downloads data for the sites and dates needed to match the target data, rather than needing to be passed a list of sites and dates. Note that these are all subjective decisions, and different people could come up with different designs.
+
+Our second step is then to calibrate a set of models to predict water temperature at different NEON lakes. Because we merged the Y and X data into one data frame, target, which also includes site and time information, the calibration function just needs this one argument. Since we're going to end up using basic linear models in our simple forecast, we're going to have the function return a list of regression objects, one for each site and using NEON standard site IDs as the names in the list.
+```
+##' Calibrate aquatic forecast model
+##' @param target dataframe containing historical data and covariates
+##' @return list of site-specific linear models
+calibrate_forecast <- function(target)
+```
+
+Our third step is to make the actual forecasts. For this we'll need the list of models that we just calibrated, the weather forecast as drivers, and the site metadata that we downloaded earlier. We'll have this function return the forecasts in a dataframe organized according to the EFI standard format to make it easier to submit the forecast to the EFI challenge. This format is documented at https://github.com/eco4cast/EFIstandards
+```
+##' run aquatic forecast into the future
+##' @param model site-specific list of forecast models
+##' @param met_forecast weather forecast dataframe
+##' @param site_data dataframe of site metadata
+##' @return dataframe in EFI standard format
+run_forecast <- function(model,met_forecast,site_data)
+```
+
+Our forth and final step is to write a function that save the forecast and it's metadata in EFI standard and then submits the forecast to the EFI challenge. The two obvious arguments to this function are the forecast and team-specific metadata. We'll also all a third argument, `submit` that determines whether the forecast is actually submitted or not, and set this argument to FALSE by default. This argument will be useful when we're building and testing our workflow, so as to not inundate the NEON challenge with junk, and can be switched to TRUE when everything is ready.
+```
+##' Save forecast and metadata to file, submit forecast to EFI
+##' @param forecast dataframe
+##' @param team_info list, see example
+##' @param submit boolean, should forecast be submitted to EFI challenge
+submit_forecast <- function(forecast,team_info,submit=FALSE)
+```
+
+At this point we've spent a good bit of time up front on organization -- we have a detailed plan of attack and have thought carefully about what each module is responsible for doing. Each task has well-defined inputs, outputs, and goals. Rather than facing a thankless job of documenting our code after we're done, even though we haven't written a single line of code yet we are largely done with our documentation. What remains to do is implementation.
+
+## Task 1: Create & Clone Repository 
+
+Because we're going to employ version control in our project, our first step is to create the repository that our project will be stored in.  **To ensure that both you and your partner get to see every step of how to work with version control, in the for the rest of this exercise you are going to complete every step twice, once from the perspective of the OWNER of the repository and once as the COLLABORATOR**.
+
+### OWNER
+
+1. Go to your account on github.com and under the Repositories tab click on the "New" button with a picture of a book on it
+2. Choose a name for your repository (make sure it's different from your partner's)
+3. Click the "Initialize this repository with a README" checkbox
+4. Optionally also provide a Description, Add a licence (e.g. MIT), and add R to the .gitignore
+5. Click "Create Repository"
+6. Copy the URL of your new repository by clicking the clipboard icon
+7. To clone the repository,open up RStudio and create a New Project using this URL Note: this current project will close when you do so, so you'll need to re-open this file from within the new project
+ + Select New Project from the menu in the top right corner
+ + Select Version Control then Git
+ + Paste the URL in and click Create Project
+ 
+## Task 2: Add the data download functions
+
+Within this project we'll create separate files for each part of the analysis. To make the order of the workflow clear we'll want to name the files systematically. In the first file we'll implement the data download functions
+
+```{r}
+##' Download Targets
+##' @return data.frame in long format with days as rows, and time, site_id, variable, and observed as columns
+download_targets <- function(){
+  readr::read_csv("https://data.ecoforecast.org/neon4cast-targets/aquatics/aquatics-targets.csv.gz", guess_max = 1e6)
+}
+
+##' Download Site metadata
+##' @return metadata dataframe
+download_site_meta <- function(){
+  site_data <- readr::read_csv("https://raw.githubusercontent.com/eco4cast/neon4cast-targets/main/NEON_Field_Site_Metadata_20220412.csv") 
+  site_data %>% filter(as.integer(aquatics) == 1)
+}
+
+
+##' append historical meteorological data into target file
+##' @param target targets dataframe
+##' @return updated targets dataframe with added weather data
+merge_met_past <- function(target){
+  
+  ## connect to data
+  df_past <- neon4cast::noaa_stage3()
+  
+  ## filter for site and variable
+  sites <- unique(target$site_id)
+  noaa_past <- df_past |> 
+    dplyr::filter(site_id %in% sites,
+                  variable == "air_temperature") |> 
+    dplyr::collect()
+  
+  ## Aggregate (to day) and convert units of drivers
+  noaa_past_mean <- noaa_past %>% 
+    mutate(date = lubridate::as_date(time)) %>% 
+    group_by(date, site_id) %>% 
+    summarize(air_temperature = mean(predicted, na.rm = TRUE), .groups = "drop") %>% 
+    rename(time = date) %>% 
+    mutate(air_temperature = air_temperature - 273.15)
+  
+  ## Merge in past NOAA data into the targets file, matching by date.
+  target <- target |> 
+    select(time, site_id, variable, observed) |> 
+    filter(variable %in% c("temperature", "oxygen")) |> 
+    tidyr::pivot_wider(names_from = "variable", values_from = "observed")
+  
+  target <- left_join(target, noaa_past_mean, by = c("time","site_id"))
+  
+}
+
+##' Download NOAA GEFS weather forecast
+##' @param forecast_date start date of forecast
+##' @return dataframe
+download_met_forecast <- function(forecast_date){
+  ## connect to data
+  df_future <- neon4cast::noaa_stage2()
+  
+  noaa_date <- forecast_date - lubridate::days(1)  #Need to use yesterday's NOAA forecast because today's is not available yet
+  
+  ## filter available forecasts by date and variable
+  met_future <- df_future |> 
+    dplyr::filter(cycle == 0,
+                  start_date == as.character(noaa_date),
+                  time >= lubridate::as_datetime(forecast_date), 
+                  variable == "air_temperature") |> 
+    dplyr::collect()
+  
+  ## aggregate to daily
+  met_future <- met_future %>% 
+    mutate(time = lubridate::as_date(time)) %>% 
+    group_by(time, site_id, ensemble) |> 
+    summarize(air_temperature = mean(predicted), .groups = "drop") |> 
+    mutate(air_temperature = air_temperature - 273.15) |> 
+    select(time, site_id, air_temperature, ensemble)
+  
+  return(met_future)
+}
+```
+
+### OWNER
+
+1. In RStudio, click File > New File > R Script
+2. Copy and Paste the above function into this file
+3. Save the file as "01_download_data.R"
+4. From the Git tab, click the box next to the file you just created. This is equivalent to _git add_
+5. Click Commit, enter a log message, and click Commit. This is equivalent to _git commit_
+6. To push the change up to Github click on the green up arrow. This is equivalent to _git push_
+
+## Task 3: Collaborator adds model calibration and forecast
+
+With the first function complete, let's now imagine that a **COLLABORATOR** has been tasked with adding the next two functions. To do so they must first fork and clone the repository
+
+### COLLABORATOR
+
+1. Go to Github and navigate to the project repository within the OWNER's workspace.
+2. Click Fork, which will make a copy of the repository to your own workspace.
+3. Copy the URL to your own version and follow the instructions above for cloning the repository in RStudio.
+4. Open a new file, enter the code below, and then save the file as "02_calibrate_forecast.R"
+```{r}
+##' Calibrate aquatic forecast model
+calibrate_forecast <- function(target){
+  fit <- list() 
+  sites <- unique(target$site_id)
+  for(i in 1:length(sites)){
+    site_target <- target |> 
+      filter(site_id == sites[i])
+    
+    if(length(which(!is.na(site_target$air_temperature) & !is.na(site_target$temperature))) > 0){
+      #Fit linear model based on past data: water temperature = m * air temperature + b
+      fit[[i]] <- lm(temperature~air_temperature,data = site_target)
+    }
+  }
+  names(fit) <- sites
+  return(fit)
+}
+```
+5. Open another new file, enter the code below, and then save the file as "03_run_forecast.R"
+```{r}
+##' run aquatic forecast into the future
+##' @param model site-specific list of forecast models
+##' @param met_forecast weather forecast dataframe
+##' @param site_data dataframe of site metadata
+##' @return dataframe in EFI standard format
+run_forecast <- function(model,met_forecast,site_data){
+  
+  forecast <- NULL
+  sites <- names(model)
+  
+  for(i in 1:length(sites)){
+  
+    # Get site information for elevation
+    site_info <- site_data %>% filter(field_site_id == sites[i]) 
+    
+    met_future_site <- met_future |> 
+      filter(site_id == sites[i])
+    
+    if(!is.null(model[[i]])){
+      
+      #use model to forecast water temperature for each ensemble member
+      forecasted_temperature <- predict(model[[i]],met_future_site)
+
+      #use forecasted temperature to predict oyxgen by assuming that oxygen is saturated.  
+      forecasted_oxygen <- rMR::Eq.Ox.conc(forecasted_temperature, 
+                                           elevation.m = site_info$field_mean_elevation_m, 
+                                           bar.press = NULL, 
+                                           bar.units = NULL,
+                                           out.DO.meas = "mg/L",
+                                           salinity = 0, 
+                                           salinity.units = "pp.thou")
+      ## organize outputs
+      temperature <- tibble(time = met_future_site$time,
+                            site_id = sites[i],
+                            ensemble = met_future_site$ensemble,
+                            predicted = forecasted_temperature,
+                            variable = "temperature")
+      
+      oxygen <- tibble(time = met_future_site$time,
+                       site_id = sites[i],
+                       ensemble = met_future_site$ensemble,
+                       predicted = forecasted_oxygen,
+                       variable = "oxygen")
+      
+      
+      #Build site level dataframe.
+      forecast <- dplyr::bind_rows(forecast, temperature, oxygen)
+      
+    }
+  
+  }
+  
+  ## reorganize into EFI standard
+  forecast <- forecast |> 
+    mutate(start_time = forecast_date) |> #start_time is today
+    select(time, start_time, site_id, variable, ensemble, predicted)
+  
+  return(forecast)
+}
+```
+
+
+5. Follow the instructions above to Add, Commit, and Push the file back to your Github
+6. Next you want to perform a "pull request", which will send a request to the OWNER that they pull your new code into their mainline version. From your Github page for this project, click **New Pull Request**.
+7. Follow the instructions, creating a title, message, and confirming that you want to create the pull request
+
+### OWNER
+
+1. Once the COLLABORATOR has created the pull request, you should get an automatic email and also be able to see the pull request under the "Pull Requests" tab on the Github page for the project.
+2. Read the description of the proposed changes and then click on "Files Changed" to view the changes to the project. New code should be in green, while deleted code will be in pink.
+3. The purpose of a pull request is to allow the OWNER to evaluate the code being added before it is added. As you read through the code, if you hover your mouse over any line of code you can insert an inline comment in the code. The COLLABORATOR would then have the ability to respond to any comments. In larger projects, all participants can discuss the code and decide whether it should be accepted or not. Furthermore, if the COLLABORATOR does any further pushes to Github before the pull request is accepted these changes will automatically become part of the pull request. While this is a very handy feature, it can also easily backfire if the COLLABORATOR starts working on something different in the meantime. This is the reason that experienced users of version control will use BRANCHES to keep different parts separate.
+4. Click on the "Conversation" page to return where you started. All participants can also leave more general comments on this page. 
+5. If you are happy with the code, click "Merge Pull Request". Alternatively, to outright reject a pull request click "Close pull request"
+
+## Task 4: Owner adds forecast submission
+
+We are now past the 'set up' stage for both the OWNER and the COLLABORATOR, so for this task we'll explore the normal sequence of steps that the OWNER will use for day-to-day work
+
+### OWNER
+
+1. Pull the latest code from Github. In RStudio this is done by clicking the light blue down arrow on the Git tab. This is equivalent to the commandline _git pull origin master_ where origin refers to where the where you did your orginal clone from and master refers to your main branch (if you use branches you can pull other branches)
+2. Next, open up a new R file, add the code below, and save as "04_submit_forecast.R". Within the code, make sure to update the `repository` variable to point to your github repository. If you are using this as a template for your own forecasts, you'll also want to update the forecast category (in the forecast_file), and model_metadata. More info about how to document model metadata can be found at https://github.com/eco4cast/EFIstandards.
+```{r}
+##' Save forecast and metadata to file, submit forecast to EFI
+##' @param forecast dataframe
+##' @param team_info list, see example
+##' @param submit boolean, should forecast be submitted to EFI challenge
+submit_forecast <- function(forecast,team_info,submit=FALSE){
+  
+  #Forecast output file name in standards requires for Challenge.  
+  # csv.gz means that it will be compressed
+  forecast_file <- paste0("aquatics","-",min(forecast$time),"-",team_info$team_name,".csv.gz")
+  
+  #Write csv to disk
+  write_csv(forecast, forecast_file)
+  
+  #Confirm that output file meets standard for Challenge
+  neon4cast::forecast_output_validator(forecast_file)
+  
+  # Generate metadata
+  model_metadata = list(
+    forecast = list(
+      model_description = list(
+        forecast_model_id =  system("git rev-parse HEAD", intern=TRUE), ## current git SHA
+        name = "Air temperature to water temperature linear regression plus assume saturated oxygen", 
+        type = "empirical",  
+        repository = "https://github.com/ecoforecast/EF_Activities"   ## put your REPO here *******************
+      ),
+      initial_conditions = list(
+        status = "absent"
+      ),
+      drivers = list(
+        status = "propagates",
+        complexity = 1, #Just air temperature
+        propagation = list( 
+          type = "ensemble", 
+          size = 31) 
+      ),
+      parameters = list(
+        status = "data_driven",
+        complexity = 2 # slope and intercept (per site)
+      ),
+      random_effects = list(
+        status = "absent"
+      ),
+      process_error = list(
+        status = "absent"
+      ),
+      obs_error = list(
+        status = "absent"
+      )
+    )
+  )
+  
+  metadata_file <- neon4cast::generate_metadata(forecast_file, team_info$team_list, model_metadata)
+  
+  if(submit){
+    neon4cast::submit(forecast_file = forecast_file, metadata = metadata_file, ask = FALSE)
+  }
+  
+}
+```
+3. As before, add your new file under the Git tab, Commit the change, and push it back to Github
+
+## Task 5: Collaborator adds the master script
+
+The day-to-day workflow for the COLLABORATOR is similar, but not exactly the same as the OWNER. The biggest differences are that the COLLABORATOR needs to pull from the OWNER, not their own repository, and needs to do a pull request after the push.
+
+### COLLABORATOR
+
+1. Pull from OWNER. Unfortunately, this has to be done from the command line rather than the pull button within RStudio, which just pulls from the COLLABORATOR's repository. In RStudio go to Tools > Shell to open a terminal
+2. At the terminal type
+```
+git pull URL master
+```
+where URL is the address of the OWNER's Github repository. Because it is a pain to always remember and type in the OWNER's URL, it is common to define this as _upstream_
+```
+git remote add upstream URL
+```
+which is a one-time task, after which you can do the pull as
+```
+git pull upstream master
+```
+3. Open a new R file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
+```{r}
+### Aquatic Forecast Workflow ###
+# devtools::install_github("eco4cast/neon4cast")
+library(tidyverse)
+library(neon4cast)
+library(lubridate)
+install.packages("rMR")
+library(rMR)
+
+forecast_date <- Sys.Date()
+noaa_date <- Sys.Date() - days(1)  #Need to use yesterday's NOAA forecast because today's is not available yet
+
+#Step 0: Define team name and team members 
+team_info <- list(team_name = "air2waterSat_MCD",
+                  team_list = list(list(individualName = list(givenName = "Mike", 
+                                                              surName = "Dietze"),
+                                        organizationName = "Boston University",
+                                        electronicMailAddress = "dietze@bu.edu"))
+                  )
+
+## Load required functions
+if(file.exists("01_download_data.R"))      source("01_download_data.R")
+if(file.exists("02_calibrate_forecast.R")) source("02_calibrate_forecast.R")
+if(file.exists("03_run_forecast.R"))       source("03_run_forecast.R")
+if(file.exists("04_submit_forecast.R"))    source("04_submit_forecast.R")
+
+### Step 1: Download Required Data
+target     <- download_targets()       ## Y variables
+site_data  <- download_site_meta()
+target     <- merge_met_past(target)   ## append met data (X) into target file
+met_future <- download_met_forecast(forecast_date) ## Weather forecast (future X)
+
+## visual check of data
+ggplot(target, aes(x = temperature, y = air_temperature)) +
+  geom_point() +
+  labs(x = "NEON water temperature (C)", y = "NOAA air temperature (C)") +
+  facet_wrap(~site_id)
+
+### Step 2: Calibrate forecast model
+model <- calibrate_forecast(target)
+
+### Step 3: Make a forecast into the future
+forecast <- run_forecast(model,met_future,site_data)
+
+#Visualize forecast.  Is it reasonable?
+forecast %>% 
+  ggplot(aes(x = time, y = predicted, group = ensemble)) +
+  geom_line() +
+  facet_grid(variable~site_id, scale ="free")
+
+### Step 4: Save and submit forecast and metadata
+submit_forecast(forecast,team_info,submit=FALSE)
+```
+
+4. Save this file as "Main.R". 
+5. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
+6. On Github.com, submit a pull request
+
+### OWNER
+1. Evaluate and accept pull request.
+
+At this point your workflow should be complete and you should be able to run the analysis! Be aware that some of the download steps can take a while, but the forecast itself if pretty quick.
+
+## Task 6: Github Actions
+
+Our final task is to leverage the continuous integration (CI) features of Github (called Github Actions) to automate our forecast. CI is conventionally used for the purposed of code testing and development -- for example, you can set it up to test if the code submitted in each Pull Request runs successfully, which is a useful check to have before pulling new code into a project. Github Actions also supports the use of cron (discussed in Activity 03) to schedule code to run at specific times and days, which we're going to use here to trigger the execution of our forecast workflow once daily.
+
+### OWNER
+1. Within the repository create a folder named `.github`
+2. Open the `.github` folder, and then within that folder create another folder called `workflows`
+3. Within the `workflows` folder open a new Text file (File > New File > Text File) and add the following code
+```
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: "0 20 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: eco4cast/rocker-neon4cast
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
+# Point to the right path, run the right Rscript command
+      - name: Run automatic prediction file
+        run: Rscript Main.R 
+```
+4. Save this file as `do_prediction.yml`
+5. As before, add your new file under the Git tab, Commit the change, and push it back to Github
+
+The first part of this file (on: workflow dispatch) used cron to schedule the workflow. The forecast in this repository is designed to run daily at 20:00 UTC.  The execution of the forecast occurs on GitHub's servers, so your local computer does not need to be turned on.  In ".github/workflow/do_prediction.yml", the lines `-cron: "* 20 * *"` define the time that the forecast is run.  In this case it is run each day at 20:00:00 UTC (note all GitHub timings are on UTC).  You can update this to run on a different schedule based on timing codes found in https://crontab.guru
+
+The second part of this file (jobs) is used to grab a copy of a Docker container image, eco4cast/rocker-neon4cast, that has R and a large number of R packages pre-installed, including the NEON forecast challenge packages.
+
+The final part of this file (run) tells Github Actions what Rscript it should run
+
+## Manually running forecast in GitHub Actions
+
+Rather than just leaving the workflow to run automatically, we're also going to run it manually to make sure everything is working. To do so go to the webpage for your repository on Github to test the workflow automation.
+
+1. Click on the Actions tab in the header bar
+2. Click on ".github/workflows/do_prediction.yml" on the left side.
+3. Click "Run workflow", then the green "Run workflow" button.
+4. Once the workflow had an orange circle next to it, it is actively running and you can click on the link to follow the workflow execution. If the execution fails (red), you should use the information provided to debug and try again. If it succeeds (green) you should be good to go!
+
+A video providing more information about how to use GitHub actions for automated forecast generation can be found here: https://youtu.be/dMrUlXi4_Bo
+
