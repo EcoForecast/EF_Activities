@@ -233,6 +233,8 @@ dfc = arrow::open_dataset("parquetTest")
 dfc
 ```
 
+**Question 4:** Use arrow to access the NOAA GEFS weather forecast and filter this data to the forecast issued yesterday at midnight for the NEON site_id "HARV". The EFI NEON challenge stores this data at the endpoint "data.ecoforecast.org" in a S3 bucket named "neon4cast-drivers/noaa/gefs-v12/stage2/parquet". When loading, we recommend setting the partion to `c("start_date", "cycle")` where cycle specifies the time of day the forecast was issued (0 = midnight). Make a timeseries plot of the "air_temperature" data in this forecast that shows one curve for each ensemble member (there are 31 ensemble members total). Hint: make sure to filter all relevant variables before calling `collect`.
+
 
 EML Metadata
 ------------

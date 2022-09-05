@@ -387,8 +387,11 @@ The day-to-day workflow for the COLLABORATOR is similar, but not exactly the sam
 
 ### COLLABORATOR
 
-1. Pull from OWNER. Unfortunately, this has to be done from the command line rather than the pull button within RStudio, which just pulls from the COLLABORATOR's repository. In RStudio go to Tools > Shell to open a terminal
-2. At the terminal type
+1. Pull from OWNER. Unfortunately, there's not yet a RStudio button for pulling from someone else's repo. There are two options for how to pull from OWNER. 
+
+The **first option** is to go to the collaborator's Github repo online, where there should now be a message near the top saying that your repo is behind the OWNER's. At the right side of that message there should be a "sync fork" option. After you've clicked on that and followed the instructions to update your fork, you should be able to use the Git > Pull button in RStudio to pull those changes down to your local computer.
+
+The **second option** is to use git at the command line. In the RStudio "Terminal" tab type
 ```
 git pull URL master
 ```
@@ -400,7 +403,7 @@ which is a one-time task, after which you can do the pull as
 ```
 git pull upstream master
 ```
-3. Open a new R file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
+2. Open a new R file and add the code below. This code just flushes out the pseudocode outline we started with at the beginning of this activity.
 ```{r}
 ### Aquatic Forecast Workflow ###
 # devtools::install_github("eco4cast/neon4cast")
@@ -455,9 +458,9 @@ forecast %>%
 submit_forecast(forecast,team_info,submit=FALSE)
 ```
 
-4. Save this file as "Main.R". 
-5. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
-6. On Github.com, submit a pull request
+3. Save this file as "Main.R". 
+4. Within RStudio's Git tab, add the file and Commit. Use the Push (up arrow) button to push this to your own repository
+5. On Github.com, submit a pull request
 
 ### OWNER
 1. Evaluate and accept pull request.
