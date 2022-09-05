@@ -25,10 +25,11 @@ get.pkg <- function(pkg){
 get.pkg("RCurl")
 get.pkg("readr")
 get.pkg("XML")
-get.pkg("ncdf4")
+get.pkg("arrow")
 get.pkg("devtools")
 get.pkg("MODISTools")
 get.pkg("EML")
+get.pkg("cronR")
 ```
 
 
@@ -62,7 +63,7 @@ For more information, please visit http://www.google.org/flutrends
 
 **Question 1:**
 
-Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed an d saved here https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
+Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
 
 grep, system, RegExp
 --------------------
@@ -134,89 +135,36 @@ gsub("HARV","BART",myCode[x])  ## substitute ALL: HARV for BART
 
 **Question 2:** Within the object myCode, find all the lines that begin with the comment character, #.
 
-
-netCDF, wget
-------------
-
-In this section I want to introduce another command-line utility, wget, which can be used to pull files and content off the web, and to demonstrate how netCDF can be used in R. For this example we will be using data from the WLEF eddy-covariance tower located in northern Wisconsin. Unlike most flux towers, WLEF is a "tall-tower" -- it's actually a 440m TV antenna -- which means that it integrates over a much larger footprint than most towers. Indeed, the tower is instrumented at multiple heights. First, let's use wget to grab the data off the web. A few notes: 1) wget could be used from command line rather than as a system command;  2) if you don't have wget installed, use your web browser
-
-```{r}
-system("wget http://co2.aos.wisc.edu/data/cheas/wlef/netcdf/US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
-```
-
-Next, lets open the file and look at what it contains
-```{r}
-## open the netCDF file
-wlef = nc_open("US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
-print(wlef)    ## metadata
-```
-
-To start, lets look at the CO2 flux data, NEE_co2, which we see is stored in a matrix that has dimensions of [level2,time], where here level2 refers to the different measurements heights. If we want to grab this data and the vectors describing the dimensions we can do this as:
-
-```{r}
-NEE = ncvar_get(wlef,"NEE_co2")    ## NEE data
-
-## matrix dimensions
-height = ncvar_get(wlef,"M_lvl")  
-doy = ncvar_get(wlef,"time")  # day of year
-
-## close file connection
-nc_close(wlef)
-```
-
-Finally, we can plot the data at the different heights. Since this flux data are recorded hourly the raw data are a bit of a cloud, therefore we use the function `filter` to impose a 24 hour moving window, which is indicated in the function as a vector of 24 weights, each given an equal weight of 1/24. 
-
-```{r}
-## print fluxes at 3 different heights
-for(i in 1:3){
-plot(doy,filter(NEE[i,],rep(1/24,24)),type='l',main=paste("Height =",height[i],"m"))
-}
-```
-
-Alternative, if I just wanted to get a subset of flux data (e.g. 24 hours of data from the top height for the 220th day of the year), I could do this by using the optional `start` and `count` arguments. `start` gives the starting point for each dimension (in this case, height and time) and `count` the length of each dimension. One of the powerful things about this syntax is that netCDF doesn't need to load the entire file into your computer's memory just to extract these values, which contrasts with most other file formats (e.g. csv, xlsx) which can make a huge difference in efficiency when working with large data files.
-
-```{r}
-start = which(doy > 220)[1]
-wlef = nc_open("US-PFa-WLEF-TallTowerClean-2012-L0-vFeb2013.nc")
-diurnal = ncvar_get(wlef,"NEE_co2",start=c(3,start),count=c(1,24))
-plot(diurnal,type = 'l')
-nc_close(wlef)
-```
-
-**Question 3:** 
-
-Similar to how we can point read.csv to the URL of a text file, you can open and manipulate netCDF files on remote servers if those servers support THREDDS/OpenDAP. Furthermore, these utilities let you grab just the part of the file that you need rather than the file in it's entirety. Using this approach, download and plot the DAYMET maximum air temperature data for Harvard Forest for 2019 that's located on the ORNL DAAC server `http://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1220/mstmip_driver_global_hd_climate_tair_2004_v1.nc4`. Compare this to the phenocam data for the same year. The underlying file is quite large so make sure to grab just the subset you need. To do so you'll need to first grab the lat, lon, and time variables to find _which_ grid cell to grab for lat and lon and how many values to grab from time (i.e. _length_). 
-
 Using APIs
 ----------
 
 In addition to data that are directly downloadable there are a number of places on the web where data are available though interactive, code-based webservices called Application Programming Interfaces (APIs). In this example we will access the NASA MODIS API, using a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
 
-First, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product is available at https://modis.ornl.gov/sites/?network=AMERIFLUX&network_siteid=US-WCr
-where we see that the tool has been expanded to also include some of the VIIRS, SMAP, and DAYMET data products as well.
+First, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product is available at https://modis.ornl.gov/sites/?id=us_massachusetts_harvard_forest_neon
+where we see that the tool has been expanded to also include data products for VIIRS, SMAP, DAYMET, GEDI, ECOSTRESS< and SIFas well.
 
 ```{r}
 MODISTools::mt_products()
 MODISTools::mt_bands(product="MOD13Q1") ## vegetation indices
 ```
 
-Next, lets grab the data for a specific band (EVI) within a specific product (MOD13Q1). We'll focus on the location of the WLEF flux tower and look at the same year as we did with the flux data (2012). The argument Size defines the dimensions of the box grabbed in terms of distance (in kilometers) outward from the center. Note that in practice we would also want to query the QAQC data for this variable, `250m_16_days_VI_Quality`, as well and use it to screen the data.
+Next, lets grab the data for a specific band (EVI) within a specific product (MOD13Q1). We'll focus on the NEON Harvard Forest (HARV) locationand look at one of the same years as we did with the phenology data from question 1. The argument Size defines the dimensions of the box grabbed in terms of distance (in kilometers) outward from the center. Note that in practice we would also want to query the QAQC data for this variable, `250m_16_days_VI_Quality`, as well and use it to screen the data.
 
 ```{r}
-WC_file = "MODIS.WillowCreek.RData"
-if(file.exists(WC_file)){
-  load(WC_file)
+EVI_file = "MODIS.HARV.RData"
+if(file.exists(EVI_file)){
+  load(EVI_file)
 } else {
   subset <- MODISTools::mt_subset(product = "MOD13Q1",
                                 band = "250m_16_days_EVI",
-                                lat=46.0827,
-                                lon=-89.9792,
-                                start="2012-01-01",
-                                end="2012-12-31",
+                                lat=42.5369,
+                                lon=-72.1727,
+                                start="2021-01-01",
+                                end="2021-12-31",
                                 km_lr = 1,
                                 km_ab = 1,
-                                site_name = "WillowCreek")
-  save(subset,file=WC_file)
+                                site_name = "HARV")
+  save(subset,file=EVI_file)
 }
 ## let's look at the first few rows to get a feel for the structure
 head(subset)
@@ -235,9 +183,56 @@ EVI = tapply(subset$value*as.numeric(subset$scale), subset$calendar_date, mean,n
 time = as.Date(names(EVI))
 ```
 
-**Question 4:** Plot EVI versus time and compare to the CO2 flux observations.
+**Question 3:** Plot EVI versus time and compare to the NEON phenocam observations.
 
 FYI, APIs now exist for an enormous range of data sources that are available on the web, as well as a range of web-services that allow you to not just download data but to also upload data or push requests various cloud platforms.
+
+Cloud-Native data
+-----------------
+
+One area of working with big data that has evolved rapidly since work began on the Ecological Forecasting book is the growth of cloud data storage and cloud-native file formats. Consistent with the ideas in the book there are RAM-limited and storage-limited problems, beyond which data do not fit in a single file or on a single computer, which necessitate _tiling_ data across multiple files that potentially live on multiple computers. Cloud-native data storage formats now make the generation and access of such tiled data seamless, such that a huge dataset that is spread across many individual files in the cloud might behave like a single dataframe. Standard operations (e.g. filtering) can then be done on such data without having to download individual files to your own computer, and with the remote files organized in a way that the system only has to touch the ones that actually contain the files of interest.
+
+File formats that have increased in use in recent year include parquet for tabular data, cloud-native GeoTIFF for raster spatial data, and zarr for mixed-format and high-dimensional data (e.g. an array that is x, y, z, time, attributes). 
+
+R support for parquet comes via the Apache `arrow` package. For example, if we want to connect to the Ecological Forecasting Initiative's catalog of ecological forecasts, which are stored in a Amazon-style S3 bucket (a cloud native data store that itself abstracts away the concept of drives, folders, and file paths) we could do so using the syntax
+```{r}
+s3 <- arrow::s3_bucket(bucket = "scores/parquet",
+                        endpoint_override = "data.ecoforecast.org",
+                        anonymous=TRUE)
+ds <- arrow::open_dataset(s3, partition="theme")
+ds
+```
+At this point, ds is just a connection to a cloud service, but it behaves like a dataframe. We can use standard tidyverse syntax to process this file (e.g. filtering by time and location) and only when we call the command `collect()` does the processing actually execute in the cloud and send us the data we're requesting. For example, in the following command we request the phenology forecasts of the Phenocam greeness variable `gcc_90` for the NEON Harvard Forest site (HARV).
+```{r}
+df <- ds %>% 
+  filter(theme == "phenology", 
+         variable=="gcc_90",
+         site_id == "HARV") %>%
+  collect()
+head(df)
+range(df$start_time)
+```
+
+Data tiling is also a particularly useful feature for forecasting, as some such formats let you add new data without having to touch the previously written files. Thus one can append additional days of forecast inputs and outputs incrementally without having to load a large file into memory or rewrite it to storage. 
+
+For example, if we split the EFI phenology data into two sections, we can write each section out separately in parquet
+```{r}
+## split data
+dfa <- df %>% filter(start_time < lubridate::as_date("2022-01-01"))
+dfb <- df %>% filter(start_time >= lubridate::as_date("2022-01-01"))
+## write out to the folder "parquetTest", tiling by start_time
+dir.create("parquetTest")
+dfa %>% group_by(start_time) %>% arrow::write_dataset("parquetTest",format="parquet")
+dfb %>% group_by(start_time) %>% arrow::write_dataset("parquetTest",format="parquet")
+```
+
+If you look in the folder you'll see that the files are organized by start_date. We can now access these files as we did before, using `arrow::open_dataset` to open the whole _folder_. As before the resulting object behaves like a dataframe, even though it's actually pointing to a whole folder, and one can operate on this object without having to load all the individual files. 
+
+```{r}
+dfc = arrow::open_dataset("parquetTest")
+dfc
+```
+
 
 EML Metadata
 ------------
@@ -305,6 +300,33 @@ dow	This is the Day of Week that you want a command to be run on, it can
 	 also be numeric (0-7) or as the name of the day (e.g. sun).
 ```
 Values that are not specified explicitly are filled in with a *. Also, it is possible to specify lists (e.g. 0,6,12,18) or to specify a repeat frequency using a /. Thus the above example is set to run every other hour (/2) at 55 min past the hour.
+
+The `cronR` library in R provides an R-based interface to cron, including an intuitive GUI for configuring the automation of scripts
+```
+cronR::cron_rstudioaddin()
+```
+as well as a set of command line tools
+```
+## get the path to the helloworld.R script
+f <- system.file(package = "cronR", "extdata", "helloworld.R")
+
+## set up command line syntax
+cmd <- cron_rscript(f)
+cmd
+
+## add the script to CRON
+cron_add(command = cmd, frequency = 'daily', at='7AM', id = 'test2')
+
+## list the number of cron jobs running
+cron_njobs()
+
+## list current cron configurations
+cron_ls()
+
+## remove a cron job based on id
+cron_rm("test2")
+```
+
 
 **Question #6:**
 
