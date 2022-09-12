@@ -218,12 +218,14 @@ Data tiling is also a particularly useful feature for forecasting, as some such 
 For example, if we split the EFI phenology data into two sections, we can write each section out separately in parquet
 ```{r}
 ## split data
-dfa <- df %>% filter(start_time < lubridate::as_date("2022-01-01"))
-dfb <- df %>% filter(start_time >= lubridate::as_date("2022-01-01"))
+dfa <- df %>% mutate(start_date = lubridate::as_date(start_time)) %>%
+  filter(start_time < lubridate::as_date("2022-01-01"))
+dfb <- df %>% mutate(start_date = lubridate::as_date(start_time))  %>% 
+  filter(start_time >= lubridate::as_date("2022-01-01"))
 ## write out to the folder "parquetTest", tiling by start_time
 dir.create("parquetTest")
-dfa %>% group_by(start_time) %>% arrow::write_dataset("parquetTest",format="parquet")
-dfb %>% group_by(start_time) %>% arrow::write_dataset("parquetTest",format="parquet")
+dfa %>% group_by(start_date) %>% arrow::write_dataset("parquetTest",format="parquet")
+dfb %>% group_by(start_date) %>% arrow::write_dataset("parquetTest",format="parquet")
 ```
 
 If you look in the folder you'll see that the files are organized by start_date. We can now access these files as we did before, using `arrow::open_dataset` to open the whole _folder_. As before the resulting object behaves like a dataframe, even though it's actually pointing to a whole folder, and one can operate on this object without having to load all the individual files. 
