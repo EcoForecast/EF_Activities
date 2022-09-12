@@ -204,6 +204,7 @@ ds
 ```
 At this point, ds is just a connection to a cloud service, but it behaves like a dataframe. We can use standard tidyverse syntax to process this file (e.g. filtering by time and location) and only when we call the command `collect()` does the processing actually execute in the cloud and send us the data we're requesting. For example, in the following command we request the phenology forecasts of the Phenocam greeness variable `gcc_90` for the NEON Harvard Forest site (HARV).
 ```{r}
+library(tidyverse)
 df <- ds %>% 
   filter(theme == "phenology", 
          variable=="gcc_90",
