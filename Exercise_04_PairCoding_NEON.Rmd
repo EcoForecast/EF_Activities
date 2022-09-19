@@ -16,7 +16,7 @@ Before beginning this exercise, you should have the following three packages ins
         
 ## Objectives
 
-The primary goal of this exercise is to gain experience working collaboratively to develop a scientific workflow. As such, this assignment is best completed with a partner. Specifically, we will outline a simple analysis, break the overall job into parts, and have each person complete part of the project. To put these parts together we will be using Github. Along the way we will also be exploring the statistical concept of Likelihood.
+The primary goal of this exercise is to gain experience working collaboratively to develop a scientific workflow. As such, this assignment is best completed with a partner. Specifically, we will outline a simple analysis, break the overall job into parts, and have each person complete part of the project. To put these parts together we will be using git & Github, and to automate it we will be using Github Actions.
 
 ## neon4cast workflow
 
@@ -422,7 +422,7 @@ git pull upstream master
 library(tidyverse)
 library(neon4cast)
 library(lubridate)
-#install.packages("rMR")
+install.packages("rMR")
 library(rMR)
 
 forecast_date <- Sys.Date()
