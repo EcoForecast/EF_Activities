@@ -10,7 +10,7 @@ The objective of today's hands-on activity is to provide a basic overview of R. 
 
 ## Assignment
 
-For this activity you will turn in a Rmd file that contains both code and written answers. 
+For this activity you will turn in a Rmd file that contains both code and written answers. Tasks are labeled as tier [A] or [B]. A are required. B are recommended and can only increase you grade.
 
 **Always check that the Rmd file "knits" before submitting!**
 
@@ -301,7 +301,7 @@ If there are a lot of files in the directory, you can start typing the file name
 
 ## ★ Questions (1-3)
 
-1. **Evaluate the following:**
+1. [A] **Evaluate the following:**
    - a.	ln(1)
    - b.	ln(0)
    - c.	ln(e)
@@ -310,10 +310,10 @@ If there are a lot of files in the directory, you can start typing the file name
    - f.	ln(1/5)
    - g.	How does R represent when the output of a function is not a number?
 
-2.	**What is the difference between log and log10?**  (Hint: use help!)
+2.	[B] **What is the difference between log and log10?**  (Hint: use help!)
 
-3.	**Pythagorean theorem**
-  - a.	Given a right triangle with sides `a` and `b`, write a few lines of code that will calculate the length of the hypotenuse. 
+3.	[A] **Pythagorean theorem**
+  - a.	Given a right triangle with sides `a` and `b`, write a few lines of code that will calculate the length of the hypotenuse. Make sure to use variables in this calculations, not hard-coded numbers.
   - b.	Try out your code with `a=5` and `b=13`.
 
 
@@ -391,8 +391,8 @@ prod(1:10)		## product of values in a vector
  
 ## ★ Questions (4-5)
 
-4.	**Generate a sequence of even numbers from -6 to 6**
-5.	**Generate a sequence of values from -4.8 to -3.43 that is length 8** (show code)
+4.	[A] **Generate a sequence of even numbers from -6 to 6**
+5.	[B] **Generate a sequence of values from -4.8 to -3.43 that is length 8** (show code)
 
 ## R Scripts
 
@@ -493,7 +493,7 @@ mylist
    
 ## ★ Questions (6)
 
-6.	**Create a character vector that contains the names of 4 people you admire.**
+6.	[A] **Create a character vector that contains the names of 4 people you admire.**
 
 
 ## Loading and Saving Data
@@ -588,9 +588,9 @@ These commands will be very helpful if you don’t finish a activity by the end 
 
 ## ★ Questions (7-8)
 
-7. Use R commands (e.g., do not click "import dataset" and use the dialog there) read in the file  `met_hourly.csv` (which is in the `data` directory) and assign it the variable name `met`
+7. [A] Use R commands (e.g., do not click "import dataset" and use the dialog there) read in the file  `met_hourly.csv` (which is in the `data` directory) and assign it the variable name `met`
 
-8. Save the matrix `x` to a csv file
+8. [A] Save the matrix `x` to a csv file
 
 
 ## Data Exploration
@@ -647,7 +647,8 @@ summary(dat)
 
 ## ★ Questions (9)
 
-9. Use the commands above to explore the contents of `met`. Describe in words what this file contains and some of its characteristics.
+9. [A] Use the commands above to explore the contents of `met`. 
+   [B] Describe in words what this file contains and some of its characteristics.
 
 ## Subsetting Data
 
@@ -668,6 +669,7 @@ We can also refer to specific columns of data by name using the $ syntax
 ```{r}
 dat$frogs  	# show just the ‘frogs’ column
 dat$color[6:10]		# show the 6th though 10th elements of the color column
+met = read.csv('data/met_hourly.csv')
 met$AirTemp[1:10] # show the first 10 values of air temperature
 ```
 
@@ -687,11 +689,11 @@ met$time[x]  		## return specific elements of a vector
 
 ## ★ Questions (10-12)
 
-10. **Show the 1033rd through 1056th row of weather data**
+10. [A] **Show the 1033rd through 1056th row of weather data**
 
-11. **Show the 3rd through 8th rows of the 1st though 3rd columns of the frog data**
+11. [B] **Show the 3rd through 8th rows of the 1st though 3rd columns of the frog data**
 
-12. **What was the _total_ amount of rain?** Hint: look back at Vector Math
+12. [A] **What was the _total_ amount of rain?** Hint: look back at Vector Math
 
 
 
@@ -731,7 +733,7 @@ as.list(x)
 
 ## ★ Questions (13)
 
-13. **Using the frog data, show just the spots column as characters**
+13. [A] **Using the frog data, show just the spots column as characters**
 
 # Logical operators and indexing
 
@@ -847,32 +849,69 @@ summary(hotData)
 
 These simple comparisons can provide a powerful means for subsetting data.
 
-## The subset function
+## dplyr: The filter and select functions
 
-R also has a built in function `subset` for doing this sort of subsetting that takes the data set as the first argument and the condition used for subsetting as the second argument. So the above could also be rewritten as
- 
+In addition to data manipulation functions provided within the base R libraries, there are a lot of external libraries developed to make data management more efficient. One of the most popular such libraries is `dplyr`.
+
+Here we load the library dplyr. If you haven't installed dplyr yet this line of code will throw an error, which you can correct by either using `install.packages("dplyr")` or the Packages > Install menu in the bottom right window of RStudio
 ```{r}
-hotData = subset(met, AirTemp > 25)
+library(dplyr)
 ```
 
-`subset` also has an optional 3rd argument for just selecting specific columns. So if you wanted to run the previous subset but only needed the columns `ShortWave` and `Rain` you could run
+dplyr includes a function `filter` that also does the sort of subsetting we saw in the previous tasks. I takes the data set as the first argument and the condition used for subsetting as the second argument. So the previous example could also be rewritten as
+ 
+```{r}
+hotData = dplyr::filter(met, AirTemp > 25)
+```
+
+`dplyr` also has an function `select` for just selecting specific columns. So if you wanted to subset just the columns `ShortWave` and `Rain` you could run
 
 ```{r}
-# select the rows of dat for which frogs are larger than or equal to 3
-# select the columns tadpoles and spots
-foo = subset(met, AirTemp > 25, select = c("ShortWave","Rain"))
+foo = dplyr::select(met, c("ShortWave","Rain"))
 head(foo)
 ```
 
-## ★ Questions (14)
+We'll see more dplyr commands below, but a quick "cheat sheet" can be found [here](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
 
-14.	**For the frog data set:** 
-*  a.	display just the rows where frogs have spots
-*  b.	display just the rows where frogs are blue
-*  c.	how many blue tadpoles are there?
-*  d.	create a new object containing just the rows where there are between 3 and 5 tadpoles
-*  e.	display just the rows where there are less than 2.5 red frogs
-*  f.	display where either frogs do not have spots or there are more than 5 frogs
+## Pipes
+
+When cleaning and organizing data it is common to have to string together multiple functions sequentially. For example, if we had data set `x` we might need to first run x through `function1()` and then run the output through `function2()`. In the examples above we did this either by using temporary variables,
+
+```
+y = function1(x)
+z = function2(y)
+```
+
+or by embedding one function call within another
+
+```
+z = function2(function1(x))
+```
+
+Many consider the first both options cumbersome, as the first creates a lot of temporary variables we don't need and the latter can be confusing, particularly when multiple functions are involved or the functions have additional arguments, because one ends up reading the functions in the reverse order that they are called.
+
+Pipes, `|>`, aim to address this issue by creating a way to pass the output of one function to another in order without creating a temporary variable.
+
+```
+z = x |> function1() |> function2()
+```
+
+As another example, if we wanted to both filter the met data by temperature AND select a subset of columns, we could pipe together multiple dplyr commands
+
+```{r}
+foo = met |> filter(AirTemp > 25) |> select(c("ShortWave","Rain"))
+head(foo)
+```
+
+In this instance, when used alone both functions took the dataset as the first arguement and then additional information as the second argument. Here, the first argument is implicit and one only needs to use specify the second. An important thing to remember about pipes is that they will _always_ pass in the *first* argument in a function.
+
+## ★ Questions (14)
+14.	**Using the frog data set and either base or dplyr functions:** 
+*  a.	[A] display just the rows where frogs have spots
+*  b.	[B] display just the rows where frogs are blue
+*  c.	[A] create a new object containing just the rows where there are between 3 and 5 tadpoles
+*  d.	[B] display just the rows where there are less than 2.5 red frogs
+*  e.	[A] display where either frogs do not have spots or there are more than 5 frogs
 
 # Summary tables and statistics
 
@@ -982,9 +1021,39 @@ tapply(dat$frogs, INDEX = dat$color, FUN = mean)
 tapply(dat$frogs, INDEX =  dat[,c("color","spots")], FUN = mean)  
 ```
 
-## ★ Questions (15)
-15. **Use apply to calculate the across-population standard deviations in the numbers of frogs and tadpoles**
+`dplyr` also provide an alternative to `tapply` using the `group_by` and `summarize` commands. For example, the previous example could be written as
 
+```{r}
+
+dat |> group_by(color,spots) |> summarise(avg = mean(frogs))
+
+```
+
+Note that the `summarize` function creates a new column to store the output of the operation being performed. In this way `summarize` also makes it easy to calculate multiple summary statistics at once for the same groups. For example:
+
+```{r}
+dat |> group_by(color,spots) |> 
+  summarise(avgFrogs = mean(frogs), 
+            sdFrogs = sd(frogs), 
+            avgTadpoles = mean(tadpoles),
+            sdTadpoles = sd(tadpoles))
+```
+
+Another handy dplyr function is `mutate` which provides the ability to add new columns to a dataframe, for example based on computations involving other columns. For example, if we wanted to add a column to `met` that converted the datetime column `time` to just the calendar date we could do this as
+
+```{r}
+met = met |> 
+  mutate(time = as.POSIXct(time,tz="GMT")) |> ## convert from character to datetime
+  mutate(date = as.Date(time))                    ## convert from datetime to date
+head(met)
+```
+
+
+## ★ Questions (15)
+15. 
+  a. [A] **Use dplyr to calculate the daily mean air temperature**
+  b. [B] **Use apply to calculate the across-population standard deviations in the numbers of frogs and tadpoles**
+  
 
 # Plotting & visualization
 
@@ -1058,11 +1127,12 @@ plot(time,met$AirTemp,
      ylab = "Air Temperature (Celsius)",  ## label the y-axis with name and units
      )
 
-month = months(met$time)                                  ## extract months from dates
-Tbar  = tapply(met$AirTemp,INDEX = month,FUN = mean)  ## calc monthly mean temp
-mbar  = tapply(met$time,INDEX = month,FUN = mean)         ## calc monthly mean date
-mbar  = as.POSIXct(mbar,origin="1970-01-01 00:00.00 UTC") ## coerce result back to datetime
-points(mbar,Tbar,col="red",pch=18,cex=2)              ## add monthly means to plot as solid diamonds (pch=18)
+## calculate monthly mean temperature
+mmet = met |> mutate(month = months(time)) |> 
+  group_by(month) |> 
+  summarize(Tbar = mean(AirTemp), mbar = mean(time))
+
+points(mmet$mbar,mmet$Tbar,col="red",pch=18,cex=2)              ## add monthly means to plot as solid diamonds (pch=18)
 ```
 
 For those accustomed to making figures with software that allows you to manipulate plots by hand by clicking on them, the process of making visualizations with code can initially feel difficult and frustrating. For example, you might want to nudge a label over by a little and you can't just drag it, you have to look up a lot of details in the `plot` or `par` functions to understand how to modify your code. However, what producing figures by code provides, which is ultimately time saving, is reliable *REPRODUCIBILITY*. It doesn't take many experiences of having to re-tweak a manual figure by hand when the data is updated, or when you need to produce a very similar plot for a similar dataset, to realize that manual, interactive figure drawing is imprecise, inefficient, and not scalable when you need to keep making figures (e.g. dashboards, regular reports).
@@ -1070,9 +1140,64 @@ For those accustomed to making figures with software that allows you to manipula
 In addition to rendering plots directly within Markdown, within the Plot window, graphs can be cut-and-pasted into other documents or saved to file fairly simply by using Export. If you want to automate the process of exporting graphics, for example when you generate a whole bunch of figures at once and don’t want to Export each one by hand, you'll want to use the graphical functions such as 'postscript', 'pdf', or 'tiff'. For all of these plot functions there are numerous additional (optional) arguments that control the formatting of the plots. The help for `par` (i.e. `?par`) gives a fairly detailed list of these options, some of which you will see in further examples below.
 
 ## ★ Questions (16-18)
-16. **Plot a histogram of blue frogs**
-17. **Plot shortwave (solar) radiation against time**
-18. **Plot shortwave (solar) radiation against relative humidity**
+16. [A] **Plot a histogram of blue frogs**
+17. [A] **Plot shortwave (solar) radiation against time**
+18. [B] **Plot shortwave (solar) radiation against relative humidity**
+
+## Tidyverse
+
+Beyond `plot` and `hist` the course readings cover additional info data visualizations, and there's even more information provided in the "Additional Resources" section of the syllabus. Visualization also brings us to introduce the concept of the `tidyverse`. Over the last few years Hadley Wickham and colleagues have introduces a set of new packages for data manipulation and visualization that "share an underlying design philosophy, grammar, and data structures" around what they call "tidy" data. The `dplyr` package, which we saw above, is part of the tidyverse and as we saw provides a number of alternative functions for subsetting and summarizing data (see, for example, the data wrangling chapters in Wickham's [R for Data Science](https://r4ds.had.co.nz/)). Another popular part of the tidyverse are its data visualization tools, which are anchored around the `ggplot2` package, which numerous other packages build upon (see the Reverse Dependencies listing for the package https://cran.r-project.org/web/packages/ggplot2/index.html)
+
+The syntax for ggplot is a bit less intuitive than `plot`, but the following tool `esquisse` provides a graphical interface around ggplot that then returns the underlying code used to generate the plot.
+
+Outside of knitr, run the following code to install and launch `esquisse`
+```
+install.packages("esquisse")  ## only needs to be run once
+esquisse::esquisser()         ## launch tool
+```
+Once the tool launches use it to answer the following questions. Note that you won't be able to type here while the tool is running, so you may want to copy the questions, and your answers, to another doc temporarily.
+
+
+## ★ Questions (19-16)
+
+19. [A] **Histogram**
+* Select “met” as the data.frame
+* Click “validate imported data”
+* Drag AirTemp into the Y box (which will initially cause the tool to draw a histogram)
+* Click on “Labels and Title” to add axes labels, units, and title
+* Click on “Plot options” to change the color, theme, and number of bins
+* Click on “Data” and filter the dates down to just the summer (approximately)
+* Click on Export & code and hit “insert code into script” to add the code for this figure
+* When you do this you’ll see a lot of new syntax. First, the `%>%` is known as the _pipe operator_ and is used string together multiple functions. So here we see that we start with the met data, then we filter it based upon time, then we call ggplot(). After we call ggplot we see that the different parts of the figure are added together using a `+`. First, we use `aes` (aesthetic) to select the data being used. Then `geom_histogram` is called to plot a histogram, with additional arguments for the number of bins and the fill color (in this case specified using a hexadecimal color code). Next, we see axis labels being set using the `labs` command. Finally we see the theme that’s been applied.
+* Turn in the code for drawing your histogram
+
+20. [B] **Density plot**
+* With the same data loaded up click on the “Histogram” icon in the top left you can see that you can also change the type of plot drawn. Click “density” to see how the plot changes and how the underlying code changes.
+* Play with the options to get a plot you like
+* Using Export, turn in the code for drawing your density plot 
+ 
+21. [A] **Line plot**
+* Returning to the ggplot builder, next drag “time” into the X box, which should turn the plot into a time series line plot.
+* As before you can play with label, plot options, data filtering, etc
+* Export this code to your Rmd as well and briefly explain (in text) what has changed in your code from the histogram plot
+
+22. [B] **Colored line plot**
+* Drag the “shortwave” data into the “Color” box. This should now cause the color of the line to change as a function of the incoming solar radiation
+* After playing with options, export this code as well
+* Describe the impact that Shortwave radiation has on air temperature. Note both the diurnal (daily) cycle (How does temperature change as shortwave increases and deceases throughout the day? When is temperature at its max and min?) and across days (How does shortwave radiation impact the amplitude of the diurnal cycle?). Note: to be able to see diurnal cycles clearly you’ll need to have zoomed in to a few months or smaller, not the whole time series.
+
+23. [A] **Scatterplot**
+* At the top left click on “Data” and change to the frog data “dat”
+* Plot tadpoles vs frogs and then drag the color variable to the Color box and the spots variable to the Size box
+* Set labels, select plot options that provide a good color scheme, theme, etc
+* Export the code and describe the new functions and arguments being used.
+
+24. [B] **Facet and group plots**
+* Drag spots from Size to Facet. This will cause ggplot to now draw separate plots for the spots=TRUE data and the spots=FALSE data. Export this plot code.
+* Similarly, if you change the plot to type ‘line’ in the top left and then drag spots from “Facet” to “Group” it will now draw separate lines for each case of spots. This feature can be particularly handy when you have data from many different discrete classes (states, plots, year, etc).
+
+Hit the Close button on the ggplot2 builder and check to make sure that it put the code chunks in the right place with each question, that the R code is within executable R code blocks, and that the figures still render correctly when you hit ‘Knit’
+
 
 # Linear Models
 
@@ -1199,8 +1324,8 @@ for(t in 2:NT){
 plot(N)
 ```
 
-## ★ Questions (19)
-19. **Modify the logistic growth code to simulate discrete-time exponential growth and plot the output.**
+## ★ Questions (25)
+25. [B] **Modify the logistic growth code to simulate discrete-time exponential growth and plot the output.**
 
 ## Matrix Math
 
