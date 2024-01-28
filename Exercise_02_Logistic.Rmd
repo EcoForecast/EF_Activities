@@ -34,7 +34,7 @@ plot(time,n,ylim=c(0,12),lwd=3,type='l',
 
 ### Problems
 
-1. Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+1. [A] Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
 
 
 Probability distributions in R
@@ -141,7 +141,7 @@ This example demonstrates that as the number of random draws from a probability 
 
 ### Problems
 
-2. Choose another probability distribution from the table above and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+2. [A] Choose another probability distribution from the table above and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
 
 Monte Carlo Simulation
 ----------------------
@@ -173,7 +173,7 @@ It turns out that this specific transformation (x^2 of a standard Normal), has a
 
 ### Problems
 
-3. Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+3. [B] Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
 
 Parameter error
 ---------------
@@ -219,16 +219,16 @@ ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
 
 ### Problems
 
-4. Plot histograms of the samples of r and K used for the simulation.
+4. [B] Plot histograms of the samples of r and K used for the simulation.
 
-5. Plot a sample of 10 different trajectories (through time) from your ensemble (on one graph).
+5. [A] Plot a sample of 10 different trajectories (through time) from your ensemble (on one graph).
 
-6. Plot a histogram of your population forecast at time = 15.
+6. [B] Plot a histogram of your population forecast at time = 15.
 
-7. Plot the median trajectory through time. Use `ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
+7. [A] Plot the median trajectory through time. Use `ciEnvelope` to add a 95% CI (i.e. 2.5% to 97.5%) to the plot. This function need to take time-series for both the upper (yhi) and lower (ylo) intervals.
 
-Extra Credit: Initial conditions
---------------------------------
+Initial conditions
+------------------
 
 The approach for simulating uncertainty in the initial conditions is very similar to the approach used for the parameter uncertainty.  As in Chapter 2, we'll assume that the initial condition is distributed as a lognormal to ensure that we never draw negative values. For this example we'll assume a standard deviation of 0.6 and an intrinsic growth rate of 0.3
 
@@ -246,9 +246,9 @@ for(i in 1:NE){
 
 ### Problems
 
-8. Plot the median & 95% interval.
+8. [B] Plot the median & 95% interval.
 
-9. Repeat with r equal to 1.95, 2.05, and 2.8
+9. [C] Repeat with r equal to 1.95, 2.05, and 2.8
 
 
 
