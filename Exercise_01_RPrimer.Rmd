@@ -1158,7 +1158,7 @@ esquisse::esquisser()         ## launch tool
 Once the tool launches use it to answer the following questions. Note that you won't be able to type here while the tool is running, so you may want to copy the questions, and your answers, to another doc temporarily.
 
 
-## ★ Questions (19-16)
+## ★ Questions (19-24)
 
 19. [A] **Histogram**
 * Select “met” as the data.frame

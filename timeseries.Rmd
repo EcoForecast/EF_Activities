@@ -1,0 +1,183 @@
+---
+title: "Classic Time-series models"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Grab data
+
+```{r}
+library(daymetr)
+if(!file.exists("df.Rdata")){
+  df <- daymetr::download_daymet(site = "Boston",
+                                 lat = 42.36,
+                                 lon = -71.06,
+                                 start = 2003,
+                                 end = 2022,
+                                 internal = TRUE)$data
+  df$date <- as.Date(paste(df$year,df$yday,sep = "-"),"%Y-%j")
+  df$year = as.integer(df$year)
+  save(df,file="df.Rdata")
+} else {
+  load("df.Rdata")
+}
+```
+
+
+## Daymet data
+
+```{r}
+colnames(df)
+train = df |> dplyr::filter(year < 2022) |> dplyr::select(yday,date,tmin..deg.c.)
+test  = df |> dplyr::filter(year == 2022) |> dplyr::select(yday,date,tmin..deg.c.)
+head(train)
+```
+
+## Raw timeseries
+
+```{r}
+plot(train$date,train$tmin..deg.c.,type='l')
+```
+
+## Null 1: historical means
+
+```{r pressure}
+hm = train |> dplyr::group_by(yday) |>
+  dplyr::summarise(mean=mean(tmin..deg.c.),sd=sd(tmin..deg.c.))
+plot(hm$yday,hm$mean,ylim=c(-15,23),ylab="tmin",xlab="doy",type='l',lwd=3)
+lines(hm$yday,hm$mean-1.96*hm$sd,lty=2); lines(hm$yday,hm$mean+1.96*hm$sd,lty=2)
+points(test$yday,test$tmin..deg.c.,col=2,pch=18,cex=0.5)
+```
+## Time series data objects
+
+```{r}
+xt <- ts(train$tmin..deg.c.,start=2003,frequency = 365)  ## convert data to a time series object
+plot(xt,type='b',ylab="C",xlab="Year",main="Min temperature",cex=0.5)
+```
+
+
+## Null 2: random walk
+
+```{r}
+library(forecast)
+rw = Arima(xt,c(0,0,0))
+rw
+```
+
+## Random Walk forecast
+
+```{r}
+rwp = forecast(rw,h=365,level=95)
+plot(test$date,test$tmin..deg.c.,pch=18,cex=0.5,col=2)
+lines(test$date,rwp$mean,lwd=3)
+lines(test$date,rwp$lower,lty=2); lines(test$date,rwp$upper,lty=2)
+```
+
+## Autocorrelation
+
+```{r}
+t    = test$tmin..deg.c.[-nrow(test)]
+tlag = test$tmin..deg.c.[-1]
+plot(t,tlag,xlab="t",ylab="t+1")
+text(-5,15,cor(t,tlag))
+```
+
+## Autocorrelation function
+
+```{r}
+acf(train$tmin..deg.c.)
+```
+
+## Partial Autocorrelation function
+
+```{r}
+pacf(train$tmin..deg.c.)
+```
+
+## AR(1) timeseries
+
+```{r}
+ar1 = Arima(xt,c(1,0,0))
+ar1
+```
+## AR(1) forecast
+
+```{r}
+ar1p = forecast(ar1,h=365,level=95)
+plot(test$date,test$tmin..deg.c.,pch=18,cex=0.5,col=2)
+lines(test$date,ar1p$mean,lwd=3)
+lines(test$date,ar1p$lower,lty=2); lines(test$date,ar1p$upper,lty=2)
+```
+
+## Auto.arima: AR only
+
+```{r}
+ar = auto.arima(xt,max.p=10,max.d = 0,max.q = 0,seasonal=FALSE)
+ar
+```
+
+## AR forecast
+
+```{r}
+arp = forecast(ar,h=365,level=95)
+plot(test$date,test$tmin..deg.c.,pch=18,cex=0.5,col=2)
+lines(test$date,arp$mean,lwd=3)
+lines(test$date,arp$lower,lty=2); lines(test$date,arp$upper,lty=2)
+```
+
+## Detrending
+
+```{r}
+rt <- ts(train$tmin..deg.c. - hm$mean[train$yday],start=2003,frequency = 365)  ## convert data to a time series object
+plot(rt,ylab="C",xlab="Year",main="Min temperature anomaly",cex=0.5)
+```
+
+## Autocorrelation
+
+```{r}
+par(mfrow=c(1,2))
+acf(rt)
+pacf(rt)
+```
+
+## auto.arima
+
+```{r}
+rr = auto.arima(rt,max.p=10,max.d = 0,max.q = 0,seasonal=FALSE)
+rr
+```
+
+## Forecast of anomalies
+
+```{r}
+rrp = forecast(rr,h=365,level=95)
+test.anomaly = test$tmin..deg.c. - hm$mean
+plot(test$date,test.anomaly,pch=18,cex=0.5,col=2)
+lines(test$date,rrp$mean,lwd=3)
+lines(test$date,rrp$lower,lty=2); lines(test$date,rrp$upper,lty=2)
+```
+
+## actual forecast
+
+```{r}
+plot(test$date,test$tmin..deg.c.,pch=18,cex=0.5,col=2)
+lines(test$date,rrp$mean+hm$mean,lwd=3)
+lines(test$date,rrp$lower+hm$mean,lty=2); lines(test$date,rrp$upper+hm$mean,lty=2)
+```
+
+## predictive uncertainties
+
+```{r}
+plot(test$date,rwp$upper-rwp$lower,type='l',
+     ylim=c(0,40),xlim=as.Date(c("2022-01-01","2022-03-01")),
+     xlab="Time",ylab="CI width")
+lines(test$date,hm$sd*1.96*2,col=2)
+lines(test$date,ar1p$upper-ar1p$lower,col=3)
+lines(test$date,arp$upper-arp$lower,col=4)
+lines(test$date,rrp$upper-rrp$lower,col=5)
+legend("bottomright",col=1:5,lwd=2,legend=c("RandWalk","HistMeans","AR(1)","AR(auto)","detrended AR(auto)"))
+```
+
