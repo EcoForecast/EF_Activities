@@ -286,7 +286,7 @@ eml_get(md$additionalMetadata, "forecast")
 ```
 In the example above the `complexity` variables record the dimension of each uncertainty term (number of parameters, number of process error variances, etc.).
 
-More information about the EFI metadata standard can be found here https://github.com/eco4cast/EFIstandards, which includes a link to the external Documentation (note: you'll want to look at Table 1 and 2 in the Documentation to answer the following question)
+More information about the EFI metadata standard can be found here https://github.com/eco4cast/EFIstandards and in Dietze et al 2023 Ecosphere https://dx.doi.org/10.1002/ecs2.4686
 
 **Question 5 [A]**
 Based on the metadata above, what were the identities of the species_1 and species_2 columns in the forecast file, what units were used, and did this forecast propagate the initial condition uncertainty for these species? For full credit, include code that answers these questions rather than just looking for the answers in the output.
