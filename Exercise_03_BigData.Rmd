@@ -30,6 +30,7 @@ get.pkg("devtools")
 get.pkg("MODISTools")
 get.pkg("EML")
 get.pkg("cronR")
+get.pkg("tidyverse")
 ```
 
 
@@ -61,9 +62,9 @@ Note: To open these files in a spreadsheet application, we recommend you save ea
 For more information, please visit http://www.google.org/flutrends
 ```
 
-**Question 1:**
+**Question 1: [A]**
 
-Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
+Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
 
 grep, system, RegExp
 --------------------
@@ -76,11 +77,12 @@ grep, system, RegExp
 
 ```
 grep -ir "phenology" .
-```
+
 ### Note: Some Windows users won't have grep installed but
 ### will have a similar function, findstr
 ### system("cmd.exe",input='findstr "phenology" *.Rmd')
 ### findstr is more limited and it is OK to skip examples that don't run
+```
 
 here the -i means ignore case when searching, the -r means to search recursively through subdirectories, and the `.` means to start from the current directory. Used in this way grep can help you quickly find your way through new and complex code, iteratively hopping through the code from one search to another. It is also extremely helpful in debugging, when a program returns a cryptic error message and you want to find _where_ in the code that message was generated.
 
@@ -133,7 +135,7 @@ gsub("HARV","BART",myCode[x])  ## substitute ALL: HARV for BART
 ```
 
 
-**Question 2:** Within the object myCode, find all the lines that begin with the comment character, #.
+**Question 2: [B]** Within the object myCode, find all the lines that begin with the comment character, #.
 
 Using APIs
 ----------
@@ -141,7 +143,7 @@ Using APIs
 In addition to data that are directly downloadable there are a number of places on the web where data are available though interactive, code-based webservices called Application Programming Interfaces (APIs). In this example we will access the NASA MODIS API, using a pre-existing R package called MODISTools, as a demonstration of one of the many dataset-specific R packages.  
 
 First, we'll query the MODIS server to see what data products are available and what variables (bands) are available within one of those data products. More details about each data product is available at https://modis.ornl.gov/sites/?id=us_massachusetts_harvard_forest_neon
-where we see that the tool has been expanded to also include data products for VIIRS, SMAP, DAYMET, GEDI, ECOSTRESS< and SIFas well.
+where we see that the tool has been expanded to also include data products for VIIRS, SMAP, DAYMET, GEDI, ECOSTRESS and SIF as well.
 
 ```{r}
 MODISTools::mt_products()
@@ -183,7 +185,7 @@ EVI = tapply(subset$value*as.numeric(subset$scale), subset$calendar_date, mean,n
 time = as.Date(names(EVI))
 ```
 
-**Question 3:** Plot EVI versus time and compare to the NEON phenocam observations.
+**Question 3: [B]** Plot EVI versus time and compare to the NEON phenocam observations.
 
 FYI, APIs now exist for an enormous range of data sources that are available on the web, as well as a range of web-services that allow you to not just download data but to also upload data or push requests various cloud platforms.
 
@@ -194,49 +196,59 @@ One area of working with big data that has evolved rapidly since work began on t
 
 File formats that have increased in use in recent year include parquet for tabular data, cloud-native GeoTIFF for raster spatial data, and zarr for mixed-format and high-dimensional data (e.g. an array that is x, y, z, time, attributes). 
 
-R support for parquet comes via the Apache `arrow` package. For example, if we want to connect to the Ecological Forecasting Initiative's catalog of ecological forecasts, which are stored in a Amazon-style S3 bucket (a cloud native data store that itself abstracts away the concept of drives, folders, and file paths) we could do so using the syntax
+R support for parquet comes via the Apache `arrow` package. For example, if we want to connect to the Ecological Forecasting Initiative's catalog of ecological forecasts, which are stored in a Amazon-style S3 bucket (a cloud native data store that itself abstracts away the concept of drives, folders, and file paths) we could do so using the syntax:
+
 ```{r}
-s3 <- arrow::s3_bucket(bucket = "scores/parquet",
+if(file.exists("pheno.Rdata")){  
+  load("pheno.Rdata")
+} else{  ## to make knit faster, only download the data the first time
+  
+s3 <- arrow::s3_bucket(bucket = "neon4cast-scores/parquet/phenology",
                         endpoint_override = "data.ecoforecast.org",
                         anonymous=TRUE)
-ds <- arrow::open_dataset(s3, partition="theme")
+ds <- arrow::open_dataset(s3)
 ds
-```
-At this point, ds is just a connection to a cloud service, but it behaves like a dataframe. We can use standard tidyverse syntax to process this file (e.g. filtering by time and location) and only when we call the command `collect()` does the processing actually execute in the cloud and send us the data we're requesting. For example, in the following command we request the phenology forecasts of the Phenocam greeness variable `gcc_90` for the NEON Harvard Forest site (HARV).
-```{r}
-library(tidyverse)
-df <- ds %>% 
-  filter(theme == "phenology", 
+
+
+df <- ds |> 
+  filter(model_id == "climatology",
          variable=="gcc_90",
-         site_id == "HARV") %>%
+         site_id == "HARV") |>
   collect()
+
+save(df,file="pheno.Rdata")
+} ## end download
+
 head(df)
-range(df$start_time)
+range(df$reference_datetime)
+
 ```
+
+In the first part of the code, ds is just a connection to a cloud service, but it behaves like a dataframe (e.g., the line with just `ds` will display the list of variable names and variable types for the cloud-based dataframe). Next, we can use standard tidyverse syntax to process this file (e.g. filtering by model, variable, and location) and only when we call the command `collect()` does the processing actually execute in the cloud and send us the data we're requesting. For example, in the command above we request the phenology forecasts of the Phenocam greeness variable `gcc_90` from the `climatology` model for the NEON Harvard Forest site (HARV).
 
 Data tiling is also a particularly useful feature for forecasting, as some such formats let you add new data without having to touch the previously written files. Thus one can append additional days of forecast inputs and outputs incrementally without having to load a large file into memory or rewrite it to storage. 
 
 For example, if we split the EFI phenology data into two sections, we can write each section out separately in parquet
 ```{r}
 ## split data
-dfa <- df %>% mutate(start_date = lubridate::as_date(start_time)) %>%
-  filter(start_time < lubridate::as_date("2022-01-01"))
-dfb <- df %>% mutate(start_date = lubridate::as_date(start_time))  %>% 
-  filter(start_time >= lubridate::as_date("2022-01-01"))
-## write out to the folder "parquetTest", tiling by start_time
+dfa <- df |> mutate(reference_datetime = lubridate::as_date(reference_datetime)) |>
+  filter(reference_datetime < lubridate::as_date("2022-01-01"))
+dfb <- df |> mutate(reference_datetime = lubridate::as_date(reference_datetime))  |> 
+  filter(reference_datetime >= lubridate::as_date("2022-01-01"))
+## write out to the folder "parquetTest", tiling by reference_datetime
 dir.create("parquetTest")
-dfa %>% group_by(start_date) %>% arrow::write_dataset("parquetTest",format="parquet")
-dfb %>% group_by(start_date) %>% arrow::write_dataset("parquetTest",format="parquet")
+dfa |> group_by(reference_datetime) |> arrow::write_dataset("parquetTest",format="parquet")
+dfb |> group_by(reference_datetime) |> arrow::write_dataset("parquetTest",format="parquet")
 ```
 
-If you look in the folder you'll see that the files are organized by start_date. We can now access these files as we did before, using `arrow::open_dataset` to open the whole _folder_. As before the resulting object behaves like a dataframe, even though it's actually pointing to a whole folder, and one can operate on this object without having to load all the individual files. 
+If you look in the folder you'll see that the files are organized by reference_datetime. We can now access these files as we did before, using `arrow::open_dataset` to open the whole _folder_. As before the resulting object behaves like a dataframe, even though it's actually pointing to a whole folder, and one can operate on this object without having to load all the individual files. 
 
 ```{r}
 dfc = arrow::open_dataset("parquetTest")
 dfc
 ```
 
-**Question 4:** Use arrow to access the NOAA GEFS weather forecast and filter this data to the forecast issued yesterday at midnight for the NEON site_id "HARV". The EFI NEON challenge stores this data at the endpoint "data.ecoforecast.org" in a S3 bucket named "neon4cast-drivers/noaa/gefs-v12/stage2/parquet". When loading, we recommend setting the partion to `c("start_date", "cycle")` where cycle specifies the time of day the forecast was issued (0 = midnight). Make a timeseries plot of the "air_temperature" data in this forecast that shows one curve for each ensemble member (there are 31 ensemble members total). Hint: make sure to filter all relevant variables before calling `collect`.
+**Question 4: [A]** Use arrow to access the NOAA GEFS weather forecast and filter this data to the forecast issued yesterday at midnight for the NEON site_id "HARV". The EFI NEON challenge stores this data at the endpoint "data.ecoforecast.org" in a S3 bucket named "neon4cast-drivers/noaa/gefs-v12/stage2/parquet/0/2024-01-01". Note in this case that once could select a different data by changing the last folder referenced, or could access multiple dates by leaving of a date at the end of the bucket. Make a timeseries plot of the "air_temperature" data in this forecast that shows one curve for each ensemble member (there are 31 ensemble members total). Hint: make sure to filter all relevant variables before calling `collect`.
 
 
 EML Metadata
@@ -276,8 +288,8 @@ In the example above the `complexity` variables record the dimension of each unc
 
 More information about the EFI metadata standard can be found here https://github.com/eco4cast/EFIstandards, which includes a link to the external Documentation (note: you'll want to look at Table 1 and 2 in the Documentation to answer the following question)
 
-**Question 5**
-Based on the metadata above, what were the identities of the species_1 and species_2 columns in the forecast file, what units were used, and did this forecast propagate the initial condition uncertainty for these species?
+**Question 5 [A]**
+Based on the metadata above, what were the identities of the species_1 and species_2 columns in the forecast file, what units were used, and did this forecast propagate the initial condition uncertainty for these species? For full credit, include code that answers these questions rather than just looking for the answers in the output.
 
 cron
 ----
@@ -333,9 +345,9 @@ cron_rm("test2")
 ```
 
 
-**Question #6:**
+**Question #6: [A]**
 
-Imagine you are working with MODIS data, but are grabbing a large region (rather than a single pixel) and want to ensure that the data you are using is always up to date. However, the total size of the database is large and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
+Imagine you are working with MODIS data, but are grabbing a large region (rather than a single pixel) and want to ensure that the data you are using is alwaysd up to date. However, the total size of the database is large and you don't want to completely delete and reinstall the database every day when only a small percentage of the data changes in any update. 
 
 * Write out the pseudocode/outline for how to keep the files up to date
 * Write out what the cron table would look like to schedule this job (assume the update only needs to be done weekly)
