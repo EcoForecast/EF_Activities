@@ -8,12 +8,14 @@ output: html_document
 
 Before beginning this exercise, you should have the following three packages installed, which you may not already have installed. If you don't have them installed, you should run the following commands **in your console** to install them. The reason for this is RMarkdown really doesn't like when you try to install packages while knitting a document. So, while you *can* run the code chunk by chunk in RMarkdown, if you go to knit it, you will receive an error.
 
+```
         devtools::install_github('eco4cast/neon4cast')
         
         install.packages('rMR')
         
         devtools::install_github('eco4cast/EFIstandards')
-        
+```
+
 ## Objectives
 
 The primary goal of this exercise is to gain experience working collaboratively to develop a scientific workflow. As such, this assignment is best completed with a partner. Specifically, we will outline a simple analysis, break the overall job into parts, and have each person complete part of the project. To put these parts together we will be using git & Github, and to automate it we will be using Github Actions.
@@ -156,27 +158,34 @@ merge_met_past <- function(target){
   
   ## filter for site and variable
   sites <- unique(target$site_id)
+  
+  ## temporary hack to remove a site that's mid-behaving
+  sites = sites[!(sites=="POSE")] 
+  target = target |> filter(site_id %in% sites)  
+  
+  ## grab air temperature from the historical forecast
   noaa_past <- df_past |> 
     dplyr::filter(site_id %in% sites,
                   variable == "air_temperature") |> 
     dplyr::collect()
   
+  ## aggregate to daily
+  noaa_past_mean = noaa_past |> 
+    mutate(datetime = as.Date(datetime)) |>
+    group_by(datetime, site_id) |> 
+    summarise(air_temperature = mean(prediction),.groups = "drop")
+  
   ## Aggregate (to day) and convert units of drivers
   target <- target %>% 
     group_by(datetime, site_id,variable) %>%
-    summarize(obs2 = mean(observed, na.rm = TRUE), .groups = "drop") %>%
+    summarize(obs2 = mean(observation, na.rm = TRUE), .groups = "drop") %>%
     mutate(obs3 = ifelse(is.nan(obs2),NA,obs2)) %>%
     select(datetime, site_id, variable, obs3) %>%
-    rename(observed = obs3) %>%
+    rename(observation = obs3) %>%
     filter(variable %in% c("temperature", "oxygen")) %>% 
-    tidyr::pivot_wider(names_from = "variable", values_from = "observed")
+    tidyr::pivot_wider(names_from = "variable", values_from = "observation")
   
   ## Merge in past NOAA data into the targets file, matching by date.
-  target <- target |> 
-    select(datetime, site_id, variable, observed) |> 
-    filter(variable %in% c("temperature", "oxygen")) |> 
-    tidyr::pivot_wider(names_from = "variable", values_from = "observed")
-  
   target <- left_join(target, noaa_past_mean, by = c("datetime","site_id"))
   
 }
@@ -185,26 +194,24 @@ merge_met_past <- function(target){
 ##' @param forecast_date start date of forecast
 ##' @return dataframe
 download_met_forecast <- function(forecast_date){
-  ## connect to data
-  df_future <- neon4cast::noaa_stage2()
-  
   noaa_date <- forecast_date - lubridate::days(1)  #Need to use yesterday's NOAA forecast because today's is not available yet
+  
+  ## connect to data
+  df_future <- neon4cast::noaa_stage2(start_date = as.character(noaa_date))
   
   ## filter available forecasts by date and variable
   met_future <- df_future |> 
-    dplyr::filter(cycle == 0,
-                  start_date == as.character(noaa_date),
-                  time >= lubridate::as_datetime(forecast_date), 
+    dplyr::filter(datetime >= lubridate::as_datetime(forecast_date), 
                   variable == "air_temperature") |> 
     dplyr::collect()
   
   ## aggregate to daily
   met_future <- met_future %>% 
-    mutate(time = lubridate::as_date(time)) %>% 
-    group_by(time, site_id, ensemble) |> 
-    summarize(air_temperature = mean(predicted), .groups = "drop") |> 
-    mutate(air_temperature = air_temperature - 273.15) |> 
-    select(time, site_id, air_temperature, ensemble)
+    mutate(datetime = lubridate::as_date(datetime)) %>% 
+    group_by(datetime, site_id, parameter) |> 
+    summarize(air_temperature = mean(prediction), .groups = "drop") |> 
+#    mutate(air_temperature = air_temperature - 273.15) |> 
+    select(datetime, site_id, air_temperature, parameter)
   
   return(met_future)
 }
@@ -281,16 +288,16 @@ run_forecast <- function(model,met_forecast,site_data){
                                            salinity = 0, 
                                            salinity.units = "pp.thou")
       ## organize outputs
-      temperature <- tibble(time = met_future_site$time,
+      temperature <- tibble(datetime = met_future_site$datetime,
                             site_id = sites[i],
-                            ensemble = met_future_site$ensemble,
-                            predicted = forecasted_temperature,
+                            parameter = met_future_site$parameter,
+                            prediction = forecasted_temperature,
                             variable = "temperature")
       
-      oxygen <- tibble(time = met_future_site$time,
+      oxygen <- tibble(datetime = met_future_site$datetime,
                        site_id = sites[i],
-                       ensemble = met_future_site$ensemble,
-                       predicted = forecasted_oxygen,
+                       parameter = met_future_site$parameter,
+                       prediction = forecasted_oxygen,
                        variable = "oxygen")
       
       
@@ -303,8 +310,8 @@ run_forecast <- function(model,met_forecast,site_data){
   
   ## reorganize into EFI standard
   forecast <- forecast |> 
-    mutate(start_time = forecast_date) |> #start_time is today
-    select(time, start_time, site_id, variable, ensemble, predicted)
+    mutate(reference_datetime = forecast_date) |>
+    select(datetime, reference_datetime, site_id, variable, parameter, prediction)
   
   return(forecast)
 }
@@ -340,7 +347,13 @@ submit_forecast <- function(forecast,team_info,submit=FALSE){
   
   #Forecast output file name in standards requires for Challenge.  
   # csv.gz means that it will be compressed
-  forecast_file <- paste0("aquatics","-",min(forecast$time),"-",team_info$team_name,".csv.gz")
+  forecast_file <- paste0("aquatics","-",min(forecast$reference_datetime),"-",team_info$team_name,".csv.gz")
+  
+  ## final format tweaks for submission
+  forecast = forecast |> mutate(model_id = team_info$team_name, family="ensemble") |>
+    relocate(model_id,reference_datetime) |>
+    relocate(parameter,.before = variable) |>
+    relocate(family,.before = parameter)
   
   #Write csv to disk
   write_csv(forecast, forecast_file)
@@ -382,11 +395,12 @@ submit_forecast <- function(forecast,team_info,submit=FALSE){
       )
     )
   )
-  
-  metadata_file <- neon4cast::generate_metadata(forecast_file, team_info$team_list, model_metadata)
+
+  ## this function needs to be restored
+  #metadata_file <- neon4cast::generate_metadata(forecast_file, team_info$team_list, model_metadata)
   
   if(submit){
-    neon4cast::submit(forecast_file = forecast_file, metadata = metadata_file, ask = FALSE)
+    neon4cast::submit(forecast_file = forecast_file, ask = FALSE) #metadata = metadata_file,
   }
   
 }
@@ -422,7 +436,7 @@ git pull upstream master
 library(tidyverse)
 library(neon4cast)
 library(lubridate)
-install.packages("rMR")
+#install.packages("rMR")
 library(rMR)
 
 forecast_date <- Sys.Date()
@@ -454,6 +468,11 @@ ggplot(target, aes(x = temperature, y = air_temperature)) +
   labs(x = "NEON water temperature (C)", y = "NOAA air temperature (C)") +
   facet_wrap(~site_id)
 
+met_future %>% 
+  ggplot(aes(x = datetime, y = air_temperature, group = parameter)) +
+  geom_line() +
+  facet_grid(~site_id, scale ="free")
+
 ### Step 2: Calibrate forecast model
 model <- calibrate_forecast(target)
 
@@ -462,7 +481,7 @@ forecast <- run_forecast(model,met_future,site_data)
 
 #Visualize forecast.  Is it reasonable?
 forecast %>% 
-  ggplot(aes(x = time, y = predicted, group = ensemble)) +
+  ggplot(aes(x = datetime, y = prediction, group = parameter)) +
   geom_line() +
   facet_grid(variable~site_id, scale ="free")
 
