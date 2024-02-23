@@ -371,12 +371,12 @@ hist(SD)
 summary(SD)
 ```
 
-### Task 1
+### Task 1 
 
--   Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burn-in
--   Report parameter summary table and plot marginal distributions
--   Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.
--   Compare the summary statistics for the Bayesian regression model to those from the classical regression: `summary(lm(y ~ x1))`. This should include a comparison of the means and uncertainties of **all 3 model parameters**
+-   Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burn-in [A]
+-   Report parameter summary table and plot marginal distributions [A]
+-   Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.[B]
+-   Compare the summary statistics for the Bayesian regression model to those from the classical regression: `summary(lm(y ~ x1))`. This should include a comparison of the means and uncertainties of **all 3 model parameters** [A]
 
 # Multiple Regression
 
@@ -384,7 +384,7 @@ Using the dataset "data/Ex05.Part2.RData", extend your univariate regression to 
 
 ### Task 2
 
--   Show the JAGS and R code used.
--   Include relevant convergence diagnostics and plots.
--   Report parameter summary table.
--   Plot marginal parameter distributions and pairwise parameter correlations (stats and scatter plots).
+-   Show the JAGS and R code used. [A]
+-   Include relevant convergence diagnostics and plots. [A]
+-   Report parameter summary table. [A]
+-   Plot marginal parameter distributions and pairwise parameter correlations (stats and scatter plots). [B]
