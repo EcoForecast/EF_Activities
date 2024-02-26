@@ -64,7 +64,7 @@ For more information, please visit http://www.google.org/flutrends
 
 **Question 1: [A]**
 
-Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge.  
+Make a simple time-series plot of the Harvard Forest (HARV) Phenocam phenology data (gcc_90), which EFI has preprocessed and saved here https://data.ecoforecast.org/neon4cast-targets/phenology/phenology-targets.csv.gz as part of the NEON forecasting challenge. Don't forget to filter this data by site and variable!  
 
 grep, system, RegExp
 --------------------
