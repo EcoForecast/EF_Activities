@@ -127,7 +127,7 @@ cor(out[,1:2])
 ```
 
 
-Assignment:
+Question 1 [A]:
 -----------
 
 To explore the ability of state space models to generate forecasts (or in this case, a hindcast) make a copy of the data and **remove the last 40 observations (convert to NA)** and refit the model.
@@ -136,7 +136,7 @@ To explore the ability of state space models to generate forecasts (or in this c
 * Comment on how well the random walk model performed (both accuracy and precision) and how it might be modified to improve both these criteria.
 
 
-Extra Credit (Part 1):
+Question 2 [C: Extra Credit]
 ----------------------
 To look at how observation frequency affects data assimilation, convert 3 out of every 4 observations to NA (i.e. treat the data as approximately monthly) and refit the model. 
 
@@ -208,14 +208,15 @@ This code illustrates a few things:
 
 Finally, the returned object also includes the `data` that was used to fit the model.
 
-Part 2:
+Question 3 [A]:
 -----------
 
 * Compare the process and observation error estimates and model CI between this fit and the original random walk model. How much has the residual variance been reduced by?
-* Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 * Explain and discuss the parameter estimates (betas) from the dynamic linear model (what do they mean both biologically and in terms of the predictability of the system) and their correlations
+* Because a state-space model returns X's that are close to the Y's, metrics such as R2 and RMSE aren't great metrics of model performance. Besides looking at the taus, how else could we judge which model is doing better (in a way that avoids/penalizes overfitting)?
 
-Part 3:
+
+Question 4 [B]:
 -----------
 
 Repeat the process of forecasting the last 40 observations (convert to NA), this time using the DLM with temperature as a covariate
@@ -225,7 +226,7 @@ Repeat the process of forecasting the last 40 observations (convert to NA), this
 
 # Next steps 
 
-Apply these modeling approaches to you own time-series data! As a simple place to start note that you can fit the basic Random Walk model using `fit_dlm` just by setting `fixed = ""`. Also, as with standard `lm` syntax, you can suppress the intercept by including -1 in fixed, specify interaction terms using multiplication (e.g. X * Tmin), and express polynomials both on X and on covariates (e.g. X^2 or Tmin^2). The latter allows you to construct models with stabalizing feedbacks, for example:
+Apply these modeling approaches to you own time-series data! As a simple place to start note that you can fit the basic Random Walk model using `fit_dlm` just by setting `fixed = ""`. Also, as with standard `lm` syntax, you can suppress the intercept by including -1 in fixed, specify interaction terms using multiplication (e.g. X * Tmin), and express polynomials both on X and on covariates (e.g. X^2 or Tmin^2). The latter allows you to construct models with stabilizing feedbacks, for example:
 
 $$ N_{t+1} = N_t + rN_t \left( 1 + {{N_t}\over{K}} \right) = (1+r)N_t + {{r}\over{K}}N_t^2$$
 can be expressed as fixed = "-1 + X + X^2" where $\beta_X = r$ and $\beta_{X^2} = r/K$.
