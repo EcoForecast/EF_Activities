@@ -410,15 +410,19 @@ By default this code is set to run with a small number of years (15), and a much
 
 Assignment:
 
-1. Run the model initially with random effects off.
+1. Run the model initially with random effects off. [A]
 
-2. Rerun the model with both random effects on. Make sure to check convergence, burn-in, and effective sample size. Compare model fit and parameter estimates to the previous run. What is the relative partitioning of uncertainties in the different versions of the model among observation error, process error, and the different random effects? What does the size of these effects suggest about the drivers of uncertainty in tree growth?
+2. Rerun the model with both random effects on. 
+* Make sure to check convergence, burn-in, and effective sample size. [A]
+* Compare model fit and parameter estimates to the previous run.[A] 
+* What is the relative partitioning of uncertainties in the different versions of the model among observation error, process error, and the different random effects? [B]
+* What does the size of these effects suggest about the drivers of uncertainty in tree growth? [B]
 
-3. Based on the diagnostics, propose an additional effect (fixed or random) to add to the model. Such an effect should plausibly chip away at a sizable fraction of the unexplained variability -- you wouldn't want to propose an effect that isn't associated with systematic variability. 
+3. Based on the diagnostics, propose an additional effect (fixed or random) to add to the model. Such an effect should plausibly chip away at a sizable fraction of the unexplained variability -- you wouldn't want to propose an effect that isn't associated with systematic variability. [A]
 
-4. Explain any additional exploratory analyses you would perform (e.g. plotting your proposed covariate against one of the random effects). 
+4. Explain any additional exploratory analyses you would perform (e.g. plotting your proposed covariate against one of the random effects). [B]
 
-5. Write the JAGS code that would fit the proposed model (note: you don't have to track down additional covariate data or run this model, just propose the code)
+5. Write the JAGS code that would fit the proposed model (note: you don't have to track down additional covariate data or run this model, just propose the code) [A]
 
 **BECAUSE THE PRODUCTION VERSION OF THIS CODE TAKES A LONG TIME TO RUN, PLEASE SUBMIT THE KNIT HTML NOT THE Rmd**
 
