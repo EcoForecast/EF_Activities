@@ -1,0 +1,320 @@
+---
+title: "Importing, converting and plotting Dates and Times with R"
+author: "Betsy Cowdery"
+date: "January 25, 2016"
+output:
+html_document:
+code_folding: hide
+highlight: tango
+---
+<STYLE TYPE="text/css">
+<!--
+tr {
+border: 1px solid #666;
+}
+th {
+font-weight: bold;
+text-align: Left;
+background-color: #cce5ff;
+padding: 2px 4px;
+border: 1px solid #666;
+white-space: nowrap;
+}
+td{
+text-align: Left;
+padding: 2px 4px;
+border: 1px solid #666;
+}
+table { 
+margin: 1em 0;
+border-collapse: collapse;
+}
+h1:after{
+content:' ';
+display:block;
+border:2px solid #d0d0d0;
+border-radius:4px;
+-webkit-border-radius:4px;
+-moz-border-radius:4px;
+box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05);
+-webkit-box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05);
+-moz-box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05);
+}
+h2:after{
+content:' ';
+display:block;
+border:1px solid #d0d0d0;
+border-radius:4px;
+-webkit-border-radius:4px;
+-moz-border-radius:4px;
+box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05);
+-webkit-box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05);
+-moz-box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05);
+}
+pre {
+display: block;
+padding: 9.5px;
+margin: 0 0 10px;
+font-size: 13px;
+line-height: 20px;
+word-break: break-all;
+word-wrap: break-word;
+white-space: pre;
+white-space: pre-wrap;
+background-color: #EBEBEB;
+border: 1px solid #ccc;
+border: 1px solid rgba(0, 0, 0, 0.15);
+-webkit-border-radius: 4px;
+-moz-border-radius: 4px;
+border-radius: 4px;
+}
+--->
+</STYLE>
+
+## Dates and Time in Excel vs. in R
+
+Suppose a scientist were to record in an Excel spreadsheet that a measurement of atmospheric CO2 concentration was taken February 1st, 2016 at 2:00 pm using the flux tower on the roof of CAS. 
+One might expect the spreadsheet entry would look something like this:
+
+```{r,echo=FALSE}
+knitr::kable(as.data.frame(cbind("Date"="2/1/16", "Time"="2:00:00 PM", "ppm"="403" )))
+``` 
+
+One would also assume that the latitude and longitude of BU flux tower would be recorded so that time zone adjustments could be calculated as necessary. 
+
+This is how we are used to looking at dates and times, but unfortunately, this is not the way R formats dates and times. In fact, during the first exercise for this class, you learned that there are R object classes dedicated specifically to date and time.  <br>
+To get an idea of how R formats date-time objects, look at how R reports the current time: 
+```{r}
+Sys.time() #What time is it right now?
+```
+Here we can see a string with the current date, time and time zone.
+
+What class is this object?
+```{r}
+class(Sys.time())
+```
+This returns two classes ("POSIXct" and "POSIXt") which are the two "Date-Time" Classes in R. <br> 
+The key to successfully and efficiently using data with date and time components is learning how to convert what you see in your spreadsheets into these date-time formats that R can understand. 
+
+### The goal of this tutorial is to demonstrate how to:
+1) Import data that contains date and time components
+2) Convert the data into an appropriate R class
+3) Make plots with varying date/time axes
+
+The data I will be using for this tutorial is
+atmospheric CO2 measurements at Mauna Loa Observatory 
+taken directly from the Mauna Loa Observatory [website](http://www.esrl.noaa.gov/gmd/ccgg/trends/full.html) <br>
+The data does not come with a time-stamp so I have created a column of randomly generated times for practice. 
+
+
+## 1) Importing date-time data
+
+First load the data from a csv file:
+```{r}
+CO2 <-read.csv("Mauna_Loa_Current.csv", stringsAsFactors=FALSE)
+```
+
+The first 5 rows of the data set look like this:
+```{r, echo=FALSE}
+knitr::kable(head(CO2,5))
+```
+
+Now we need to learn how to tell R how our data is formatted. <br>
+Below are tables of "conversion specifications," i.e. the shorthand one can use to describe date-time formats. This list is by no means exhaustive, and more can be found in the [documentation](https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html)
+
+### Time 
+|Code     |Description                  |Example            |
+|--------|----------------------------|------------------|
+%H | Hour (00–23). | 14 or 14:00:00 is accepted |
+%I | Hour (00–23). | 14 BUT 14:00:00 is NOT accepted |
+%p | AM/PM Used with %I and not with %H. | 2 PM |
+%M | Minute (00–59).| 01, 40|
+%S | Second (00–61) allowing for up to two leap-seconds | 01, 40|
+
+### Dates
+|Code     |Description                  |Example            |
+|--------|----------------------------|------------------|
+|%A       |Full weekday                 |Sunday, Thursday   |
+|%a       |Abbreviated weekday          |Sun, Thu           |
+|%w       |Weekday (0-6) Sunday = 0 |0, 4 |
+|%u       |Weekday (1-7) Sunday = 7 |7, 4  |
+|%U       |Week with Sunday as first day (00-53) |21, 27 |
+|%W       |Week with Monday as first day (00-53) |21, 27 |  
+|%b or %h |Abbreviated month            |May, Jul           |
+|%B       |Full month                   |May, July          |
+|%d       |Day of the month             |27, 07             |
+|%m       |Month  (01-12)                 |05, 12            |
+|%j       |Day of the year (001 -366)   |148, 188           |
+|%y       |Year without century (00-99) |84, 05  |   
+|%Y       |Year with century (00 to 68 prefixed by 20, 69 to 99 prefixed by 19) |1984, 2005 |
+|%C       |Century   |19, 20             |
+
+### Common Formats
+|Code     |Description                  |Example            |
+|--------|----------------------------|------------------|
+|%D |Date formatted %m/%d/%y  |05/27/84, 07/07/05 |
+|%R | Equivalent to %H:%M | 14:30 |
+|%T | Equivalent to %H:%M:%S | 14:30:05 |
+
+### Time zone
+Finally, we need to figure out the time zone. <br>
+I personally recommend a service called [GeoNames](http://www.geonames.org/)<br>
+You can either use the website to determine a time zone by entering latitude and longitude, or you can use the R package `geonames`. To use the R package, you need to have your own personal login, but for this example you can use the name "carya"
+
+```{r,message=FALSE}
+require(geonames)
+options(geonamesUsername="carya")
+gntz <- GNtimezone(lat = CO2$Lat, lng = CO2$Lon, radius = 0)
+```
+
+Now we have all the components to convert our date-time data from character strings to date-time objects in R. 
+
+### `strptime()`
+
+Looking back at our own data, we can now see that: 
+
+* Date is `%m/%d/%y`
+
+* Time is `%I:%M:%S %p`
+
+* Time zone is `as.character(gntz$timezoneId)` 
+
+The function `strptime` will convert a character string into a form that R can use for calculations using the conversion specifications.
+
+```{r}
+# Paste together the date and time components
+CO2$full_date_time <- paste(CO2$Date, CO2$Time) 
+# Convert the character string
+CO2$full_strp <- strptime(CO2$full_date_time, format = "%m/%d/%y %I:%M:%S %p", tz = as.character(gntz$timezoneId))
+```
+
+Now we have date-time entries in a format that R can read!
+
+```{r,echo=F}
+knitr::kable(head(data.frame(CO2$Date, CO2$Time, CO2$full_strp),5))
+```
+
+Next, we can convert our new data into some of the different Date-Time classes available in R.
+
+## 2) Date-Time Classes
+
+### The Date Class: Dates without time stamps
+
+If your data does not have a time component, then the best class to use is Date. <br>
+The Date class is a double precision format (i.e. a numeric value) that represents the number of days since January 1st, 1970. 
+
+```{r}
+typeof(as.Date("2/1/2016", format = "%m/%d/%Y"))
+
+#The number of days since January 1st, 1970
+cat(as.Date(Sys.time()))
+```
+
+`as.Date` is a wrapper for `strptime` so the following commands will return the same thing. 
+
+```{r}
+as.Date("1/2/2016", format = "%m/%d/%Y")
+as.Date(strptime("1/2/2016", format = "%m/%d/%Y"))
+```
+
+`as.Date` can also be used to extract dates from objects with date and time components. 
+```{r}
+tail(CO2$full_date_time,1)
+as.Date(tail(CO2$full_date_time,1), format = "%m/%d/%y %I:%M:%S %p", tz = as.character(gntz$timezoneId))
+```
+
+Because a Date object is just a numeric value, it is a popular choice when working with matrices and data frames.
+
+## The POSIXt Classes: Dates with time stamps
+
+### POSIXct -- "ct" for calendar time 
+
+The POSIXct is a double precision format  (i.e. a numeric value) that represents the number of seconds since January 1st, 1970 at 00:00:00 UTC. 
+
+```{r}
+typeof(as.POSIXct(Sys.time()))
+```
+
+
+```{r}
+# How many seconds has it been since the beginning of 1970
+cat(as.POSIXct(Sys.time())) 
+```
+```{r}
+# How many seconds passed between the beginning of 1970 and 1/1/1970 at 00:00:01? 
+cat(as.POSIXct("1970-1-1 00:00:01",tz="UTC")) 
+```
+```{r}
+# How many hours has it been since the beginning of 2016?
+difftime(as.POSIXct(Sys.time()), as.POSIXct("2016-1-1 00:00:00"), units = "hours")
+```
+
+Because POSIXct is just a numeric value, it is a popular choice when working with matrices and data frames. 
+```{r}
+# Convert our data to POSIXct
+CO2$ct <- as.POSIXct(CO2$full_strp)
+```
+
+In addition, according to a 2004 editorial by Thomas Lumley in The Newsletter of the R Project, found (here)[https://cran.r-project.org/doc/Rnews/Rnews_2004-1.pdf], 
+
+> The tzone attribute on POSIXlt times
+are ignored so it is safer to use POSIXct than
+POSIXlt when performing arithmetic or other
+manipulations that may depend on time zones.
+
+### POSIXlt -- "lt" for local time (or lists if that helps you remember)
+
+Unlike Date and POSIXct, POSIXlt is a list object that breaks down the date and time into 9 components plus an optional time zone attribute. This not only has the benefit of being human-readable but it also makes it easy to extract specific aspects of a time (such as the day of the week).
+
+```{r}
+typeof(as.POSIXlt(Sys.time()))
+```
+
+
+```{r}
+# All the entries in the POSIXlt list
+knitr::kable(as.data.frame(unclass(as.POSIXlt(Sys.time()))))
+```
+
+```{r}
+# Extract day of the week (as an integer 1:7, Sunday=7)
+as.POSIXlt(Sys.time())$wday
+```
+
+```{r}
+# Convert our data to POSIXlt
+CO2$lt <- as.POSIXlt(CO2$full_strp)
+```
+
+## 3) Plotting with dates
+
+Using Date-Time classes makes adjusting axes very simple. You can quickly change the tick marks, as well as the tick mark labels.  
+Below are a few examples of different ways to display the Mauna Loa CO2 data. 
+
+```{r}
+
+
+attach(CO2)
+
+# Simple plot of ppm 
+plot(as.Date(full_strp), ppm, type = "l", xlab = "", las=2)
+title("Default plot")
+
+# now label every 35 months on the time axis
+plot(as.Date(full_strp), ppm, type = "l", xaxt = "n", xlab="")
+r <- as.Date(round(range(full_strp), "hours"))
+axis.Date(side = 1, at = seq(r[1], r[2], by = "35 months"), format = "%b %Y", las=2)
+title("Label every 35 months")
+
+# now label evey 73040 hours (because why not?)
+plot(ct, ppm, type = "l", xaxt = "n", xlab = "")
+r <- round(range(ct), "hours")
+axis.POSIXct(side = 1, at = seq(r[1], r[2], by = "73040 hours"), format = "%D %H:%M", las=2)
+title("Label every 73040 hours")
+
+plot(lt$year, ppm)
+title("Be careful you don't plot by year instead of label the x axis by year!")
+
+
+```
+

@@ -1,0 +1,245 @@
+Exercise 2: From Models to Forecasts
+========================================================
+  
+Note: This activity supplements material in Ecological Forecasting Chapter 2 "From Models to Forecasts" As a class activity, please turn in answers in Rmd format.
+
+Simulating the discrete-time logistic
+-------------------------------------
+
+1. Generate plots of the logistic growth model at r = 1.95, 2.05, 2.5, and 2.8 Describe the trajectory observed in each case.
+
+```{r}
+
+r = c(1.95, 2.05, 2.5, 2.8)         ## intrinsic growth rate
+K = 10        ## carrying capacity      
+n0 = .1       ## initial population size
+NT = 60      ## number of time steps to simulate
+time = 1:NT
+
+par(mfrow = c(2,2))
+for(i in 1:length(r)){
+  n = rep(n0,NT)    ## vector to store result
+  for(t in 2:NT){
+    n[t] = n[t-1] + r[i]*n[t-1]*(1-n[t-1]/K)
+  }
+  plot(time,n,ylim=c(0,12),lwd=3,type='l',
+       bty='l',cex.lab=1.5,
+       xlab="Time",ylab="Population Size", main = sprintf("Population Size with growth rate r = %.2f", r[i]))
+  abline(h=K)
+}
+
+```
+
+
+For $r \geq 2$, the populations do not converge, but the populations will converge for $1 \leq r \leq 2$
+
+
+Probability distributions in R
+------------------------------
+
+2. Choose another probability distribution and generate graphs of the probability density function, the cumulative distribution function, the quantile function, and a histogram of samples from that distribution.
+
+```{r}
+
+ml = c(.2,.5,1)
+sl = c(.2,.5,1)
+
+x = seq(0,6, length.out = 1000)
+par(mfrow=c(3,1))
+for(i in 1:3){
+  plot(x, dlnorm(x, meanlog = ml[i], sdlog = sl[1]), type="l", col =2, lwd =3)
+  for(j in 2:3){
+    lines(x, dlnorm(x, meanlog = ml[i], sdlog = sl[j]), col = j+1, lwd =3)
+  }
+}
+
+
+par(mfrow=c(3,1))
+for(i in 1:3){
+  plot(x, plnorm(x, meanlog = ml[i], sdlog = sl[1]), type="l", col =2, lwd =3)
+  abline(v= exp(ml[i]))
+  abline(h=.5, lty=2)
+  for(j in 2:3){
+    lines(x, plnorm(x, meanlog = ml[i], sdlog = sl[j]), col = j+1, lwd =3)
+  }
+}
+
+
+p = seq(0,1, length.out = 1000)
+par(mfrow=c(1,3))
+for(i in 1:3){
+  plot(p, qlnorm(p, meanlog = ml[i], sdlog = sl[1]), type="l", col =2, lwd =3, ylim = range(x))
+  abline(h= exp(ml[i]))
+  abline(v=.5, lty=2)
+  for(j in 2:3){
+    lines(p, qlnorm(p, meanlog = ml[i], sdlog = sl[j]), col = j+1, lwd =3)
+  }
+}
+
+n = c(10,100,1000,10000)	# sequence of sample sizes
+par(mfrow=c(2,2))
+for(i in 1:4){			# loop over these sample sizes
+  hist(rlnorm(n = n[i], meanlog = .2, sdlog = .2), main=n[i], probability=TRUE, breaks=40, xlim = c(.5, 2.5))
+  lines(x,dlnorm(x, meanlog = .2, sdlog = .2),col=2,lwd=3)
+}
+```
+
+Monte Carlo Simulation
+----------------------
+
+3. Numerically transform a lognormal(meanlog=0,sdlog=0.5) through sin(x) using Monte Carlo simulation. Include histograms of the original and transformed distributions. Report the mean, median, and 95% CI for both distributions and indicate these values on the histograms.
+
+```{r}
+x = rlnorm(10000,meanlog = 0,sdlog = 1)
+y = sin(x)
+
+hist(x,main="Original distribution",breaks=40)
+abline(v=quantile(x,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(x),col="red",lwd=3,lty=3)
+
+knitr::kable(quantile(x,c(0.025,0.5,0.975)))
+
+```
+
+```{r}
+
+hist(y,main="Transformed distribution",breaks=40)
+abline(v=quantile(y,c(0.025,0.5,0.975)),lty=c(2,1,2),lwd=3,col="orange")
+abline(v=mean(y),col="red",lwd=3,lty=3)
+knitr::kable(quantile(x,c(0.025,0.5,0.975)))
+
+```
+
+Parameter error
+---------------
+
+We next want to use the Monte Carlo approach to account for parameter uncertainty in the logistic growth model
+
+Define parameters
+```{r}
+r = 1         ## intrinsic growth rate
+K = 10        ## carrying capacity      
+n0 = .1       ## initial population size
+NT = 30     ## number of time steps to simulate
+time = 1:NT
+```
+
+```{r}
+r.sd = 0.2     ## standard deviation on r
+K.sd = 1.0     ## standard deviation on K
+NE = 1000      ## Ensemble size
+
+n = matrix(n0,NE,NT)   # storage for all simulations
+rE = rnorm(NE,r,r.sd)  # sample of r
+KE = rnorm(NE,K,K.sd)  # sample of K
+for(i in 1:NE){        # loop over samples
+  for(t in 2:NT){      # for each sample, simulate throught time
+    n[i,t] = n[i,t-1] + rE[i]*n[i,t-1]*(1-n[i,t-1]/KE[i])
+  }
+}
+```
+
+```{r}
+n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+```
+
+```{r}
+ciEnvelope <- function(x,ylo,yhi,col="lightgrey",...){
+polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+ylo[1])), border = NA,col=col,...) 
+}
+```
+
+### Problems
+
+4. Plot histograms of the samples of r and K used for the simulation.
+
+```{r}
+hist(rE)
+hist(KE)
+```
+
+5. Plot a sample of 10 different trajectories from your ensemble (on one graph).
+
+```{r}
+traj <- sample(1:1000,10)
+
+plot(n[traj[1],], type="l", ylim=c(0,max(n[traj,])))
+for(i in 2:10){
+  lines(n[traj[i],], type="l")
+}
+
+```
+
+6. Plot a histogram of your population forecast at time = 15.
+
+```{r}
+hist(n[,15])
+```
+
+7. Plot the median trajectory and 95% CI.
+8. Add a 50% CI (i.e. 25% to 75%) to the plot. Note that you'll have to both compute the summary statistics for this interval and plot the envelope in a different color.
+
+
+```{r}
+
+n.stats = apply(n,2,quantile,c(0.025,.25, 0.5,.75, 0.975))
+
+x = 1:dim(n)[2]
+plot(n.stats[5,], type="l", col="white", main = sprintf("r = %.2f", r))
+ciEnvelope(x, n.stats[1,],n.stats[5,], col=gray(0.8))
+lines( n.stats[1,], lty=2)
+lines( n.stats[5,], lty=2)
+ciEnvelope(x, n.stats[2,],n.stats[4,], col=gray(0.6))
+lines( n.stats[2,], lty=2, lwd=2)
+lines( n.stats[4,], lty=2, lwd=2)
+lines( n.stats[3,], lwd=3)
+```
+
+
+Extra Credit: Initial conditions
+--------------------------------
+  
+  The approach for simulating uncertainty in the initial conditions is very similar to the approach used for the parameter uncertainty.  As in Chapter 2, we'll assume that the initial condition is distributed as a lognormal to ensure that we never draw negative values. For this example we'll assume a standard deviation of 0.6 and an intrinsic growth rate of 0.3
+
+
+
+### Problems
+
+9. Plot the median & 95% interval.
+
+10. Repeat with r equal to 1.95, 2.05, and 2.8
+
+```{r}
+r = c(0.3, 1.95, 2.05, 2.8)
+
+par(mfrow = c(2,2))
+
+for(j in 1:4){
+  n0.sd = 0.6
+  n0s = rlnorm(NE,log(n0),n0.sd)
+  n = matrix(n0s,NE,NT)
+  for(i in 1:NE){
+    for(t in 2:NT){
+      n[i,t] = n[i,t-1] + r[j]*n[i,t-1]*(1-n[i,t-1]/K)
+    }
+  }
+  
+  n.stats = apply(n,2,quantile,c(0.025,0.5,0.975))
+  
+  n.stats = apply(n,2,quantile,c(0.025,.25, 0.5,.75, 0.975))
+  
+  x = 1:dim(n)[2]
+  plot(n.stats[5,], type="l", col="white", main = sprintf("r = %.2f", r[j]))
+  ciEnvelope(x, n.stats[1,],n.stats[5,], col=gray(0.8))
+  lines( n.stats[1,], lty=2)
+  lines( n.stats[5,], lty=2)
+  ciEnvelope(x, n.stats[2,],n.stats[4,], col=gray(0.6))
+  lines( n.stats[2,], lty=2, lwd=2)
+  lines( n.stats[4,], lty=2, lwd=2)
+  lines( n.stats[3,], lwd=3)
+}
+
+```
+
+
