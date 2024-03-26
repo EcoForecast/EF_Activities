@@ -226,7 +226,7 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
-**Question 1:** Describe the pattern to the initial condition uncertainty and compare that to your expectations (e.g. Table 1).
+**Question 1: [A]** Describe the pattern to the initial condition uncertainty and compare that to your expectations (e.g. Table 1).
 
 ### Parameter uncertainty
 
@@ -252,7 +252,7 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
-**Question 2:** 
+**Question 2: [A]** 
 A) Describe the pattern and relative magnitude of the parameter uncertainty and compare this to your expectations. 
 B) Using the existing model and Monte Carlo approach, describe how you might partition the contribution of each parameter (r, Kg, alpha, beta) to the forecast uncertainty.
 
@@ -293,7 +293,7 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
-**Question 3:** As before, describe the pattern of how driver uncertainty contributes to the forecast and compare that to our first principles expectations.
+**Question 3: [A]** As before, describe the pattern of how driver uncertainty contributes to the forecast and compare that to our first principles expectations.
 
 ### Process uncertainty
 
@@ -322,7 +322,7 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
-**Question 4:** Why might the relative contribution of the process error decline with time? Does this match expectations?
+**Question 4: [A]** Why might the relative contribution of the process error decline with time? Does this match expectations?
 
 ### Random Effect uncertainty
 
@@ -353,7 +353,7 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
-**Question 5:** The last step added random effects, but this uncertainty could be further partitioned into two parts: the ecological site-to-site variability in the population processes, and the parameter uncertainty about the site-to-site variance. To partition these out repeat this analysis setting `tau.mc` to its posterior mean. How does this change your results? How much of the random effect uncertainty is due to ecological variability versus uncertainty about `tau.mc`?
+**Question 5: [B]** The last step added random effects, but this uncertainty could be further partitioned into two parts: the ecological site-to-site variability in the population processes, and the parameter uncertainty about the site-to-site variance. To partition these out repeat the random effect partitioning analysis setting `tau.mc` to its posterior mean. How does this change your results? How much of the random effect uncertainty is due to ecological variability versus uncertainty about `tau.mc`?
 
 # Uncertainty Analysis
 
@@ -389,9 +389,9 @@ legend("topleft",legend=c("Process","Driver","Parameter","InitCond"),col=rev(N.c
 ```
 
 
-**Question 6:**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about improving in-sample predictions? What is the current balance between process and parameter error and what does that tell us about the potential value of increasing model complexity?
+**Question 6: [A]**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about improving in-sample predictions? What is the current balance between process and parameter error and what does that tell us about the potential value of increasing model complexity?
 
-## Next steps:
+## Next steps [C: extra credit for 1 of the 3 options below]:
 
 The Monte Carlo approach to uncertainty propagation is very flexible and general, however for computationally demanding models it can also be limiting because of the large ensemble sizes required to approximate the full predictive distribution. As discussed in Chapter 11, there are alternative approaches that can be applied in these cases, but at the cost of additional assumptions and/or analytical complexity. We'd encourage you to explore how these other methods could be implemented for the above analysis:
 
