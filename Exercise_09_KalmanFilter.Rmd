@@ -66,7 +66,9 @@ model{
   #### Process Model
   for(t in 2:n){
     for(i in 1:nstate){
-      mu[i,t] <- x[i,t-1] + alpha * sum(adj[i,1:nstate]*x[1:nstate,t-1])
+      mu[i,t] <- x[i,t-1] +                            ## current state
+      alpha * sum(adj[i,1:nstate]*x[1:nstate,t-1]) -   ## plus flux in
+      alpha * sum(adj[1:nstate,i])*x[i,t-1]            ## minus flux out
     }
     x[1:nstate,t] ~ dmnorm(mu[1:nstate,t],Omega_proc)
   }
@@ -269,15 +271,15 @@ points(time,Y[1,])
 
 Run the KF under all four combinations of covariance in the process model versus process error and compare the results. In particular you'll want to pay attention to the missing data at the beginning of the timeseries for some states. You'll also want to comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. Finally, you'll want to note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
 
-Task 1, KF00: Run the default analysis, KF00, with no spatial flux in the process model, and no spatial covariance in the process error
+Task 1, KF00 [A]: Run the default analysis, KF00, with no spatial flux in the process model, and no spatial covariance in the process error
 
-Task 2, KF01: Rerun with process error set to the full covariance matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
+Task 2, KF01 [A]: Rerun with process error set to the full covariance matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
 
-Task 3, KF10: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix (no spatial covariance). Comparing KF10 to KF00, what impact does including a spatial flux in the process model have on the inference?
+Task 3, KF10 [B]: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix (no spatial covariance). Comparing KF10 to KF00, what impact does including a spatial flux in the process model have on the inference?
 
-Task 4, KF11: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
+Task 4, KF11 [A]: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
 
-Task 5: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
+Task 5 [A]: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
 
 * Take the previous forecast and the new data (for just that day) as inputs (plus any other parameters you may need)
 * Assimilates the new data
@@ -288,6 +290,6 @@ You should leverage the existing `KalmanAnalysis` and `KalmanForecast` functions
 
 Note: in a real world situation, where your forecast model has driver/covariate data, you would actually want to first re-run the forecast from yesterday to today with the actual (now observed) driver/covariate data, rather than using your archived forecast (which was done based on your forecasted covariate/driver data), before assimilating today's new observations of your response data.
 
-Extra Credit:
+Task 6 [C: Extra Credit]:
 Using the run with alpha=0.05 and full process error covariance Q, apply your forecast function to make, and visualize, 5 iterative forecasts. Hint: when visualizing, remember that each forecast starts from a different day.
 
