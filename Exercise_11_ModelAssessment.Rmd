@@ -65,9 +65,9 @@ abline(NEE.pf.fit,col=3,lwd=3,lty=2)
 legend("bottomright",legend=c('obs','1:1','reg'),col=1:3,lwd=3)
 ```
 
-Question 1: Which version of the model performed better? Do the statistics or plots give any indication about what parameters might need to be fixed, or processeses refined in the model?
+Question 1 [A]: Which version of the model performed better? Do the statistics or plots give any indication about what parameters might need to be fixed, or processeses refined in the model?
 
-Question 2: Plot a time-series of observed and modeled **daily mean** NEE. Make sure to use the gap-filled NEE estimates, since flux data are not missing at random. Hint: you can use `tapply` and the day of year column in the data
+Question 2 [B]: Plot a time-series of observed and modeled **daily mean** NEE. Make sure to use the gap-filled NEE estimates, since flux data are not missing at random. Hint: you can use `tapply` and the day of year column in the data
 
 Taylor diagram
 --------------
@@ -98,9 +98,9 @@ for(i in 1:200){
 legend("topright",legend=c("ens","PF","obsUncert"),col=2:5,pch=20,cex=0.7)
 ```
 
-Question 3: What did you learn about model performance from the Taylor diagram? 
+Question 3 [A]: What did you learn about model performance from the Taylor diagram? 
 
-Question 4: How do our simple models compare to the ensemble of ecosystem models in Figure 7 of Schwalm et al 2010  "A model-data intercomparison of CO2 exchange across North America: results from the north american carbon program site synthesis". J. Geophys. Res. ?
+Question 4 [B]: How do our simple models compare to the ensemble of ecosystem models in Figure 7 of Schwalm et al 2010  "A model-data intercomparison of CO2 exchange across North America: results from the north american carbon program site synthesis". J. Geophys. Res. ?
 
 Bayesian p-values
 -----------------
@@ -116,7 +116,7 @@ for(i in 1:nrow(NEE.pf)){
 plot(pval.pf)   ## quantile 'residuals'
 hist(pval.pf,probability=TRUE) ## quantile distribution (should be flat)
 ```
-Question 5: How do **both** the ensemble and particle filter perform in terms of the predicted quantiles?
+Question 5 [A]: How do **both** the ensemble and particle filter perform in terms of the predicted quantiles?
 
 CRPS
 ----
@@ -147,7 +147,7 @@ plot(time.of.day,crps.diurnal)
 plot(O,crps)
 ```
 
-Question 6: Compare the CRPS for the ensemble and PF models. How do they perform overall (mean) in terms of their ability to produce the correct seasonal and diurnal cycles? Explain the pattern of the relationship between NEE and CRPS.
+Question 6 [A]: Compare the CRPS for the ensemble and PF models. How do they perform overall (mean) in terms of their ability to produce the correct seasonal and diurnal cycles? Explain the pattern of the relationship between NEE and CRPS.
 
 Mining the Residuals
 --------------------
@@ -186,7 +186,7 @@ partialPlot(rfe,x[smp,],"PAR")
 partialPlot(rfe,x[smp,],"temp")
 ```
 
-Question 7: Overall, which driver is most important in explaining model error? What conditions are most associated with model success? With model failure?  Where do these results reinforce conclusions we reached earlier and where do they shine light on new patterns you may have missed earlier?
+Question 7 [A]: Overall, which driver is most important in explaining model error? What conditions are most associated with model success? With model failure?  Where do these results reinforce conclusions we reached earlier and where do they shine light on new patterns you may have missed earlier?
 
 Functional Responses
 --------------------
@@ -228,7 +228,7 @@ legend("bottom",legend=c("Model","Data"),lwd=10,col=c(col2,col1),lty=1,cex=1.7)
 
 ```
 
-Question 8: Evaluate the model's ability to capture functional responses to both Temperature and PAR.
+Question 8 [A]: Evaluate the model's ability to capture functional responses to both Temperature and PAR.
 
 Overall 
 -------
@@ -314,7 +314,7 @@ lines(L4$DoY,-NEE.clim,col=4,lwd=2,lty=2)
 legend("topright",legend=c("Obs","clim"),lty=1:2,col=c(1,4),lwd=2)
 ```
 
-Question 9: How does the process model perform relative to the average flux data? Which statistics showed the largest differences between the model and climatology? 
+Question 9 [B]: How does the process model perform relative to the average flux data? Which statistics showed the largest differences between the model and climatology? 
 
 Time-scales
 -----------
@@ -338,4 +338,4 @@ lines(tod,NEE.obs.diurnal,lwd=3)
 legend("bottomright",legend=c("obs","ens","PF","clim"),col=1:4,pch=20,cex=0.75)
 ```
 
-Question 10: What time of day has the largest uncertainty? What does this suggest about what parameter(s) needs to be modified in the model, in what direction, and by approximately how much? In providing this answer, recall the structure of the model as well as the fact that the particle filter has assimilated LAI so we can assume that that term is unbiased for that case.
+Question 10 [C]: What time of day has the largest uncertainty? What does this suggest about what parameter(s) needs to be modified in the model, in what direction, and by approximately how much? In providing this answer, recall the structure of the model as well as the fact that the particle filter has assimilated LAI so we can assume that that term is unbiased for that case.

@@ -7,9 +7,9 @@ For this activity we will write all the code, process all the data, and visualiz
 
 ```{r}
 library(rjags)
-#library(rnoaa)
 library(daymetr)
-devtools::install_github("EcoForecast/ecoforecastR",force=TRUE)
+#devtools::install_github("EcoForecast/ecoforecastR",force=TRUE)
+library(ecoforecastR)
 ```
 
 Next we'll want to grab the data we want to analyze. For this example we'll use the Google Flu Trends data for the state of Massachusetts, which we saw how to pull directly off the web in Activity 3.
