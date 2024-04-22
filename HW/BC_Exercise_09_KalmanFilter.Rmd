@@ -1,0 +1,238 @@
+Kalman Filter
+========================================================
+  
+# The Data
+
+```{r, fig.height=5, fig.width=10}
+## load the Google flu data & select states
+gflu = read.csv("http://www.google.org/flutrends/about/data/flu/us/data.txt",skip=11)
+time = as.Date(gflu$Date)
+states = c("Massachusetts","Connecticut","Rhode.Island","New.Hampshire","Vermont","Maine")
+nstates = length(states)
+y = t(gflu[,states])
+
+## define adjacency between states slected
+adj = matrix(c(0,1,1,1,1,0,    ### state-to-state spatial adjacency (self=0)
+               1,0,1,0,0,0,
+               1,1,0,0,0,0,
+               1,0,0,0,1,1,
+               1,0,0,1,0,0,
+               0,0,0,1,0,0),nstates,nstates,byrow=TRUE)
+
+## plot time-series from states
+plot(time,1:length(time),type='n',ylab="Flu Index",lwd=2,log='y',ylim=range(y,na.rm=TRUE))
+for(i in 1:nstates){
+  lines(time,y[i,],col=i,lwd=2)
+}
+legend("topleft",legend=states,lwd=2,col=1:nstates)
+```
+
+# The Random Walk Model
+
+In our previous model we assumed a Random Walk which we just fit Massachusetts. For this version we'll keep working with a Random Walk but we'll need to add a spatial contagious process to the random-walk process model. Specifically, lets assume a simple flux process just based on adjacency, and ignore differences in how population size, border length, transpiration corridors, etc. affect the movement of individuals among the New England states.
+
+$X_{i,t+1} = X_{i,t} + \alpha*\sum(adj_{i,j}*(X_{j,t}-X_{i,t}))+\epsilon_{i,t}$
+
+Thus, if state j has more cases than state i, this will tend to increase infection in state i. For your reference, below is the JAGS model fit to the log-transformed flu data
+
+```{r}
+SpatialRandomWalk = "
+model{
+
+#### Data Model
+for(t in 1:n){
+for(i in 1:nstate){
+y[i,t] ~ dnorm(x[i,t],tau_obs)
+}
+}
+
+#### Process Model
+for(t in 2:n){
+for(i in 1:nstate){
+mu[i,t] <- x[i,t-1] + alpha * sum(adj[i,1:nstate]*x[1:nstate,t-1])
+}
+x[1:nstate,t] ~ dmnorm(mu[1:nstate,t],Omega_proc)
+}
+
+#### Priors
+for(i in 1:nstate){
+x[i,1] ~ dnorm(x_ic,tau_ic)
+}
+tau_obs ~ dgamma(a_obs,r_obs)
+Omega_proc ~ dwish(R,k)
+alpha ~ dbeta(1,20)
+}
+"
+```
+
+# The Classic Kalman Filter
+
+Note, if one is running the KF in 'operational' mode, where new data is arriving in real time, you wouldn't write the function in this manner. Rather you would  write a function that does the incremental update for one time step (i.e. Analysis on the current data and then generate a new Forecast). In other words, you would make what's inside the loop its own function.
+
+```{r}
+##'  Kalman Filter
+##' @param  M   = model matrix
+##' @param  mu0 = initial condition mean vector
+##' @param  P0  = initial condition covariance matrix
+##' @param  Q   = process error covariance matrix
+##' @param  R   = observation error covariance matrix
+##' @param  Y   = observation matrix (with missing values as NAs), time as col's
+##'
+##' @return list
+##'  mu.f, mu.a  = state mean vector for (a)nalysis and (f)orecast steps
+##'  P.f, P.a    = state covariance matrix for a and f
+KalmanFilter <- function(M,mu0,P0,Q,R,Y){
+  
+  ## storage
+  nstates = nrow(Y)  
+  nt = ncol(Y)
+  mu.f  = matrix(NA,nstates,nt+1)  ## forecast mean for time t
+  mu.a  = matrix(NA,nstates,nt)  ## analysis mean for time t
+  P.f  = array(NA,c(nstates,nstates,nt+1))  ## forecast variance for time t
+  P.a  = array(NA,c(nstates,nstates,nt))  ## analysis variance for time t
+  
+  ## initialization
+  mu.f[,1] = mu0
+  P.f[,,1] = P0
+  I = diag(1,nstates)
+  
+  ## run updates sequentially for each observation.
+  for(t in 1:nt){
+    
+    ## Analysis step: combine previous forecast with observed data
+    obs = !is.na(Y[,t]) ## which Y's were observed?
+    if(any(obs)){
+      H <- I[obs,]                                                        ## observation matrix
+      K <- P.f[,,t] %*% t(H) %*% solve(H%*%P.f[,,t]%*%t(H) + R[obs,obs])  ## Kalman gain
+      mu.a[,t] <- mu.f[,t] + K%*%(Y[obs,t] - H %*% mu.f[,t])              ## update mean
+      P.a[,,t] <- (1-K %*% H)*P.f[,,t]                                    ## update covariance
+    } else {
+      ##if there's no data, the posterior is the prior
+      mu.a[,t] = mu.f[,t]
+      P.a[,,t] = P.f[,,t]
+    }
+    
+    ## Forecast step: predict to next step from current
+    mu.f[,t+1] = M%*%mu.a[,t]
+    P.f[,,t+1] = Q + M*P.a[,,t]*t(M)
+    
+  }
+  
+  return(list(mu.f=mu.f,mu.a=mu.a,P.f=P.f,P.a=P.a))
+}
+
+ciEnvelope <- function(x,ylo,yhi,...){
+  polygon(cbind(c(x, rev(x), x[1]), c(ylo, rev(yhi),
+                                      ylo[1])), border = NA,...) 
+}
+```
+
+## Define the inputs to the function and run the function
+
+```{r}
+
+## log transform data
+Y   = log10(y)
+
+## load parameters (assume known)
+load("data/KFalpha.params.Rdata")
+
+## options for process model
+alpha_noflux = 0       ## assume no spatial flux
+alpha_lgflux = 0.05    ## assume a large spatial flux
+
+## options for process error covariance
+Q_full = tau_proc            ## full covariance matrix
+Q_diag = diag(diag(Q_full))  ## diagonal covariance matrix
+ 
+  
+KF_run <- function(alpha, Q){
+
+  M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
+  
+  ## observation error covariance (assumed independent)  
+  R = diag(tau_obs,nstates) 
+
+  ## prior on first step, initialize with long-term mean and covariance
+  mu0 = apply(Y,1,mean,na.rm=TRUE)
+  P0 = cov(t(Y),use="pairwise.complete.obs")
+  
+  ## Run Kalman Filter
+  KFrun = KalmanFilter(M,mu0,P0,Q,R,Y)
+  return(KFrun)
+}
+
+KF <- list(
+KF00 = c(KF_run(alpha_noflux, Q_diag), title = "No Spatial Flux\nDiagonal Covariance Matrix"),
+KF01 = c(KF_run(alpha_noflux, Q_full), title = "No Spatial Flux\nFull Covariance Matrix"),
+KF10 = c(KF_run(alpha_lgflux, Q_diag), title = "Large Spatial Flux\nDiagonal Covariance Matrix"),
+KF11 = c(KF_run(alpha_lgflux, Q_full), title = "Large Spatial Flux\nFull Covariance Matrix")
+)
+
+```
+
+## Visualizations by state
+
+```{r, fig.height=10, fig.width=10}
+nt = length(time)
+
+Y   = log10(y)
+
+### plot ANALYSIS mean & CI time-series
+
+state.plot <- function(KF,Y,time){
+  attach(KF)
+  ci = rbind(mu.a[i,]-1.96*sqrt(P.a[i,i,]),mu.a[i,]+1.96*sqrt(P.a[i,i,]))
+  plot(time,mu.a[i,],ylim=range(ci,na.rm=TRUE),type='n',main=KF$title)
+  ciEnvelope(time,ci[1,],ci[2,],col="lightBlue")
+  lines(time,mu.a[i,],col=4)
+  lines(time,Y[i,])
+  
+  plot(time,sqrt(P.a[i,i,]),ylim=c(0,sqrt(max(c(P.a[i,i,],P.f[i,i,])))),xlab="Time",
+       ylab="Std Error",type='l')
+  lines(time,sqrt(P.f[i,i,1:nt]),col=2)
+  points(time[is.na(Y[i,])],rep(0,nt)[is.na(Y[i,])],pch="*",col=3) ## flag's the zero's
+  legend("topright",legend=c("Analysis","Forecast","NAs"),col=1:3,lty=c(1,1,NA),pch=c(NA,NA,1),cex=1.4)
+  
+  title(main=states[i], outer = TRUE, line = -2, cex.main = 2)
+  detach(KF)
+}
+
+layout(matrix(c(1,1,2,3,3,4,5,5,6,7,7,8),4,3,byrow=TRUE))
+for(i in 1:6){
+  for(k in 1:4){
+    state.plot(KF[[k]],Y,time)
+  }
+}
+```
+
+# Questions 
+
+### Run the KF under all four combinations of covariance in the process model versus process error and compare the results. 
+* Pay attention to the missing data at the beginning of the time series for some states. 
+* Comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. 
+* Note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
+
+We can see the effects of changing the covariance matrices and the alpha values in the states that have the least missing values. Thus predictions in states like Massachusetts and Connecticut don't show any improvement by changing covariances for both the process model and the process error. 
+
+#### No Spatial Flux, Diagonal Covariance Matrix
+
+This is the least informative model and thus predictions for periods in which there are missing data have high uncertainty and do not capture any of the seasonal trends. 
+
+#### No Spatial Flux, Full Covariance Matrix
+
+The addition of the full covariance model does appear bring in some of the seasonal trends of the flu values, however, the magnitude of the uncertainty does not appear to have improved. 
+
+#### Large Spatial Flux, Diagonal Covariance Matrix
+
+For states that with many missing values that have multiple neighbors, such as Vermont and Rhode Island, the high-flux run greatly decreases prediction uncertainty and captures the seasonal trends, more so than with just a full covariance model.  However, for states such as Maine, with only one neighboring state, a large spatial flux does little to improve the prediction. Unfortunately, it also appears that a large spatial flux is less realistic and thus would most likely not reduce uncertainty as dramatically as it does in this example. 
+
+#### Large Spatial Flux, Full Covariance Matrix
+
+In all the states, including a full covariance matrix in as well as large spatial flux doesn't appear to improve the magnitude of uncertainty more than by just increasing spatial flux and using a diagonal covariance matrix. The states with missing values now show the same sharp peaks in flue values in 2004 that can be seen in Massachusetts and Connecticut, though it seems unlikely that states further away (such as Maine) would have such similar trends. 
+
+
+### Extended Kalman Filter
+Explain conceptually what would have to change in the Kalman Filter function if we replaced the current linear model with a nonlinear process model, in order to turn it into an Extended Kalman Filter function. 
+
+Replacing the linear process model with an arbitrary nonlinear function, requires that the forecast variance must be updated using a numerical approach, in this case a first-order Taylor Series approximation. In turn, this requires solving the Jacobian matrix for the nonlinear function. At each time step the Jacobian matrix is calculated and used in place of the current matrix of slopes. 
