@@ -157,7 +157,12 @@ KalmanAnalysis <- function(mu.f,P.f,Y,R,H,I){
   obs = !is.na(Y) ## which Y's were observed?
   if(any(obs)){
     H <- H[obs,]                                              ## observation matrix
-    K <- P.f %*% t(H) %*% solve(H%*%P.f%*%t(H) + R[obs,obs])  ## Kalman gain
+    ## Kalman gain
+    if (dim(t(H))[1] == 1) {
+      K <- P.f %*% t(t(H)) %*% solve(H%*%P.f%*%t(t(H)) + R[obs,obs])
+    } else {
+      K <- P.f %*% t(H) %*% solve(H%*%P.f%*%t(H) + R[obs,obs])  
+    }
     mu.a <- mu.f + K%*%(Y[obs] - H %*% mu.f)                  ## update mean
     P.a <- (I - K %*% H)%*%P.f                                ## update covariance
     ## Note: Here's an alternative form that doesn't use the Kalman gain
