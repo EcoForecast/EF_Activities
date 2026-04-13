@@ -574,7 +574,9 @@ smooth.params <- function(params,h=1){
   params.star[params.star < 0] = 0
   falloc = params.star[,c("falloc.1","falloc.2","falloc.3")]
   falloc = falloc / rowSums(falloc)  ## fractional allocation needs to sum to 1
-  params.star[,c("falloc.1","falloc.2","falloc.3")] = falloc
+  params.star = as.list(params.star)
+  params.star[c("falloc.1","falloc.2","falloc.3")] = NULL
+  params.star[["falloc"]] = unname(as.matrix(falloc))
   return(params.star)
 }
 ```
@@ -618,7 +620,7 @@ ParticleFilter <- function(out,params,dat,wt=1){
     ## resample ensemble members in proportion to their weight
     index = sample.int(ne, ne, replace = TRUE, prob = wtn) 
     X = X[index, ]                                ## update state
-    params = smooth.params(params[index,],h=0.95) ## kernel smooth updated parameters
+    params = smooth.params(as.data.frame(params)[index,],h=0.95) ## kernel smooth updated parameters
     wt = rep(1,ne)                                ## if resample, reset weights
   }
   return(list(params=params,X=X, wt=wt))  ## analysis updates parameters, state, and weights
